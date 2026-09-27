@@ -1,0 +1,45 @@
+{
+  "sync_menu": {
+    "description": "启动时同步自定义菜单",
+    "type": "bool",
+    "default": true,
+    "hint": "关闭后仅读取 QQ 当前菜单，不会覆盖 QQ 机器人菜单。"
+  },
+  "qq_platforms": {
+    "description": "QQ 官方机器人平台凭证",
+    "type": "template_list",
+    "default": [],
+    "obvious_hint": true,
+    "hint": "填写 AppID 和 ClientSecret；留空时尝试从 AstrBot 平台配置读取。",
+    "templates": {
+      "qq_platform": {
+        "name": "QQ 机器人",
+        "display_item": "appid",
+        "items": {
+          "appid": {
+            "description": "AppID",
+            "type": "string"
+          },
+          "secret": {
+            "description": "ClientSecret",
+            "type": "string"
+          },
+          "platform": {
+            "description": "平台类型",
+            "type": "string",
+            "options": ["qq_official", "qq_official_webhook"],
+            "default": "qq_official"
+          }
+        }
+      }
+    }
+  },
+  "menu": {
+    "description": "QQ 私聊自定义菜单",
+    "type": "object",
+    "default": {
+      "items": []
+    },
+    "hint": "菜单项 type 支持 send_message、link、menu；分别填写 send_message、link 或 sub_menu_items。"
+  }
+}

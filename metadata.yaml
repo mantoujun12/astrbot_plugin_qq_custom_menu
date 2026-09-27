@@ -4,7 +4,12 @@ desc: 用户通过在 AstrBot Web UI 配置，让 QQ 官方机器人展示自定
 short_desc: 让 QQ 机器人展示自定义菜单
 version: v0.1.0
 author: mantoujun12
+social_link: https://github.com/mantoujun12
 repo: https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu
-support_planforms:
+support_platforms:
   - qq_official
   - qq_official_webhook
+tags:
+  - QQ
+  - 机器人
+  - 自定义菜单

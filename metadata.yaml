@@ -2,7 +2,7 @@ name: astrbot_plugin_qq_custom_menu
 display_name: QQ 自定义菜单
 desc: 用户通过在 AstrBot Web UI 配置，让 QQ 官方机器人展示自定义菜单。仅支持私聊场景。
 short_desc: 让 QQ 机器人展示自定义菜单
-version: v0.2.0
+version: v0.2.1
 author: mantoujun12
 social_link: https://github.com/mantoujun12
 repo: https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu

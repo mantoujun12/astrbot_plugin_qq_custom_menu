@@ -15,7 +15,7 @@ from .core import MenuSynchronizer, get_platforms, migrate_menu_config
     "astrbot_plugin_qq_custom_menu",
     "mantoujun12",
     "用户在 AstrBot WebUI 配置 QQ 官方机器人私聊自定义菜单",
-    "v0.1.0",
+    "v0.2.0",
     "https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu",
 )
 class QQCustomMenuPlugin(Star):

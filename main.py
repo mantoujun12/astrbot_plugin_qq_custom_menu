@@ -8,7 +8,7 @@ import aiohttp
 from astrbot.api import logger
 from astrbot.api.star import Context, Star, register
 
-from .core import MenuSynchronizer, get_platforms
+from .core import MenuSynchronizer, get_platforms, migrate_menu_config
 
 
 @register(
@@ -23,6 +23,11 @@ class QQCustomMenuPlugin(Star):
 
     def __init__(self, context: Context, config):
         super().__init__(context)
+        try:
+            # 旧版菜单为 dict 结构，首次加载时迁移为 template_list 并保存
+            migrate_menu_config(config)
+        except Exception as exc:
+            logger.warning("菜单配置迁移失败: %s", exc, exc_info=True)
         self.config = dict(config)
         self._http: aiohttp.ClientSession | None = None
         self._syncer: MenuSynchronizer | None = None

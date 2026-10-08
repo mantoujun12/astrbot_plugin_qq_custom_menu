@@ -36,10 +36,66 @@
   },
   "menu": {
     "description": "QQ 私聊自定义菜单",
-    "type": "dict",
-    "default": {
-      "items": []
-    },
-    "hint": "点击右侧按钮以 JSON 编辑菜单。menu.items 为菜单项数组，每项 type 支持 send_message、link、menu；分别填写 send_message、link 或 sub_menu_items。示例：[{\"type\": \"send_message\", \"name\": \"帮助\", \"send_message\": \"/help\"}]"
+    "type": "template_list",
+    "default": [],
+    "obvious_hint": true,
+    "hint": "点击「添加条目」选择菜单类型并填写内容。一级菜单最多 3 个；需要子菜单时先添加一条「子菜单」，再添加「发送消息」或「跳转链接」条目，并把「父菜单名称」填写为该子菜单的名称。",
+    "templates": {
+      "send_message": {
+        "name": "发送消息",
+        "display_item": "name",
+        "items": {
+          "name": {
+            "description": "菜单名称",
+            "type": "string",
+            "default": ""
+          },
+          "message": {
+            "description": "点击后发送的消息",
+            "type": "string",
+            "default": ""
+          },
+          "parent": {
+            "description": "父菜单名称",
+            "type": "string",
+            "default": "",
+            "hint": "留空为一级菜单；填写某个「子菜单」条目的名称时，作为它的子项。"
+          }
+        }
+      },
+      "link": {
+        "name": "跳转链接",
+        "display_item": "name",
+        "items": {
+          "name": {
+            "description": "菜单名称",
+            "type": "string",
+            "default": ""
+          },
+          "link": {
+            "description": "点击后打开的链接",
+            "type": "string",
+            "default": ""
+          },
+          "parent": {
+            "description": "父菜单名称",
+            "type": "string",
+            "default": "",
+            "hint": "留空为一级菜单；填写某个「子菜单」条目的名称时，作为它的子项。"
+          }
+        }
+      },
+      "menu": {
+        "name": "子菜单",
+        "display_item": "name",
+        "items": {
+          "name": {
+            "description": "子菜单名称",
+            "type": "string",
+            "default": ""
+          }
+        }
+      }
+    }
   }
 }

@@ -36,10 +36,10 @@
   },
   "menu": {
     "description": "QQ 私聊自定义菜单",
-    "type": "object",
+    "type": "dict",
     "default": {
       "items": []
     },
-    "hint": "菜单项 type 支持 send_message、link、menu；分别填写 send_message、link 或 sub_menu_items。"
+    "hint": "点击右侧按钮以 JSON 编辑菜单。menu.items 为菜单项数组，每项 type 支持 send_message、link、menu；分别填写 send_message、link 或 sub_menu_items。示例：[{\"type\": \"send_message\", \"name\": \"帮助\", \"send_message\": \"/help\"}]"
   }
 }

@@ -48,6 +48,25 @@ def get_platforms(config: dict[str, Any], context: Any) -> list[dict[str, str]]:
     return [entry for entry in astrbot if entry["platform"] in QQ_PLATFORM_TYPES]
 
 
+def _normalize_link(value: str) -> str | None:
+    """把用户填写的链接规范为 QQ 要求的 https:// 开头格式。
+
+    QQ 菜单接口要求链接必须以 https:// 开头（否则报 40030008 URL 格式错误），
+    这里对省略协议或误用 http:// 的链接做容错补全。
+    """
+    value = value.strip()
+    if not value:
+        return None
+    lowered = value.lower()
+    if lowered.startswith("https://"):
+        return "https://" + value[len("https://") :]
+    if lowered.startswith("http://"):
+        return "https://" + value[len("http://") :]
+    if value.startswith("//"):
+        return "https:" + value
+    return "https://" + value
+
+
 def _normalize_menu_item(
     item: Any, allowed_types: frozenset[str] = _MENU_TYPES
 ) -> dict[str, Any] | None:
@@ -73,9 +92,13 @@ def _normalize_menu_item(
             return None
         result["send_message"] = message
     elif item_type == "link":
-        if not isinstance(item.get("link"), str):
+        link = item.get("link")
+        if not isinstance(link, str):
             return None
-        result["link"] = item["link"]
+        normalized_link = _normalize_link(link)
+        if normalized_link is None:
+            return None
+        result["link"] = normalized_link
     else:  # menu
         children = item.get("sub_menu_items", [])
         if not isinstance(children, list):

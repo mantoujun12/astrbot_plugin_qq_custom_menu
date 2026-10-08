@@ -29,9 +29,8 @@ class MenuSynchronizer:
         menu = get_menu(self.config)
         sync_menu = self.config.get("sync_menu", True)
         if sync_menu and not menu["items"]:
-            # PUT 会整表覆盖远程菜单，菜单未配置时跳过同步以免清空平台上已有菜单
-            logger.warning("菜单项为空，跳过菜单同步，仅读取 QQ 当前菜单")
-            sync_menu = False
+            # PUT 会整表覆盖远程菜单，菜单项为空时同步会清空 QQ 上已有的自定义菜单
+            logger.info("菜单项为空，将清空 QQ 当前自定义菜单")
         for platform in self.platforms:
             client = QQClient(platform["appid"], platform["secret"], self.http)
             current = await client.get_menu()

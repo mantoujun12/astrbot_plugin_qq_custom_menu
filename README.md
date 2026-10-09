@@ -2,10 +2,14 @@
 
 # astrbot_plugin_qq_custom_menu
 
-[![GitHub License](https://img.shields.io/github/license/mantoujun12/astrbot_plugin_qq_custom_menu?style=for-the-badge)](LICENSE)
-![GitHub Release](https://img.shields.io/github/v/release/mantoujun12/astrbot_plugin_qq_custom_menu?sort=date&display_name=tag&style=for-the-badge)
-![GitHub Repo stars](https://img.shields.io/github/stars/mantoujun12/astrbot_plugin_qq_custom_menu?style=for-the-badge)
-[![AstrBot](https://img.shields.io/badge/AstrBot-%234984b9?style=for-the-badge&logo=Github)](https://github.com/AstrBotDevs/AstrBot)
+<!-- badge -->
+
+[![GitHub License](https://img.shields.io/github/license/mantoujun12/astrbot_plugin_qq_custom_menu)](LICENSE)
+[![GitHub Release](https://img.shields.io/github/v/release/mantoujun12/astrbot_plugin_qq_custom_menu?sort=date&display_name=tag)](https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/releases/latest)
+[![AstrBot](https://img.shields.io/badge/AstrBot-%234984b9?logo=Github)](https://github.com/AstrBotDevs/AstrBot)
+![GitHub Repo stars](https://img.shields.io/github/stars/mantoujun12/astrbot_plugin_qq_custom_menu)
+
+<!-- badge -->
 
 QQ 官方机器人自定义菜单插件
 

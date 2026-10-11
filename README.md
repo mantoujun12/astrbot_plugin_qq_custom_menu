@@ -5,6 +5,7 @@
 <!-- badge -->
 
 [![GitHub License](https://img.shields.io/github/license/mantoujun12/astrbot_plugin_qq_custom_menu)](LICENSE)
+[![codecov](https://codecov.io/gh/mantoujun12/astrbot_plugin_qq_custom_menu/graph/badge.svg)](https://codecov.io/gh/mantoujun12/astrbot_plugin_qq_custom_menu)
 [![GitHub Release](https://img.shields.io/github/v/release/mantoujun12/astrbot_plugin_qq_custom_menu?sort=date&display_name=tag)](https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/releases/latest)
 [![AstrBot](https://img.shields.io/badge/AstrBot-%234984b9?logo=Github)](https://github.com/AstrBotDevs/AstrBot)
 ![GitHub Repo stars](https://img.shields.io/github/stars/mantoujun12/astrbot_plugin_qq_custom_menu)

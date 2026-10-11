@@ -166,7 +166,11 @@ def get_menu(config: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
 
 
 def _migrate_entry(item: Any, parent: str) -> dict[str, Any] | None:
-    if not isinstance(item, dict) or not isinstance(item.get("name"), str) or not item["name"].strip():
+    if (
+        not isinstance(item, dict)
+        or not isinstance(item.get("name"), str)
+        or not item["name"].strip()
+    ):
         return None
     item_type = item.get("type")
     if item_type == "send_message" and isinstance(item.get("send_message"), str):
@@ -200,7 +204,11 @@ def migrate_menu_config(config: Any) -> bool:
     for item in legacy_items:
         if not isinstance(item, dict):
             continue
-        if item.get("type") == "menu" and isinstance(item.get("name"), str) and item["name"].strip():
+        if (
+            item.get("type") == "menu"
+            and isinstance(item.get("name"), str)
+            and item["name"].strip()
+        ):
             migrated.append({"__template_key": "menu", "name": item["name"]})
             children = item.get("sub_menu_items", [])
             if isinstance(children, list):

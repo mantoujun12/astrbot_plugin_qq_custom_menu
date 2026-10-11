@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import aiohttp
 from astrbot.api import logger
 from astrbot.api.star import Context, Star, register
@@ -33,9 +31,7 @@ class QQCustomMenuPlugin(Star):
         self._syncer: MenuSynchronizer | None = None
 
     async def initialize(self) -> None:
-        self._http = aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=15)
-        )
+        self._http = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=15))
         self._syncer = MenuSynchronizer(
             self._http,
             get_platforms(self.config, self.context),

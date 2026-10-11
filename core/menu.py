@@ -34,7 +34,9 @@ class MenuSynchronizer:
         for platform in self.platforms:
             client = QQClient(platform["appid"], platform["secret"], self.http)
             current = await client.get_menu()
-            logger.info("QQ 菜单读取成功: appid=%s, menu=%s", platform["appid"], current.get("menu"))
+            logger.info(
+                "QQ 菜单读取成功: appid=%s, menu=%s", platform["appid"], current.get("menu")
+            )
             if sync_menu:
                 await client.update_menu(menu)
                 logger.info("QQ 菜单同步成功: appid=%s", platform["appid"])

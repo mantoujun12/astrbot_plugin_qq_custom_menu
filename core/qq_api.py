@@ -7,7 +7,7 @@ from typing import Any
 
 import aiohttp
 
-TOKEN_URL = "https://bots.qq.com/app/getAppAccessToken"
+TOKEN_URL = "https://bots.qq.com/app/getAppAccessToken"  # noqa: S105 - 端点 URL, 非密钥
 API_BASE = "https://api.bot.qq.com"
 
 
@@ -33,7 +33,9 @@ class QQClient:
         self._expires_at = time.time() + max(int(data.get("expires_in", 7200)) - 600, 60)
         return self._token
 
-    async def request(self, method: str, path: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
+    async def request(
+        self, method: str, path: str, body: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         token = await self._token_value()
         async with self.http.request(
             method,
@@ -43,7 +45,9 @@ class QQClient:
         ) as response:
             data = await response.json(content_type=None)
             if response.status >= 400:
-                raise RuntimeError(f"QQ API 请求失败: {method} {path}, HTTP {response.status}, {data}")
+                raise RuntimeError(
+                    f"QQ API 请求失败: {method} {path}, HTTP {response.status}, {data}"
+                )
             return data if isinstance(data, dict) else {"data": data}
 
     async def get_menu(self) -> dict[str, Any]:

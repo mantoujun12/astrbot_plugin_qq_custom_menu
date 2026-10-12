@@ -5,6 +5,12 @@
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/),
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [v0.2.3] - 2026-10-12
+
+### 变更
+
+- 将 `aiohttp` 依赖要求由 `>=3.14.4` 调整为精确锁定 `==3.14.3`, 避免自动更新引入不兼容版本 (#12)
+
 ## [v0.2.2] - 2026-10-11
 
 ### 新增
@@ -52,6 +58,7 @@
 
 - 修复菜单配置 schema 类型错误导致插件加载失败的问题 (#3)
 
+[v0.2.3]: https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/compare/v0.2.2...v0.2.3
 [v0.2.2]: https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/compare/v0.2.1...v0.2.2
 [v0.2.1]: https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/compare/v0.2.0...v0.2.1
 [v0.2.0]: https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/releases/tag/v0.2.0

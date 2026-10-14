@@ -1,4 +1,14 @@
 {
+  "language": {
+    "description": "插件日志语言",
+    "type": "string",
+    "options": [
+      "zh-CN",
+      "en-US"
+    ],
+    "default": "zh-CN",
+    "hint": "仅影响插件日志，不影响用户自定义的菜单内容。"
+  },
   "sync_menu": {
     "description": "启动时同步自定义菜单",
     "type": "bool",
@@ -27,7 +37,10 @@
           "platform": {
             "description": "平台类型",
             "type": "string",
-            "options": ["qq_official", "qq_official_webhook"],
+            "options": [
+              "qq_official",
+              "qq_official_webhook"
+            ],
             "default": "qq_official"
           }
         }

@@ -1,0 +1,90 @@
+{
+  "metadata": {
+    "display_name": "QQ 自定义菜单",
+    "short_desc": "让 QQ 机器人展示自定义菜单",
+    "desc": "用户通过在 AstrBot Web UI 配置，让 QQ 官方机器人展示自定义菜单。仅支持私聊场景。"
+  },
+  "config": {
+    "language": {
+      "description": "插件日志语言",
+      "hint": "仅影响插件日志，不影响用户自定义的菜单内容。",
+      "labels": [
+        "简体中文",
+        "English"
+      ]
+    },
+    "sync_menu": {
+      "description": "启动时同步自定义菜单",
+      "hint": "关闭后仅读取 QQ 当前菜单，不会覆盖 QQ 机器人菜单。"
+    },
+    "qq_platforms": {
+      "description": "QQ 官方机器人平台凭证",
+      "hint": "填写 AppID 和 ClientSecret；留空时尝试从 AstrBot 平台配置读取。",
+      "templates": {
+        "qq_platform": {
+          "name": "QQ 机器人",
+          "items": {
+            "appid": {
+              "description": "AppID"
+            },
+            "secret": {
+              "description": "ClientSecret"
+            },
+            "platform": {
+              "description": "平台类型",
+              "labels": [
+                "QQ 官方机器人",
+                "QQ 官方机器人 Webhook"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "menu": {
+      "description": "QQ 私聊自定义菜单",
+      "hint": "点击「添加条目」选择菜单类型并填写内容。一级菜单最多 10 个；需要子菜单时先添加一条「子菜单」，再添加「发送消息」或「跳转链接」条目，并把「父菜单名称」填写为该子菜单的名称。",
+      "templates": {
+        "send_message": {
+          "name": "发送消息",
+          "items": {
+            "name": {
+              "description": "菜单名称"
+            },
+            "message": {
+              "description": "点击后发送的消息"
+            },
+            "parent": {
+              "description": "父菜单名称",
+              "hint": "留空为一级菜单；填写某个「子菜单」条目的名称时，作为它的子项。"
+            }
+          }
+        },
+        "link": {
+          "name": "跳转链接",
+          "items": {
+            "name": {
+              "description": "菜单名称"
+            },
+            "link": {
+              "description": "点击后打开的链接",
+              "hint": "QQ 要求以 https:// 开头；未填写协议时会自动补全为 https://。"
+            },
+            "parent": {
+              "description": "父菜单名称",
+              "hint": "留空为一级菜单；填写某个「子菜单」条目的名称时，作为它的子项。"
+            }
+          }
+        },
+        "menu": {
+          "name": "子菜单",
+          "items": {
+            "name": {
+              "description": "子菜单名称"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -7,6 +7,8 @@ from typing import Any
 
 import aiohttp
 
+from .i18n import t
+
 TOKEN_URL = "https://bots.qq.com/app/getAppAccessToken"  # noqa: S105 - 端点 URL, 非密钥
 API_BASE = "https://api.bot.qq.com"
 
@@ -28,7 +30,7 @@ class QQClient:
         ) as response:
             data = await response.json()
             if response.status >= 400 or not data.get("access_token"):
-                raise RuntimeError(f"获取 QQ access_token 失败: HTTP {response.status}, {data}")
+                raise RuntimeError(t("log.token_failed", status=response.status, data=data))
         self._token = str(data["access_token"])
         self._expires_at = time.time() + max(int(data.get("expires_in", 7200)) - 600, 60)
         return self._token
@@ -46,7 +48,13 @@ class QQClient:
             data = await response.json(content_type=None)
             if response.status >= 400:
                 raise RuntimeError(
-                    f"QQ API 请求失败: {method} {path}, HTTP {response.status}, {data}"
+                    t(
+                        "log.api_failed",
+                        method=method,
+                        path=path,
+                        status=response.status,
+                        data=data,
+                    )
                 )
             return data if isinstance(data, dict) else {"data": data}
 

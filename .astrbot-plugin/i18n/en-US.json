@@ -1,0 +1,90 @@
+{
+  "metadata": {
+    "display_name": "QQ Custom Menu",
+    "short_desc": "Let QQ bots display a custom menu",
+    "desc": "Configure custom menu entries in AstrBot WebUI and sync them to the QQ official bot. Private chat only."
+  },
+  "config": {
+    "language": {
+      "description": "Plugin log language",
+      "hint": "Only affects plugin logs; user-authored menu entries are not translated.",
+      "labels": [
+        "简体中文",
+        "English"
+      ]
+    },
+    "sync_menu": {
+      "description": "Sync custom menu on startup",
+      "hint": "When disabled, the plugin only reads the current QQ menu and does not overwrite it."
+    },
+    "qq_platforms": {
+      "description": "QQ official bot platform credentials",
+      "hint": "Fill in AppID and ClientSecret; if empty, the plugin reads QQ official platforms from AstrBot platform config.",
+      "templates": {
+        "qq_platform": {
+          "name": "QQ Bot",
+          "items": {
+            "appid": {
+              "description": "AppID"
+            },
+            "secret": {
+              "description": "ClientSecret"
+            },
+            "platform": {
+              "description": "Platform type",
+              "labels": [
+                "QQ Official Bot",
+                "QQ Official Bot Webhook"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "menu": {
+      "description": "QQ private chat custom menu",
+      "hint": "Click Add Entry, choose a menu type and fill in the fields. Up to 10 top-level items; for sub-menus, add a Sub-menu entry first, then add Send Message or Link entries and set Parent Menu Name to that sub-menu name.",
+      "templates": {
+        "send_message": {
+          "name": "Send Message",
+          "items": {
+            "name": {
+              "description": "Menu name"
+            },
+            "message": {
+              "description": "Message sent after click"
+            },
+            "parent": {
+              "description": "Parent menu name",
+              "hint": "Leave empty for a top-level menu; set to a Sub-menu entry name to attach this item to it."
+            }
+          }
+        },
+        "link": {
+          "name": "Link",
+          "items": {
+            "name": {
+              "description": "Menu name"
+            },
+            "link": {
+              "description": "Link opened after click",
+              "hint": "QQ requires https://; missing schemes are normalized to https:// automatically."
+            },
+            "parent": {
+              "description": "Parent menu name",
+              "hint": "Leave empty for a top-level menu; set to a Sub-menu entry name to attach this item to it."
+            }
+          }
+        },
+        "menu": {
+          "name": "Sub-menu",
+          "items": {
+            "name": {
+              "description": "Sub-menu name"
+            }
+          }
+        }
+      }
+    }
+  }
+}

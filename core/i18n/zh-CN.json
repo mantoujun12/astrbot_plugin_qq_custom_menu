@@ -1,0 +1,12 @@
+{
+  "log.migration_failed": "菜单配置迁移失败：{exc}",
+  "log.migration_done": "已将旧版菜单配置迁移为 template_list 格式，共 {count} 个菜单项",
+  "log.sync_failed": "QQ 自定义菜单同步失败：{exc}",
+  "log.no_platforms": "未配置 QQ 官方机器人凭证，跳过自定义菜单同步",
+  "log.menu_cleared": "菜单项为空，将清空 QQ 当前自定义菜单",
+  "log.menu_read_ok": "QQ 菜单读取成功：appid={appid}，menu={menu}",
+  "log.menu_sync_ok": "QQ 菜单同步成功：appid={appid}",
+  "log.unmatched_parent": "菜单配置中存在未匹配到子菜单的条目，已忽略：parent={parents}",
+  "log.token_failed": "获取 QQ access_token 失败：HTTP {status}，{data}",
+  "log.api_failed": "QQ API 请求失败：{method} {path}，HTTP {status}，{data}"
+}

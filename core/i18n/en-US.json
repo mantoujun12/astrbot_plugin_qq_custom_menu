@@ -1,0 +1,12 @@
+{
+  "log.migration_failed": "menu config migration failed: {exc}",
+  "log.migration_done": "migrated legacy menu config to template_list format: {count} item(s)",
+  "log.sync_failed": "QQ custom menu sync failed: {exc}",
+  "log.no_platforms": "no QQ official bot credentials configured, skip custom menu sync",
+  "log.menu_cleared": "menu is empty, QQ current custom menu will be cleared",
+  "log.menu_read_ok": "QQ menu read ok: appid={appid}, menu={menu}",
+  "log.menu_sync_ok": "QQ menu synced: appid={appid}",
+  "log.unmatched_parent": "menu entries reference missing sub-menu parents, ignored: parent={parents}",
+  "log.token_failed": "failed to fetch QQ access_token: HTTP {status}, {data}",
+  "log.api_failed": "QQ API request failed: {method} {path}, HTTP {status}, {data}"
+}

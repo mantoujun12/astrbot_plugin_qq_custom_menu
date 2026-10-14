@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import aiohttp
 from astrbot.api import logger
 from astrbot.api.star import Context, Star, register
 
-from .core import MenuSynchronizer, get_platforms, migrate_menu_config
+from .core import MenuSynchronizer, get_platforms, initialize_i18n, migrate_menu_config, t
 
 
 @register(
@@ -21,11 +23,12 @@ class QQCustomMenuPlugin(Star):
 
     def __init__(self, context: Context, config):
         super().__init__(context)
+        initialize_i18n(Path(__file__).resolve().parent / "core" / "i18n", config.get("language"))
         try:
             # 旧版菜单为 dict 结构，首次加载时迁移为 template_list 并保存
             migrate_menu_config(config)
         except Exception as exc:
-            logger.warning("菜单配置迁移失败: %s", exc, exc_info=True)
+            logger.warning(t("log.migration_failed", exc=exc), exc_info=True)
         self.config = dict(config)
         self._http: aiohttp.ClientSession | None = None
         self._syncer: MenuSynchronizer | None = None
@@ -40,7 +43,7 @@ class QQCustomMenuPlugin(Star):
         try:
             await self._syncer.sync()
         except Exception as exc:
-            logger.error("QQ 自定义菜单同步失败: %s", exc, exc_info=True)
+            logger.error(t("log.sync_failed", exc=exc), exc_info=True)
 
     async def terminate(self) -> None:
         if self._http is not None and not self._http.closed:

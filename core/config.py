@@ -6,6 +6,8 @@ from typing import Any
 
 from astrbot.api import logger
 
+from .i18n import t
+
 QQ_PLATFORM_TYPES = frozenset({"qq_official", "qq_official_webhook"})
 
 # template_list 模板 key -> QQ 菜单 type
@@ -158,10 +160,7 @@ def get_menu(config: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
             items.append(_to_qq_item(item))
 
     if pending_children:
-        logger.warning(
-            "菜单配置中存在未匹配到子菜单的条目，已忽略: parent=%s",
-            ", ".join(sorted(pending_children)),
-        )
+        logger.warning(t("log.unmatched_parent", parents=", ".join(sorted(pending_children))))
     return {"items": items}
 
 
@@ -225,5 +224,5 @@ def migrate_menu_config(config: Any) -> bool:
     save = getattr(config, "save_config", None)
     if callable(save):
         save()
-    logger.info("已将旧版菜单配置迁移为 template_list 格式，共 %d 个菜单项", len(migrated))
+    logger.info(t("log.migration_done", count=len(migrated)))
     return True

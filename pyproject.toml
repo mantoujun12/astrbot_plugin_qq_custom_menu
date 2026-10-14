@@ -16,6 +16,7 @@ show_missing = true
 
 [tool.ruff]
 line-length = 100
+extend-exclude = ["data"]
 # 插件最低支持 Python 3.10 (代码里统一 from __future__ import annotations)
 target-version = "py310"
 

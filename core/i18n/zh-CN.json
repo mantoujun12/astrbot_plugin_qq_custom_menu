@@ -8,5 +8,6 @@
   "log.menu_sync_ok": "QQ 菜单同步成功：appid={appid}",
   "log.unmatched_parent": "菜单配置中存在未匹配到子菜单的条目，已忽略：parent={parents}",
   "log.token_failed": "获取 QQ access_token 失败：HTTP {status}，{data}",
-  "log.api_failed": "QQ API 请求失败：{method} {path}，HTTP {status}，{data}"
+  "log.api_failed": "QQ API 请求失败：{method} {path}，HTTP {status}，{data}",
+  "log.menu_unchanged": "QQ 菜单未变化，跳过 PUT：appid={appid}"
 }

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import shutil
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -10,6 +12,16 @@ import pytest
 from core.menu import MenuSynchronizer
 from core.qq_api import API_BASE
 from tests.fakes import FakeSession
+
+MENU_STATE_DATA = Path(__file__).resolve().parent / "_menu_state_data"
+
+
+@pytest.fixture(autouse=True)
+def cleanup_menu_state_data() -> None:
+    yield
+    if MENU_STATE_DATA.exists():
+        shutil.rmtree(MENU_STATE_DATA)
+
 
 PLATFORM: dict[str, str] = {"appid": "app1", "secret": "sec1", "platform": "qq_official"}
 
@@ -122,3 +134,23 @@ async def test_sync_iterates_every_platform() -> None:
     assert len(token_requests) == 2
     appids = {r["kwargs"]["json"]["appId"] for r in token_requests}
     assert appids == {"app1", "app2"}
+
+
+@pytest.mark.asyncio
+async def test_sync_skips_unchanged_menu() -> None:
+    session = make_session()
+    config: dict[str, Any] = {
+        "sync_menu": True,
+        "menu": [{"type": "send_message", "name": "帮助", "send_message": "/help"}],
+    }
+    data_dir = MENU_STATE_DATA
+    if data_dir.exists():
+        shutil.rmtree(data_dir)
+    data_dir.mkdir(parents=True)
+    syncer = MenuSynchronizer(session, [PLATFORM], config, data_dir)
+
+    await syncer.sync()
+    await syncer.sync()
+
+    assert len(menu_calls(session, "GET")) == 2
+    assert len(menu_calls(session, "PUT")) == 1

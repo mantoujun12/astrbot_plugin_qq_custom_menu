@@ -43,6 +43,7 @@ QQ 官方机器人自定义菜单插件。在 AstrBot WebUI 中配置私聊菜�
 7. 启动时先执行 migrate_menu_config 把旧版 dict 菜单迁移为 template_list 并保存
 8. 异步一律 async/await, 不用回调风格
 9. 日志统一 from astrbot.api import logger, 前缀 [qq-custom-menu]
+10. 运行时数据写入 AstrBot 的 `data/plugin_data/<plugin_name>/`，不得落进仓库
 
 #### 代码风格
 

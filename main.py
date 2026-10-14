@@ -8,7 +8,14 @@ import aiohttp
 from astrbot.api import logger
 from astrbot.api.star import Context, Star, register
 
-from .core import MenuSynchronizer, get_platforms, initialize_i18n, migrate_menu_config, t
+from .core import (
+    MenuSynchronizer,
+    get_platforms,
+    initialize_i18n,
+    migrate_menu_config,
+    resolve_plugin_data_dir,
+    t,
+)
 
 
 @register(
@@ -39,6 +46,7 @@ class QQCustomMenuPlugin(Star):
             self._http,
             get_platforms(self.config, self.context),
             self.config,
+            resolve_plugin_data_dir(self.context),
         )
         try:
             await self._syncer.sync()

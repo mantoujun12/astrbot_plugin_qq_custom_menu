@@ -8,5 +8,6 @@
   "log.menu_sync_ok": "QQ menu synced: appid={appid}",
   "log.unmatched_parent": "menu entries reference missing sub-menu parents, ignored: parent={parents}",
   "log.token_failed": "failed to fetch QQ access_token: HTTP {status}, {data}",
-  "log.api_failed": "QQ API request failed: {method} {path}, HTTP {status}, {data}"
+  "log.api_failed": "QQ API request failed: {method} {path}, HTTP {status}, {data}",
+  "log.menu_unchanged": "QQ menu unchanged, skip PUT: appid={appid}"
 }

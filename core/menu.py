@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import aiohttp
@@ -10,6 +11,7 @@ from astrbot.api import logger
 from .config import get_menu
 from .i18n import t
 from .qq_api import QQClient
+from .state import MenuStateStore
 
 
 class MenuSynchronizer:
@@ -18,10 +20,12 @@ class MenuSynchronizer:
         http: aiohttp.ClientSession,
         platforms: list[dict[str, str]],
         config: dict[str, Any],
+        data_dir: Path | str | None = None,
     ):
         self.http = http
         self.platforms = platforms
         self.config = config
+        self.state = MenuStateStore(data_dir) if data_dir is not None else None
 
     async def sync(self) -> None:
         if not self.platforms:
@@ -43,5 +47,11 @@ class MenuSynchronizer:
                 )
             )
             if sync_menu:
+                appid = platform["appid"]
+                if self.state is not None and self.state.is_unchanged(appid, menu):
+                    logger.info(t("log.menu_unchanged", appid=appid))
+                    continue
                 await client.update_menu(menu)
-                logger.info(t("log.menu_sync_ok", appid=platform["appid"]))
+                if self.state is not None:
+                    self.state.mark_synced(appid, menu)
+                logger.info(t("log.menu_sync_ok", appid=appid))

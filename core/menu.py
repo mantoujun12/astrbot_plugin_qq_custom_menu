@@ -48,7 +48,13 @@ class MenuSynchronizer:
             )
             if sync_menu:
                 appid = platform["appid"]
-                if self.state is not None and self.state.is_unchanged(appid, menu):
+                # 是否 PUT 必须以刚读取到的远端菜单为准：本地摘要可能已过期，
+                # 也可能在 PUT 成功后保存失败，不能单独用于跳过同步。
+                remote_menu = current.get("menu")
+                if remote_menu == menu:
+                    if self.state is not None:
+                        # 远端已与配置一致，用远端内容修复可能过期的本地摘要。
+                        self.state.mark_synced(appid, remote_menu)
                     logger.info(t("log.menu_unchanged", appid=appid))
                     continue
                 await client.update_menu(menu)

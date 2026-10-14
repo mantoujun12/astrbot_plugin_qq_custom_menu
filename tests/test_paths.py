@@ -87,14 +87,53 @@ def test_star_tools_precedes_context(monkeypatch: Any) -> None:
 
 
 def test_home_fallback(monkeypatch: Any) -> None:
+    home = make_test_dir("home")
     monkeypatch.delenv("ASTRBOT_ROOT", raising=False)
-    monkeypatch.setenv("HOME", str(make_test_dir("home")))
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setattr("core.paths.Path.home", lambda: home)
+
     resolved = resolve_plugin_data_dir(None, "demo")
-    assert resolved.parts[-3:] == ("data", "plugin_data", "demo")
+
+    assert resolved == home / ".astrbot" / "data" / "plugin_data" / "demo"
     assert resolved.is_dir()
+
+
+def test_never_writes_into_working_directory(monkeypatch: Any) -> None:
+    probe = make_test_dir("cwd-probe")
+    monkeypatch.delenv("ASTRBOT_ROOT", raising=False)
+
+    def fail_home() -> Path:
+        raise RuntimeError("no home")
+
+    monkeypatch.setattr("core.paths.Path.home", fail_home)
+    monkeypatch.setattr("core.paths.Path.cwd", lambda: probe)
+    with pytest.raises(RuntimeError):
+        resolve_plugin_data_dir(None, "demo")
+    assert not (probe / "data" / "plugin_data" / "demo").exists()
 
 
 def test_call_or_none_handles_exception() -> None:
     from core.paths import _call_or_none
 
     assert _call_or_none(lambda: (_ for _ in ()).throw(RuntimeError("boom"))) is None
+
+
+def test_unwritable_first_candidate_falls_back(monkeypatch: Any) -> None:
+    first = make_test_dir("unwritable")
+    second = make_test_dir("fallback")
+
+    monkeypatch.setattr("core.paths._star_tools_data_dir", lambda plugin_name: None)
+    monkeypatch.setattr(
+        "core.paths._iter_candidates",
+        lambda context, plugin_name: iter([first / "bad", second / plugin_name]),
+    )
+
+    real_mkdir = Path.mkdir
+
+    def flaky_mkdir(self: Path, *args: Any, **kwargs: Any) -> None:
+        if "bad" in self.parts:
+            raise OSError("unwritable")
+        real_mkdir(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "mkdir", flaky_mkdir)
+    assert resolve_plugin_data_dir(None, "demo") == second / "demo"

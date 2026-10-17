@@ -27,6 +27,11 @@
 - `core/config.py` 增加 Dashboard 配置导出、菜单统计、脱敏与提交校验 helper
 - `release.yml` 改用 `scripts/bump_version.py --check` 校验版本、`scripts/package_plugin.py` 打包，并把发布流程改为幂等（tag / release 已存在时跳过）
 
+### 文档
+
+- 重写 README：补充 Dashboard、配置说明、同步行为、开发测试、打包发布、CI / Codecov 与目录结构
+- 扩充 AGENTS.md：补齐 Dashboard 架构约定、数据契约、测试覆盖率、版本与发布流程
+
 ### 测试
 
 - 新增 `tests/test_main.py`，覆盖插件装配、初始化同步、异常兜底与资源释放

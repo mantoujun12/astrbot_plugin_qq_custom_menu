@@ -6,9 +6,17 @@ from typing import Any
 
 from astrbot.api import logger
 
-from .i18n import t
+from .i18n import DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES, t
 
 QQ_PLATFORM_TYPES = frozenset({"qq_official", "qq_official_webhook"})
+
+# QQ 官方菜单限制：一级菜单最多 10 个，每个子菜单最多 10 个子项。
+MENU_TOP_LEVEL_MAX = 10
+MENU_SUB_ITEM_MAX = 10
+MENU_LIMITS: dict[str, int] = {
+    "top_level_max": MENU_TOP_LEVEL_MAX,
+    "sub_items_max": MENU_SUB_ITEM_MAX,
+}
 
 # template_list 模板 key -> QQ 菜单 type
 _TEMPLATE_MENU_TYPES = {
@@ -41,9 +49,14 @@ def _platform_entries(value: Any) -> list[dict[str, str]]:
     return result
 
 
+def get_plugin_platforms(config: dict[str, Any]) -> list[dict[str, str]]:
+    """只读取插件配置里的平台凭证，不触发 AstrBot 平台配置回退。"""
+    return _platform_entries(config.get("qq_platforms"))
+
+
 def get_platforms(config: dict[str, Any], context: Any) -> list[dict[str, str]]:
     """优先读取插件配置中的凭证，留空时回退读取 AstrBot 全局配置中的 QQ 官方平台。"""
-    configured = _platform_entries(config.get("qq_platforms"))
+    configured = get_plugin_platforms(config)
     if configured:
         return configured
     astrbot = _platform_entries(context.get_config().get("platform", []))
@@ -226,3 +239,338 @@ def migrate_menu_config(config: Any) -> bool:
         save()
     logger.info(t("log.migration_done", count=len(migrated)))
     return True
+
+
+# ---------------------------------------------------------------------------
+# Dashboard 配置读写
+# ---------------------------------------------------------------------------
+
+
+def mask_appid(value: Any) -> str:
+    """appid 脱敏：保留前 3 位与后 2 位，过短时整体打码。"""
+    text = str(value or "")
+    if len(text) <= 6:
+        return "*" * len(text)
+    return f"{text[:3]}{'*' * (len(text) - 5)}{text[-2:]}"
+
+
+def mask_secret(value: Any) -> str:
+    """ClientSecret 脱敏：只保留首尾各 2 位，绝不把明文回给前端。"""
+    text = str(value or "")
+    if len(text) <= 6:
+        return "*" * len(text)
+    return f"{text[:2]}{'*' * (len(text) - 4)}{text[-2:]}"
+
+
+def _editor_entry_append(
+    entries: list[dict[str, Any]],
+    item: dict[str, Any],
+    parent: str,
+) -> None:
+    """把归一化后的菜单项追加成 Dashboard 使用的扁平结构，并递归展开旧式子项。"""
+    entry: dict[str, Any] = {"type": item["type"], "name": item["name"], "parent": parent}
+    if item["type"] == "send_message":
+        entry["message"] = item["send_message"]
+    elif item["type"] == "link":
+        entry["link"] = item["link"]
+    entries.append(entry)
+    for child in item.get("sub_menu_items", []):
+        _editor_entry_append(entries, child, parent=item["name"])
+
+
+def get_menu_entries(config: dict[str, Any]) -> list[dict[str, Any]]:
+    """把配置里的菜单转换为 Dashboard 编辑用的扁平条目列表。
+
+    新格式中一级菜单与子项本来就是扁平存储；旧格式的子项内嵌在
+    ``sub_menu_items`` 里，这里一并展开，输出顺序保持「母菜单 → 子项」。
+    """
+    entries: list[dict[str, Any]] = []
+    for raw in _raw_menu_entries(config):
+        item = _normalize_menu_item(raw, _MENU_TYPES)
+        if item is None:
+            continue
+        parent = item["parent"] if item["type"] in _SUB_MENU_TYPES else ""
+        _editor_entry_append(entries, item, parent=parent)
+    return entries
+
+
+def menu_stats(config: dict[str, Any]) -> dict[str, int]:
+    """统计一级菜单与子项数量，供状态页与保存前校验共用。"""
+    entries = get_menu_entries(config)
+    sub_items = sum(1 for entry in entries if entry["parent"])
+    return {
+        "top_level": len(entries) - sub_items,
+        "sub_items": sub_items,
+        "total": len(entries),
+        **MENU_LIMITS,
+    }
+
+
+def _export_plugin_platforms(config: dict[str, Any]) -> list[dict[str, Any]]:
+    """导出插件配置里的平台条目，secret 只回掩码。"""
+    raw_platforms = config.get("qq_platforms")
+    if not isinstance(raw_platforms, list):
+        return []
+    platforms: list[dict[str, Any]] = []
+    for raw in raw_platforms:
+        if not isinstance(raw, dict):
+            continue
+        secret = str(raw.get("secret") or "")
+        platforms.append(
+            {
+                "appid": str(raw.get("appid") or ""),
+                "platform": str(raw.get("platform") or raw.get("type") or "qq_official"),
+                "secret_masked": mask_secret(secret),
+                "secret_set": bool(secret),
+            }
+        )
+    return platforms
+
+
+def _runtime_platforms(
+    config: dict[str, Any],
+    overrides: list[dict[str, str]] | None,
+) -> list[dict[str, Any]]:
+    """导出当前实际生效的平台列表（插件配置优先，否则回退 AstrBot 平台）。"""
+    source = "plugin" if get_plugin_platforms(config) else "astrbot"
+    raw = overrides if overrides is not None else get_plugin_platforms(config)
+    result: list[dict[str, Any]] = []
+    for entry in raw:
+        secret = str(entry.get("secret") or "")
+        result.append(
+            {
+                "pf_id": mask_appid(entry.get("appid")),
+                "appid": mask_appid(entry.get("appid")),
+                "platform": str(entry.get("platform") or "qq_official"),
+                "secret_set": bool(secret),
+                "source": source,
+            }
+        )
+    return result
+
+
+def export_config(
+    config: dict[str, Any],
+    runtime_platforms: list[dict[str, str]] | None = None,
+) -> dict[str, Any]:
+    """导出 Dashboard 配置接口的响应体。
+
+    ``runtime_platforms`` 是 ``get_platforms()`` 的结果（包含回退到 AstrBot
+    平台配置的凭证）；插件自身的 ``qq_platforms`` 为空时，Dashboard 只能展示
+    这些只读平台，保存时不会把它们写回插件配置。
+    """
+    plugin_platforms = _export_plugin_platforms(config)
+    return {
+        "language": str(config.get("language") or DEFAULT_LANGUAGE),
+        "sync_menu": config.get("sync_menu", True) is not False,
+        "qq_platforms": plugin_platforms,
+        "runtime_platforms": _runtime_platforms(config, runtime_platforms),
+        "using_fallback": not plugin_platforms and bool(runtime_platforms),
+        "menu": get_menu_entries(config),
+        "limits": dict(MENU_LIMITS),
+    }
+
+
+def _normalize_platforms(
+    existing: dict[str, Any],
+    raw_platforms: Any,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """校验并归一化 Dashboard 提交的平台条目。
+
+    secret 留空表示沿用同 appid 的已保存密钥；新增平台必须提供密钥。
+    """
+    if not isinstance(raw_platforms, list):
+        return [], [t("web.config_platforms_invalid")]
+
+    existing_secrets: dict[str, str] = {}
+    raw_existing = existing.get("qq_platforms")
+    if isinstance(raw_existing, list):
+        for entry in raw_existing:
+            if isinstance(entry, dict):
+                appid = str(entry.get("appid") or "").strip()
+                secret = str(entry.get("secret") or "")
+                if appid and secret:
+                    existing_secrets[appid] = secret
+
+    platforms: list[dict[str, Any]] = []
+    errors: list[str] = []
+    seen: set[str] = set()
+    for index, entry in enumerate(raw_platforms, start=1):
+        if not isinstance(entry, dict):
+            errors.append(t("web.config_platform_invalid", index=index))
+            continue
+        appid = str(entry.get("appid") or "").strip()
+        if not appid:
+            errors.append(t("web.config_appid_empty", index=index))
+            continue
+        if appid in seen:
+            errors.append(t("web.config_appid_duplicate", appid=appid))
+            continue
+        seen.add(appid)
+
+        platform = str(entry.get("platform") or "qq_official").strip()
+        if platform not in QQ_PLATFORM_TYPES:
+            errors.append(t("web.config_platform_type_invalid", appid=appid))
+            continue
+
+        secret = str(entry.get("secret") or "").strip()
+        if not secret:
+            secret = existing_secrets.get(appid, "")
+        if not secret:
+            errors.append(t("web.config_secret_required", appid=appid))
+            continue
+
+        platforms.append(
+            {
+                "__template_key": "qq_platform",
+                "appid": appid,
+                "secret": secret,
+                "platform": platform,
+            }
+        )
+    return platforms, errors
+
+
+def _normalize_menu_entries(raw_menu: Any) -> tuple[list[dict[str, Any]], list[str]]:
+    """校验 Dashboard 提交的菜单条目，返回 template_list 结构。"""
+    if not isinstance(raw_menu, list):
+        return [], [t("web.config_menu_invalid")]
+
+    entries: list[dict[str, Any]] = []
+    errors: list[str] = []
+    top_level_names: list[str] = []
+    menu_names: set[str] = set()
+    child_counts: dict[str, int] = {}
+
+    for index, raw in enumerate(raw_menu, start=1):
+        if not isinstance(raw, dict):
+            errors.append(t("web.config_menu_entry_invalid", index=index))
+            continue
+        item_type = str(raw.get("type") or "")
+        name = str(raw.get("name") or "").strip()
+        parent = str(raw.get("parent") or "").strip()
+
+        if item_type not in _MENU_TYPES:
+            errors.append(t("web.config_menu_type_invalid", index=index))
+            continue
+        if not name:
+            errors.append(t("web.config_menu_name_empty", index=index))
+            continue
+
+        if item_type == "menu":
+            if parent:
+                errors.append(t("web.config_menu_parent_not_allowed", name=name))
+                continue
+            menu_names.add(name)
+            top_level_names.append(name)
+            entries.append({"__template_key": "menu", "name": name})
+            continue
+
+        if not parent:
+            top_level_names.append(name)
+        else:
+            child_counts[parent] = child_counts.get(parent, 0) + 1
+
+        if item_type == "send_message":
+            message = raw.get("message")
+            if not isinstance(message, str) or not message.strip():
+                errors.append(t("web.config_menu_message_empty", name=name))
+                continue
+            entries.append(
+                {
+                    "__template_key": "send_message",
+                    "name": name,
+                    "message": message.strip(),
+                    "parent": parent,
+                }
+            )
+            continue
+
+        link = raw.get("link")
+        normalized_link = _normalize_link(link) if isinstance(link, str) else None
+        if normalized_link is None:
+            errors.append(t("web.config_menu_link_empty", name=name))
+            continue
+        entries.append(
+            {
+                "__template_key": "link",
+                "name": name,
+                "link": normalized_link,
+                "parent": parent,
+            }
+        )
+
+    if len(top_level_names) > MENU_TOP_LEVEL_MAX:
+        errors.append(t("web.config_menu_top_limit", max=MENU_TOP_LEVEL_MAX))
+    if len(set(top_level_names)) != len(top_level_names):
+        errors.append(t("web.config_menu_duplicate"))
+    for entry in entries:
+        parent = str(entry.get("parent") or "")
+        if parent and parent not in menu_names:
+            errors.append(t("web.config_menu_parent_invalid", name=entry["name"], parent=parent))
+    for name, count in child_counts.items():
+        if count > MENU_SUB_ITEM_MAX:
+            errors.append(t("web.config_menu_sub_limit", name=name, max=MENU_SUB_ITEM_MAX))
+
+    return entries, errors
+
+
+def normalize_config_payload(
+    existing: dict[str, Any],
+    payload: dict[str, Any],
+) -> tuple[dict[str, Any], list[str]]:
+    """校验 Dashboard 提交的配置，返回（可写回的字段，错误列表）。
+
+    载荷允许只带部分字段，缺省字段沿用已保存的值，避免「设置」页与「菜单」页
+    互相覆盖。任一字段出错时整次保存都会被拒绝。
+    """
+    values: dict[str, Any] = {}
+    errors: list[str] = []
+
+    if "language" in payload:
+        language = payload.get("language")
+        if not isinstance(language, str) or language not in SUPPORTED_LANGUAGES:
+            errors.append(
+                t("web.config_language_invalid", languages=" / ".join(SUPPORTED_LANGUAGES))
+            )
+        else:
+            values["language"] = language
+
+    if "sync_menu" in payload:
+        sync_menu = payload.get("sync_menu")
+        if not isinstance(sync_menu, bool):
+            errors.append(t("web.config_sync_menu_invalid"))
+        else:
+            values["sync_menu"] = sync_menu
+
+    if "qq_platforms" in payload:
+        platforms, platform_errors = _normalize_platforms(existing, payload.get("qq_platforms"))
+        errors.extend(platform_errors)
+        if not platform_errors:
+            values["qq_platforms"] = platforms
+
+    if "menu" in payload:
+        menu, menu_errors = _normalize_menu_entries(payload.get("menu"))
+        errors.extend(menu_errors)
+        if not menu_errors:
+            values["menu"] = menu
+
+    return values, errors
+
+
+__all__ = [
+    "MENU_LIMITS",
+    "MENU_SUB_ITEM_MAX",
+    "MENU_TOP_LEVEL_MAX",
+    "QQ_PLATFORM_TYPES",
+    "export_config",
+    "get_menu",
+    "get_menu_entries",
+    "get_platforms",
+    "get_plugin_platforms",
+    "mask_appid",
+    "mask_secret",
+    "menu_stats",
+    "migrate_menu_config",
+    "normalize_config_payload",
+]

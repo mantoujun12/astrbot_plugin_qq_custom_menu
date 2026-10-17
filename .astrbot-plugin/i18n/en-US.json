@@ -86,5 +86,173 @@
         }
       }
     }
+  },
+  "views": {
+    "dashboard": {
+      "title": "QQ Custom Menu",
+      "description": "Maintain the QQ official bot private-chat menu in AstrBot WebUI, inspect sync state and trigger a sync.",
+      "nav": {
+        "status": "Overview",
+        "menu": "Menu",
+        "platforms": "Robots",
+        "settings": "Settings",
+        "collapse": "Collapse sidebar",
+        "expand": "Expand sidebar",
+        "openDrawer": "Open sidebar",
+        "closeDrawer": "Close sidebar"
+      },
+      "common": {
+        "cancel": "Cancel",
+        "save": "Save",
+        "reload": "Reload",
+        "delete": "Delete"
+      },
+      "status": {
+        "title": "Overview",
+        "subtitle": "Inspect menu configuration, sync state and credentials for each QQ platform.",
+        "refresh": "Refresh",
+        "loadFailed": "Failed to load status",
+        "mockHint": "Local dev environment: showing mock data, not connected to the AstrBot backend.",
+        "cards": {
+          "platforms": "QQ platforms",
+          "topLevel": "Top-level items",
+          "subItems": "Sub-items",
+          "total": "Menu entries"
+        },
+        "state": {
+          "synced": "Synced",
+          "pending": "Pending sync",
+          "unknown": "Never synced",
+          "disabled": "Sync disabled"
+        },
+        "source": {
+          "plugin": "Plugin config",
+          "astrbot": "AstrBot platform config"
+        },
+        "secret": "ClientSecret",
+        "secretSet": "Configured",
+        "secretMissing": "Missing",
+        "syncDisabled": "\"Sync custom menu on startup\" is disabled: the plugin only reads the QQ menu and never overwrites it.",
+        "fallbackHint": "Credentials currently come from AstrBot platform config and are read-only; adding plugin entries on the Robots page takes precedence.",
+        "empty": {
+          "platforms": {
+            "title": "No QQ platform available yet",
+            "description": "Fill in AppID and ClientSecret on the Robots page, or enable a QQ official bot in AstrBot platform config.",
+            "action": "Configure robots"
+          },
+          "menu": {
+            "description": "No menu entries configured; syncing would clear the existing custom menu on QQ."
+          }
+        },
+        "previewTitle": "Menu preview",
+        "previewSubtitle": "This is the menu structure the plugin will write to QQ.",
+        "editMenu": "Edit menu",
+        "sync": {
+          "title": "Sync menu",
+          "subtitle": "Write the current configuration to the QQ official bot menu with live progress.",
+          "action": "Sync menu",
+          "running": "Syncing...",
+          "progress": "Progress {completed}/{total}",
+          "done": "Sync finished: {succeeded} platform(s) succeeded, {failed} failed",
+          "retry": "Retry",
+          "empty": "No sync run yet.",
+          "disabledMock": "The AstrBot backend is unavailable in local dev, so syncing is disabled."
+        }
+      },
+      "menu": {
+        "title": "Menu",
+        "subtitle": "Maintain top-level entries and children for the QQ private-chat menu; saving writes back to plugin config.",
+        "saveAndSync": "Save and sync",
+        "type": {
+          "send_message": "Send message",
+          "link": "Link",
+          "menu": "Sub-menu"
+        },
+        "childCount": "{count} child item(s)",
+        "empty": "No menu entries yet",
+        "addChild": "Add child",
+        "edit": "Edit",
+        "delete": "Delete",
+        "dialogEdit": "Edit menu entry",
+        "dialogAdd": "Add menu entry",
+        "parentLabel": "Parent: {parent}",
+        "fieldType": "Type",
+        "fieldName": "Menu name",
+        "fieldMessage": "Message sent after click",
+        "messageHint": "For example /help",
+        "fieldLink": "Link opened after click",
+        "linkHint": "QQ requires https://; missing schemes are normalized automatically.",
+        "menuHint": "A sub-menu has no payload; after saving, add Send Message or Link children to it.",
+        "mockHint": "Local dev environment: showing mock data, saving is disabled.",
+        "saved": "Menu saved and applied.",
+        "emptyWarning": "The menu is empty; with \"Sync custom menu on startup\" enabled, syncing will clear the existing custom menu on QQ.",
+        "listTitle": "Menu entries",
+        "listSubtitle": "Top-level {top}/{maxTop}; each sub-menu allows at most {maxSub} children.",
+        "addTop": "Add top-level menu",
+        "validation": {
+          "topLimit": "At most {max} top-level entries are allowed",
+          "duplicate": "Top-level menu names must be unique",
+          "nameEmpty": "Menu name cannot be empty",
+          "menuParent": "A sub-menu cannot have a parent",
+          "parentMissing": "Parent \"{parent}\" does not exist",
+          "messageEmpty": "Menu \"{name}\" is missing message content",
+          "linkEmpty": "Menu \"{name}\" is missing a link",
+          "subLimit": "Sub-menu \"{name}\" allows at most {max} children"
+        }
+      },
+      "platforms": {
+        "title": "Robots",
+        "subtitle": "Each QQ official bot keeps its own AppID and ClientSecret; plugin config takes precedence over AstrBot platform config.",
+        "mockHint": "Local dev environment: showing mock data, saving is disabled.",
+        "fallbackHint": "No plugin credentials configured; the plugin currently uses QQ official bots from AstrBot platform config. Adding entries below takes precedence.",
+        "empty": "No plugin-configured robots yet",
+        "emptyHint": "After adding AppID and ClientSecret, the plugin syncs these robots' menus on startup.",
+        "newTitle": "New robot",
+        "newSubtitle": "Fill in credentials and save",
+        "savedSubtitle": "Saved credentials",
+        "appid": "AppID",
+        "secret": "ClientSecret",
+        "secretPlaceholder": "{masked} (leave empty to keep)",
+        "platform": "Platform type",
+        "add": "Add robot",
+        "runtimeTitle": "Effective platforms",
+        "runtimeSubtitle": "Startup sync and the overview page use this list.",
+        "sourcePlugin": "Plugin config",
+        "sourceAstrbot": "AstrBot platform config",
+        "saved": "Robot credentials saved and applied.",
+        "type": {
+          "qq_official": "QQ official bot",
+          "qq_official_webhook": "QQ official bot Webhook"
+        },
+        "validation": {
+          "appidEmpty": "Platform entry #{index} is missing AppID",
+          "duplicate": "Duplicate AppID: {appid}",
+          "typeInvalid": "Platform {appid} has an invalid type",
+          "secretEmpty": "Platform {appid} is missing ClientSecret"
+        }
+      },
+      "settings": {
+        "title": "Settings",
+        "subtitle": "Plugin-wide settings: log language and startup sync.",
+        "basicTitle": "Basics",
+        "basicSubtitle": "The log language only affects plugin logs.",
+        "language": "Log language",
+        "languageName": {
+          "zh-CN": "简体中文",
+          "en-US": "English"
+        },
+        "syncMenu": "Sync custom menu on startup",
+        "syncMenuHint": "When disabled, the plugin only reads the current QQ menu and never overwrites it.",
+        "mockHint": "Local dev environment: editable preview, saving is disabled.",
+        "saved": "Settings saved and applied.",
+        "aboutTitle": "About",
+        "aboutSubtitle": "Plugin summary and repository link.",
+        "aboutName": "QQ Custom Menu",
+        "aboutDescription": "Maintain menu entries in AstrBot WebUI and sync them to the QQ official bot private-chat menu.",
+        "githubTitle": "GitHub repository",
+        "githubDescription": "View source code, changelog and issue tracker.",
+        "githubAction": "Open GitHub"
+      }
+    }
   }
 }

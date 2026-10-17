@@ -4,7 +4,20 @@ from __future__ import annotations
 
 from typing import Any
 
-from core.config import get_menu, get_platforms, migrate_menu_config
+from core.config import (
+    MENU_SUB_ITEM_MAX,
+    MENU_TOP_LEVEL_MAX,
+    export_config,
+    get_menu,
+    get_menu_entries,
+    get_platforms,
+    get_plugin_platforms,
+    mask_appid,
+    mask_secret,
+    menu_stats,
+    migrate_menu_config,
+    normalize_config_payload,
+)
 from tests.fakes import FakeContext
 
 # ---------------------------------------------------------------------------
@@ -339,3 +352,274 @@ def test_migrate_menu_config_skips_invalid_children() -> None:
         {"__template_key": "send_message", "name": "关于", "message": "/about", "parent": "更多"},
         {"__template_key": "menu", "name": "无子项"},
     ]
+
+
+# ---------------------------------------------------------------------------
+# Dashboard 配置读写：导出、统计、脱敏与提交校验
+# ---------------------------------------------------------------------------
+
+
+def test_mask_helpers() -> None:
+    assert mask_appid("123456789") == "123****89"
+    assert mask_appid("short") == "*****"
+    assert mask_appid(None) == ""
+    assert mask_secret("abcdef123456") == "ab********56"
+    assert mask_secret("tiny") == "****"
+    assert mask_secret(None) == ""
+
+
+def test_get_plugin_platforms_does_not_fall_back() -> None:
+    config: dict[str, Any] = {
+        "qq_platforms": [
+            {"appid": "1", "secret": "s", "platform": "qq_official"},
+            {"appid": "2"},
+            "invalid",
+        ]
+    }
+    assert get_plugin_platforms(config) == [
+        {"appid": "1", "secret": "s", "platform": "qq_official"},
+    ]
+    assert get_plugin_platforms({}) == []
+
+
+def test_get_menu_entries_flattens_legacy_children() -> None:
+    config: dict[str, Any] = {
+        "menu": [
+            {
+                "type": "menu",
+                "name": "更多",
+                "sub_menu_items": [
+                    {"type": "send_message", "name": "关于", "send_message": "/about"},
+                ],
+            },
+            {"type": "link", "name": "官网", "link": "example.com"},
+        ]
+    }
+    assert get_menu_entries(config) == [
+        {"type": "menu", "name": "更多", "parent": ""},
+        {"type": "send_message", "name": "关于", "parent": "更多", "message": "/about"},
+        {"type": "link", "name": "官网", "parent": "", "link": "https://example.com"},
+    ]
+
+
+def test_get_menu_entries_keeps_flat_children() -> None:
+    config: dict[str, Any] = {
+        "menu": [
+            {"type": "menu", "name": "更多"},
+            {"type": "send_message", "name": "关于", "message": "/about", "parent": "更多"},
+        ]
+    }
+    assert get_menu_entries(config) == [
+        {"type": "menu", "name": "更多", "parent": ""},
+        {"type": "send_message", "name": "关于", "parent": "更多", "message": "/about"},
+    ]
+
+
+def test_menu_stats_counts_top_level_and_children() -> None:
+    config: dict[str, Any] = {
+        "menu": [
+            {"type": "menu", "name": "更多"},
+            {"type": "send_message", "name": "关于", "message": "/about", "parent": "更多"},
+            {"type": "link", "name": "官网", "link": "example.com"},
+        ]
+    }
+    assert menu_stats(config) == {
+        "top_level": 2,
+        "sub_items": 1,
+        "total": 3,
+        "top_level_max": MENU_TOP_LEVEL_MAX,
+        "sub_items_max": MENU_SUB_ITEM_MAX,
+    }
+
+
+def test_export_config_masks_secrets_and_expands_menu() -> None:
+    config: dict[str, Any] = {
+        "language": "en-US",
+        "sync_menu": False,
+        "qq_platforms": [
+            {"appid": "123456789", "secret": "abcdef123456", "platform": "qq_official"},
+        ],
+        "menu": [
+            {"type": "send_message", "name": "帮助", "send_message": "/help"},
+            {
+                "type": "menu",
+                "name": "更多",
+                "sub_menu_items": [
+                    {"type": "link", "name": "文档", "link": "docs.app"},
+                ],
+            },
+        ],
+    }
+    payload = export_config(config)
+
+    assert payload["language"] == "en-US"
+    assert payload["sync_menu"] is False
+    assert payload["using_fallback"] is False
+    assert payload["qq_platforms"] == [
+        {
+            "appid": "123456789",
+            "platform": "qq_official",
+            "secret_masked": "ab********56",
+            "secret_set": True,
+        }
+    ]
+    assert payload["menu"] == [
+        {"type": "send_message", "name": "帮助", "parent": "", "message": "/help"},
+        {"type": "menu", "name": "更多", "parent": ""},
+        {"type": "link", "name": "文档", "parent": "更多", "link": "https://docs.app"},
+    ]
+    assert payload["limits"] == {
+        "top_level_max": MENU_TOP_LEVEL_MAX,
+        "sub_items_max": MENU_SUB_ITEM_MAX,
+    }
+
+
+def test_export_config_uses_fallback_platforms() -> None:
+    runtime = [{"appid": "abc", "secret": "secret", "platform": "qq_official"}]
+    payload = export_config({}, runtime)
+
+    assert payload["language"] == "zh-CN"
+    assert payload["sync_menu"] is True
+    assert payload["qq_platforms"] == []
+    assert payload["using_fallback"] is True
+    assert payload["runtime_platforms"] == [
+        {
+            "pf_id": "***",
+            "appid": "***",
+            "platform": "qq_official",
+            "secret_set": True,
+            "source": "astrbot",
+        }
+    ]
+
+
+def test_export_config_skips_invalid_platform_entries() -> None:
+    config: dict[str, Any] = {"qq_platforms": ["invalid", {"appid": "a"}]}
+    payload = export_config(config)
+    assert payload["qq_platforms"] == [
+        {
+            "appid": "a",
+            "platform": "qq_official",
+            "secret_masked": "",
+            "secret_set": False,
+        }
+    ]
+
+
+def test_normalize_config_payload_keeps_partial_fields() -> None:
+    existing: dict[str, Any] = {
+        "qq_platforms": [
+            {"appid": "a", "secret": "old-secret", "platform": "qq_official"},
+        ]
+    }
+    payload: dict[str, Any] = {
+        "language": "en-US",
+        "sync_menu": False,
+        "qq_platforms": [
+            {"appid": "a", "secret": "", "platform": "qq_official"},
+            {"appid": "b", "secret": "new-secret", "platform": "qq_official_webhook"},
+        ],
+        "menu": [
+            {"type": "menu", "name": "更多"},
+            {"type": "send_message", "name": "关于", "message": " /about ", "parent": "更多"},
+            {"type": "link", "name": "文档", "link": "docs.app", "parent": "更多"},
+            {"type": "link", "name": "官网", "link": "example.com"},
+        ],
+    }
+
+    values, errors = normalize_config_payload(existing, payload)
+
+    assert errors == []
+    assert values["language"] == "en-US"
+    assert values["sync_menu"] is False
+    assert values["qq_platforms"] == [
+        {
+            "__template_key": "qq_platform",
+            "appid": "a",
+            "secret": "old-secret",
+            "platform": "qq_official",
+        },
+        {
+            "__template_key": "qq_platform",
+            "appid": "b",
+            "secret": "new-secret",
+            "platform": "qq_official_webhook",
+        },
+    ]
+    assert values["menu"] == [
+        {"__template_key": "menu", "name": "更多"},
+        {"__template_key": "send_message", "name": "关于", "message": "/about", "parent": "更多"},
+        {"__template_key": "link", "name": "文档", "link": "https://docs.app", "parent": "更多"},
+        {"__template_key": "link", "name": "官网", "link": "https://example.com", "parent": ""},
+    ]
+
+
+def test_normalize_config_payload_rejects_invalid_language_and_sync_menu() -> None:
+    values, errors = normalize_config_payload({}, {"language": "fr-FR", "sync_menu": "yes"})
+    assert len(errors) == 2
+    assert "language" not in values
+    assert "sync_menu" not in values
+
+
+def test_normalize_config_payload_rejects_invalid_platforms() -> None:
+    cases: list[Any] = [
+        "oops",
+        ["oops"],
+        [{"appid": ""}],
+        [{"appid": "a", "secret": "s"}, {"appid": "a", "secret": "s"}],
+        [{"appid": "a", "secret": "s", "platform": "bad"}],
+        [{"appid": "a", "secret": ""}],
+    ]
+    # 错误文案跟随当前语言，这里只断言确实失败且没有写出字段
+    for platforms in cases:
+        values, errors = normalize_config_payload({}, {"qq_platforms": platforms})
+        assert errors, platforms
+        assert "qq_platforms" not in values
+
+
+def test_normalize_config_payload_rejects_invalid_menu() -> None:
+    cases: list[Any] = [
+        "oops",
+        ["oops"],
+        [{"type": "bad", "name": "x"}],
+        [{"type": "send_message", "name": ""}],
+        [{"type": "send_message", "name": "无消息"}],
+        [{"type": "link", "name": "无链接", "link": "   "}],
+        [{"type": "link", "name": "坏链接", "link": 123}],
+        [{"type": "menu", "name": "子菜单", "parent": "父"}],
+        [{"type": "send_message", "name": "孤儿", "message": "/x", "parent": "不存在"}],
+        [
+            {"type": "menu", "name": "更多"},
+            *[
+                {
+                    "type": "send_message",
+                    "name": f"子项{index}",
+                    "message": "/x",
+                    "parent": "更多",
+                }
+                for index in range(MENU_SUB_ITEM_MAX + 1)
+            ],
+        ],
+    ]
+    for menu in cases:
+        values, errors = normalize_config_payload({}, {"menu": menu})
+        assert errors, menu
+        assert "menu" not in values
+
+
+def test_normalize_config_payload_rejects_top_level_limit_and_duplicates() -> None:
+    too_many = [
+        {"type": "send_message", "name": f"菜单{index}", "message": "/x"}
+        for index in range(MENU_TOP_LEVEL_MAX + 1)
+    ]
+    values, errors = normalize_config_payload({}, {"menu": too_many})
+    assert errors
+    assert "menu" not in values
+
+    duplicated = [
+        {"type": "send_message", "name": "重复", "message": "/x"},
+        {"type": "link", "name": "重复", "link": "example.com"},
+    ]
+    values, errors = normalize_config_payload({}, {"menu": duplicated})
+    assert errors
+    assert "menu" not in values

@@ -3,26 +3,30 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import aiohttp
 from astrbot.api import logger
 from astrbot.api.star import Context, Star, register
 
 from .core import (
+    PLUGIN_NAME,
+    PLUGIN_VERSION,
     MenuSynchronizer,
     get_platforms,
     initialize_i18n,
     migrate_menu_config,
+    register_web_apis,
     resolve_plugin_data_dir,
     t,
 )
 
 
 @register(
-    "astrbot_plugin_qq_custom_menu",
+    PLUGIN_NAME,
     "mantoujun12",
     "用户在 AstrBot WebUI 配置 QQ 官方机器人私聊自定义菜单",
-    "v0.2.3",
+    PLUGIN_VERSION,
     "https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu",
 )
 class QQCustomMenuPlugin(Star):
@@ -36,9 +40,38 @@ class QQCustomMenuPlugin(Star):
             migrate_menu_config(config)
         except Exception as exc:
             logger.warning(t("log.migration_failed", exc=exc), exc_info=True)
-        self.config = dict(config)
+        # 保留 AstrBotConfig 原对象，Dashboard 保存配置时才能调用它的持久化方法
+        self.config = config
+        self.data_dir = resolve_plugin_data_dir(self.context)
         self._http: aiohttp.ClientSession | None = None
         self._syncer: MenuSynchronizer | None = None
+        # 视图接口在 __init__ 注册；syncer 到 initialize() 才创建，handler
+        # 每次请求都会通过回调取最新实例，避免持有过期引用
+        self._web_api = register_web_apis(
+            self.context,
+            lambda: self._syncer,
+            lambda: dict(self.config),
+            get_platforms=lambda: get_platforms(self.config, self.context),
+            save_config=self._save_config,
+            data_dir=self.data_dir,
+            version=PLUGIN_VERSION,
+        )
+
+    async def _save_config(self, values: dict[str, Any]) -> None:
+        """把 Dashboard 提交的字段写回 AstrBot 配置并刷新同步器。"""
+        save_async = getattr(self.config, "save_config_async", None)
+        if callable(save_async):
+            await save_async(values)
+        else:
+            self.config.update(values)
+            save_sync = getattr(self.config, "save_config", None)
+            if callable(save_sync):
+                save_sync()
+        # save_config_async 内部只在写入时合并字段，这里再同步一次内存视图
+        self.config.update(values)
+        if self._syncer is not None:
+            self._syncer.set_config(self.config)
+            self._syncer.set_platforms(get_platforms(self.config, self.context))
 
     async def initialize(self) -> None:
         self._http = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=15))
@@ -46,7 +79,7 @@ class QQCustomMenuPlugin(Star):
             self._http,
             get_platforms(self.config, self.context),
             self.config,
-            resolve_plugin_data_dir(self.context),
+            self.data_dir,
         )
         try:
             await self._syncer.sync()
@@ -54,6 +87,9 @@ class QQCustomMenuPlugin(Star):
             logger.error(t("log.sync_failed", exc=exc), exc_info=True)
 
     async def terminate(self) -> None:
+        if self._web_api is not None:
+            await self._web_api.runner.close()
+            self._web_api = None
         if self._http is not None and not self._http.closed:
             await self._http.close()
         self._http = None

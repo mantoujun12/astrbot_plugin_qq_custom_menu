@@ -17,12 +17,15 @@
 - 新增 `core/sync_runner.py`：后台单飞同步任务、事件缓冲与断线续订（`since`）
 - 新增 `web/dashboard/`（Vue 3 + Vite 8 + Vuetify 4 + Vitest）与构建产物 `pages/dashboard/`
 - 新增 Dashboard CI（`ci-dashboard.yml`）与 Codecov（`codecov-dashboard.yml`），并在 Dependabot 中接管前端依赖
+- 新增 `scripts/package_plugin.py`：只收录 AstrBot 会读取的文件，固定时间戳生成可复现 zip
+- 新增 `scripts/bump_version.py`：同步 `metadata.yaml` / `core/paths.py` / `web/dashboard/package.json` 三处版本号，支持 `--check` / `--dry-run` / `--force` 与交互式选择
 
 ### 变更
 
 - `core/menu.py` 增加结构化同步事件与逐平台失败隔离，Dashboard 可展示每个平台的同步结果
 - `main.py` 注册视图 Web API、暴露配置保存回调，并使用 `core/paths.py` 的 `PLUGIN_VERSION` 作为唯一版本来源
 - `core/config.py` 增加 Dashboard 配置导出、菜单统计、脱敏与提交校验 helper
+- `release.yml` 改用 `scripts/bump_version.py --check` 校验版本、`scripts/package_plugin.py` 打包，并把发布流程改为幂等（tag / release 已存在时跳过）
 
 ### 测试
 
@@ -30,6 +33,7 @@
 - 补充 `core/config.py`、`core/i18n.py`、`core/paths.py`、`core/state.py` 的边界分支测试，Python 行覆盖率提升到 99%
 - 新增 `tests/test_web_api.py`、`tests/test_sync_runner.py` 与菜单同步事件测试，Python 行覆盖率保持 99%
 - 新增 24 个 Vitest 测试文件，前端行覆盖率约 94%，并在 `vitest.config.ts` 中设置覆盖率硬门
+- 新增 `tests/test_package_script.py` 与 `tests/test_bump_script.py`，覆盖打包内容、可复现性、版本号解析 / 写回 / 校验与交互式流程
 
 ## [v0.2.3] - 2026-10-12
 

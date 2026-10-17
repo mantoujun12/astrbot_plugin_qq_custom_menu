@@ -5,6 +5,19 @@
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/),
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased]
+
+### 新增
+
+- 新增 `codecov.yml`，按 `unittests`（Python）与 `dashboard`（前端）两个 flag 分别设置覆盖率门禁与评论
+- 新增 `.gitattributes`，把前端构建产物标记为生成文件并使用 `merge=binary`，同时统一文本文件的 LF 换行
+- CI 拆分为 lint / Pytest 矩阵（`ci.yml`）与覆盖率上传（`codecov-core.yml`），覆盖率任务同时上传 XML 与 JUnit 测试报告
+
+### 测试
+
+- 新增 `tests/test_main.py`，覆盖插件装配、初始化同步、异常兜底与资源释放
+- 补充 `core/config.py`、`core/i18n.py`、`core/paths.py`、`core/state.py` 的边界分支测试，Python 行覆盖率提升到 99%
+
 ## [v0.2.3] - 2026-10-12
 
 ### 变更

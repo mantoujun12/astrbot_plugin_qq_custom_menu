@@ -137,3 +137,24 @@ def test_unwritable_first_candidate_falls_back(monkeypatch: Any) -> None:
 
     monkeypatch.setattr(Path, "mkdir", flaky_mkdir)
     assert resolve_plugin_data_dir(None, "demo") == second / "demo"
+
+
+def test_star_tools_module_is_discovered(monkeypatch: Any) -> None:
+    import sys
+    import types
+
+    tmp_path = make_test_dir("star-tools-module")
+
+    class StarTools:
+        @staticmethod
+        def get_data_dir(plugin_name: str) -> Path:
+            return tmp_path / plugin_name
+
+    module = types.ModuleType("astrbot.core.star.star_tools")
+    module.StarTools = StarTools  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "astrbot.core.star.star_tools", module)
+
+    resolved = resolve_plugin_data_dir(None, "demo")
+
+    assert resolved == tmp_path / "demo"
+    assert resolved.is_dir()

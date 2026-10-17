@@ -1,0 +1,80 @@
+# Codecov 配置：core（pytest，flag: unittests）与 dashboard（vitest，flag: dashboard）两条上传链路。
+# 参考 https://docs.codecov.com/docs/codecovyml-reference，改动后可用
+# https://api.codecov.io/validate 校验。
+
+codecov:
+  require_ci_to_pass: true
+  # core 与 dashboard 分别由两个 workflow 上传；合并后再发状态与评论。
+  notify:
+    after_n_builds: 2
+
+# dashboard 的 lcov 路径是相对 web/dashboard 的（src/...），需补上仓库内的前缀。
+fixes:
+  - "src/::web/dashboard/src/"
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+  status:
+    project:
+      # 整仓库：core 覆盖率较高，dashboard 仍在补齐测试，这里留 2% 兜底。
+      default:
+        target: auto
+        threshold: 2%
+        if_ci_failed: error
+      unittests:
+        flags:
+          - unittests
+        target: 90%
+        threshold: 2%
+      # dashboard 的硬门在 vitest 的 coverage.thresholds，这里只做绝对下限兜底。
+      dashboard:
+        flags:
+          - dashboard
+        target: 80%
+        threshold: 2%
+    patch:
+      # 关掉整仓库 patch：auto 会拿整体覆盖率当门槛，容易卡住局部改动。
+      default: off
+      unittests:
+        flags:
+          - unittests
+        target: 85%
+        threshold: 5%
+      dashboard:
+        flags:
+          - dashboard
+        target: 80%
+        threshold: 2%
+
+flags:
+  unittests:
+    paths:
+      - core/
+      - main.py
+      - scripts/
+    carryforward: false
+  dashboard:
+    paths:
+      - web/dashboard/src/
+    carryforward: false
+
+ignore:
+  - "tests/**"
+  - "**/*.test.ts"
+  - "pages/**"
+
+test_analytics:
+  flake_detection: true
+
+comment:
+  layout: "header, diff, flags, files, footer"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+  after_n_builds: 2
+
+github_checks:
+  annotations: true

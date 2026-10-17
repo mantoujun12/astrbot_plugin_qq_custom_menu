@@ -281,3 +281,61 @@ def test_migrate_menu_config_skips_invalid_entries() -> None:
     assert config["menu"] == [
         {"__template_key": "send_message", "name": "保留", "message": "/keep", "parent": ""},
     ]
+
+
+# ---------------------------------------------------------------------------
+# 覆盖率补充分支：非法字段 / 旧格式边界
+# ---------------------------------------------------------------------------
+
+
+def test_get_menu_link_non_string_is_skipped() -> None:
+    config: dict[str, Any] = {"menu": [{"type": "link", "name": "坏链接", "link": 123}]}
+    assert get_menu(config) == {"items": []}
+
+
+def test_get_menu_menu_children_non_list_is_ignored() -> None:
+    config: dict[str, Any] = {"menu": [{"type": "menu", "name": "更多", "sub_menu_items": "oops"}]}
+    assert get_menu(config) == {"items": [{"type": "menu", "name": "更多", "sub_menu_items": []}]}
+
+
+def test_migrate_menu_config_non_list_items() -> None:
+    config = _SaveableDict({"menu": {"items": "oops"}})
+    assert migrate_menu_config(config) is True
+    assert config["menu"] == []
+    assert config.saved == 1
+
+
+def test_migrate_menu_config_without_save_config() -> None:
+    config: dict[str, Any] = {
+        "menu": {"items": [{"type": "send_message", "name": "保留", "send_message": "/keep"}]}
+    }
+    assert migrate_menu_config(config) is True
+    assert config["menu"] == [
+        {"__template_key": "send_message", "name": "保留", "message": "/keep", "parent": ""}
+    ]
+
+
+def test_migrate_menu_config_skips_invalid_children() -> None:
+    config = _SaveableDict(
+        {
+            "menu": {
+                "items": [
+                    {
+                        "type": "menu",
+                        "name": "更多",
+                        "sub_menu_items": [
+                            "not a dict",
+                            {"type": "send_message", "name": "关于", "send_message": "/about"},
+                        ],
+                    },
+                    {"type": "menu", "name": "无子项", "sub_menu_items": "oops"},
+                ]
+            }
+        }
+    )
+    assert migrate_menu_config(config) is True
+    assert config["menu"] == [
+        {"__template_key": "menu", "name": "更多"},
+        {"__template_key": "send_message", "name": "关于", "message": "/about", "parent": "更多"},
+        {"__template_key": "menu", "name": "无子项"},
+    ]

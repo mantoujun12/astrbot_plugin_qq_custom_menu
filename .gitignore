@@ -208,3 +208,10 @@ __marimo__/
 
 # 运行时兜底数据目录，不应提交到仓库
 /data/
+
+# 前端与测试产物
+web/dashboard/node_modules/
+web/dashboard/coverage/
+web/dashboard/test-report.junit.xml
+/junit.xml
+coverage.xml

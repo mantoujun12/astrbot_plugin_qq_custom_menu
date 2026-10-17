@@ -208,3 +208,79 @@ def test_state_save_close_failure_is_tolerated(monkeypatch: Any) -> None:
 
     monkeypatch.setattr("core.state.os.fdopen", flaky_fdopen)
     store.mark_synced("app1", {"items": []})
+
+
+def test_stale_lock_stat_failure_falls_back(monkeypatch: Any) -> None:
+    tmp_path = make_test_dir("stale-lock-stat")
+    store = MenuStateStore(tmp_path)
+    store.lock_file.write_text("held", encoding="utf-8")
+    monkeypatch.setattr("core.state.LOCK_TIMEOUT_SECONDS", 0.06)
+
+    real_stat = Path.stat
+
+    def flaky_stat(self: Path, *args: Any, **kwargs: Any) -> Any:
+        if self == store.lock_file:
+            raise OSError("stat failed")
+        return real_stat(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "stat", flaky_stat)
+    store.mark_synced("app1", {"items": []})
+
+    assert store.is_unchanged("app1", {"items": []}) is True
+
+
+def test_stale_lock_unlink_failure_is_logged(monkeypatch: Any, caplog: Any) -> None:
+    import time
+
+    tmp_path = make_test_dir("stale-lock-unlink")
+    store = MenuStateStore(tmp_path)
+    store.lock_file.write_text("stale", encoding="utf-8")
+    old = time.time() - 3600
+    os.utime(store.lock_file, (old, old))
+    monkeypatch.setattr("core.state.LOCK_TIMEOUT_SECONDS", 0.02)
+
+    real_unlink = Path.unlink
+
+    def flaky_unlink(self: Path, *args: Any, **kwargs: Any) -> None:
+        if self == store.lock_file:
+            raise OSError("unlink failed")
+        real_unlink(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "unlink", flaky_unlink)
+    with caplog.at_level("DEBUG", logger="astrbot"):
+        store.mark_synced("app1", {"items": []})
+
+    assert "remove stale state lock failed" in caplog.text
+    assert store.is_unchanged("app1", {"items": []}) is True
+
+
+def test_release_lock_file_already_gone() -> None:
+    tmp_path = make_test_dir("lock-gone")
+    store = MenuStateStore(tmp_path)
+
+    with store._locked():
+        store.lock_file.unlink()
+
+    assert not store.lock_file.exists()
+
+
+def test_cleanup_tmp_failure_is_tolerated(monkeypatch: Any, caplog: Any) -> None:
+    tmp_path = make_test_dir("tmp-cleanup-failure")
+    store = MenuStateStore(tmp_path)
+
+    def fail_replace(*args: Any, **kwargs: Any) -> None:
+        raise OSError("replace failed")
+
+    real_unlink = Path.unlink
+
+    def flaky_unlink(self: Path, *args: Any, **kwargs: Any) -> None:
+        if self.name.endswith(".tmp"):
+            raise OSError("cleanup failed")
+        real_unlink(self, *args, **kwargs)
+
+    monkeypatch.setattr("core.state.os.replace", fail_replace)
+    monkeypatch.setattr(Path, "unlink", flaky_unlink)
+    with caplog.at_level("DEBUG", logger="astrbot"):
+        store.save({"app1": "digest"})
+
+    assert "cleanup menu state tmp failed" in caplog.text

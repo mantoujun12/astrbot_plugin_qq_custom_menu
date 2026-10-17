@@ -5,6 +5,41 @@
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/),
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased]
+
+### 新增
+
+- 新增 `codecov.yml`，按 `unittests`（Python）与 `dashboard`（前端）两个 flag 分别设置覆盖率门禁与评论
+- 新增 `.gitattributes`，把前端构建产物标记为生成文件并使用 `merge=binary`，同时统一文本文件的 LF 换行
+- CI 拆分为 lint / Pytest 矩阵（`ci.yml`）与覆盖率上传（`codecov-core.yml`），覆盖率任务同时上传 XML 与 JUnit 测试报告
+- 新增插件可视化视图（Dashboard）：状态概览、菜单配置、机器人凭证、设置四个页面，支持保存配置、保存并同步与 SSE 实时同步进度
+- 新增 `core/web_api.py`：注册状态、配置读写、同步入口与同步事件流接口，`secret` 只返回掩码
+- 新增 `core/sync_runner.py`：后台单飞同步任务、事件缓冲与断线续订（`since`）
+- 新增 `web/dashboard/`（Vue 3 + Vite 8 + Vuetify 4 + Vitest）与构建产物 `pages/dashboard/`
+- 新增 Dashboard CI（`ci-dashboard.yml`）与 Codecov（`codecov-dashboard.yml`），并在 Dependabot 中接管前端依赖
+- 新增 `scripts/package_plugin.py`：只收录 AstrBot 会读取的文件，固定时间戳生成可复现 zip
+- 新增 `scripts/bump_version.py`：同步 `metadata.yaml` / `core/paths.py` / `web/dashboard/package.json` 三处版本号，支持 `--check` / `--dry-run` / `--force` 与交互式选择
+
+### 变更
+
+- `core/menu.py` 增加结构化同步事件与逐平台失败隔离，Dashboard 可展示每个平台的同步结果
+- `main.py` 注册视图 Web API、暴露配置保存回调，并使用 `core/paths.py` 的 `PLUGIN_VERSION` 作为唯一版本来源
+- `core/config.py` 增加 Dashboard 配置导出、菜单统计、脱敏与提交校验 helper
+- `release.yml` 改用 `scripts/bump_version.py --check` 校验版本、`scripts/package_plugin.py` 打包，并把发布流程改为幂等（tag / release 已存在时跳过）
+
+### 文档
+
+- 重写 README：补充 Dashboard、配置说明、同步行为、开发测试、打包发布、CI / Codecov 与目录结构
+- 扩充 AGENTS.md：补齐 Dashboard 架构约定、数据契约、测试覆盖率、版本与发布流程
+
+### 测试
+
+- 新增 `tests/test_main.py`，覆盖插件装配、初始化同步、异常兜底与资源释放
+- 补充 `core/config.py`、`core/i18n.py`、`core/paths.py`、`core/state.py` 的边界分支测试，Python 行覆盖率提升到 99%
+- 新增 `tests/test_web_api.py`、`tests/test_sync_runner.py` 与菜单同步事件测试，Python 行覆盖率保持 99%
+- 新增 24 个 Vitest 测试文件，前端行覆盖率约 94%，并在 `vitest.config.ts` 中设置覆盖率硬门
+- 新增 `tests/test_package_script.py` 与 `tests/test_bump_script.py`，覆盖打包内容、可复现性、版本号解析 / 写回 / 校验与交互式流程
+
 ## [v0.2.3] - 2026-10-12
 
 ### 变更

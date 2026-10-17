@@ -1,0 +1,392 @@
+/* 字体栈对齐宿主 $body-font-family。Outfit 是自带的 @fontsource 变量字体，
+   只含拉丁子集，中文仍走宿主那套 CJK 回退；注册名是 'Outfit Variable'，
+   写成 'Outfit' 会静默回退。 */
+:root {
+  --v-font-body: 'Outfit Variable', 'Noto Sans', 'PingFang SC', 'Hiragino Sans GB',
+    'Noto Sans CJK SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+}
+
+.v-card,
+.v-field,
+.v-alert,
+.v-list-item--rounded {
+  border-radius: 8px;
+}
+
+.v-btn {
+  border-radius: 16px;
+}
+
+/* $rounded 映射表 */
+.rounded-sm {
+  border-radius: 4px;
+}
+
+.rounded,
+.rounded-md {
+  border-radius: 8px;
+}
+
+.rounded-lg {
+  border-radius: 16px;
+}
+
+.rounded-xl {
+  border-radius: 48px;
+}
+
+.rounded-shaped {
+  border-radius: 48px 0;
+}
+
+/* size="small" 的按钮 Vuetify 会把字号一起压到 12px，这里只保留小尺寸高度。 */
+.v-btn--size-small {
+  --v-btn-size: 0.875rem;
+}
+
+/* 卡片标题用 18px / 600 的分量，比正文更清楚。 */
+.v-card-title {
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.qc-page {
+  --qc-text: rgb(var(--v-theme-on-surface));
+  --qc-muted: rgba(var(--v-theme-on-surface), 0.68);
+  --qc-subtle: rgba(var(--v-theme-on-surface), 0.56);
+  --qc-border: rgba(var(--v-theme-on-surface), 0.1);
+  min-height: 100%;
+  background: rgb(var(--v-theme-background));
+  color: var(--qc-text);
+}
+
+/* 平面描边卡 */
+.qc-page .qc-card {
+  border-radius: 16px;
+  border-color: var(--qc-border);
+}
+
+/* 指标卡改成填充底。flat 只给 surface，亮色下 surface 与 background 同为白色，
+   混一点 on-surface 让两种主题都读得出边界。 */
+.qc-stat-card {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(
+    in srgb,
+    rgb(var(--v-theme-surface)) 95%,
+    rgb(var(--v-theme-on-surface))
+  );
+}
+
+.qc-stat-card .qc-metric-label {
+  margin-top: 0;
+}
+
+/* 右下角水印图标 */
+.qc-stat-watermark {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  opacity: 0.2;
+  color: rgb(var(--v-theme-primary));
+  pointer-events: none;
+}
+
+.qc-metric-label {
+  margin-top: 12px;
+  color: var(--qc-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.qc-metric-value {
+  margin-top: 8px;
+  font-size: clamp(24px, 2vw, 34px);
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  overflow-wrap: anywhere;
+}
+
+.qc-metric-note {
+  margin-top: 8px;
+  color: var(--qc-subtle);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* 标题块与操作区并排；操作区放不下时整块换行。 */
+.qc-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px 24px;
+  margin-bottom: 24px;
+}
+
+.qc-header-main {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.qc-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+/* 侧边栏 brand 行 */
+.qc-sidebar-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 50px;
+  padding: 0 16px 2px 24px;
+}
+
+.qc-sidebar-brand--rail {
+  width: 56px;
+  justify-content: center;
+  padding: 0 0 2px;
+}
+
+.qc-sidebar-brand-title {
+  min-width: 0;
+  overflow: hidden;
+  color: rgb(var(--v-theme-on-surface));
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qc-sidebar-brand-toggle {
+  color: rgba(var(--v-theme-on-surface), 0.56);
+}
+
+.qc-sidebar-brand-toggle:hover {
+  color: rgba(var(--v-theme-on-surface), 0.9);
+}
+
+.qc-sidebar .v-list-item {
+  min-height: 36px;
+  margin-bottom: 2px;
+  padding-inline-start: calc(10px + var(--indent-padding, 0px) / 2);
+  border-radius: 8px;
+  color: rgba(var(--v-theme-on-surface), 0.76);
+}
+
+.qc-sidebar .v-list-item:hover {
+  background: rgba(var(--v-theme-on-surface), 0.05);
+  color: rgb(var(--v-theme-on-surface));
+}
+
+.qc-sidebar .v-list-item--active {
+  background: rgba(var(--v-theme-primary), 0.08);
+  color: rgb(var(--v-theme-primary));
+}
+
+.qc-sidebar .v-list-item__prepend {
+  min-width: 0;
+  margin-inline-end: 12px;
+}
+
+.qc-sidebar .v-list-item__spacer {
+  width: 0;
+}
+
+.qc-sidebar .v-list-item-title {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.qc-sidebar-version {
+  padding: 0 10px 12px;
+  color: rgba(var(--v-theme-on-surface), 0.46);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.qc-title {
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.qc-subtitle {
+  margin: 4px 0 0;
+  max-width: 860px;
+  color: var(--qc-muted);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.qc-list-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--qc-border);
+  font-size: 14px;
+}
+
+.qc-list-row:last-child {
+  border-bottom: 0;
+}
+
+.qc-row-main {
+  min-width: 0;
+}
+
+.qc-list-label {
+  color: var(--qc-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .qc-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .qc-header-main {
+    flex-basis: auto;
+  }
+
+  .qc-header-actions {
+    margin-left: 0;
+  }
+}
+
+/* 同步进度：日志区固定高度滚动，避免长日志把卡片撑高 */
+.qc-sync-log {
+  max-height: 220px;
+  overflow: auto;
+  padding: 12px 14px;
+  border: 1px solid var(--qc-border);
+  border-radius: 12px;
+  background: rgba(128, 128, 128, 0.06);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.qc-sync-log-line {
+  color: var(--qc-text);
+}
+
+/* 空状态面板 */
+.qc-empty-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 40px 24px;
+  border: 1px dashed var(--qc-border);
+  border-radius: 16px;
+  text-align: center;
+}
+
+.qc-empty-panel .qc-metric-note {
+  max-width: 560px;
+}
+
+/* 菜单树 */
+.qc-menu-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.qc-menu-empty {
+  margin: 0;
+  padding: 24px;
+  text-align: center;
+}
+
+.qc-menu-group {
+  border: 1px solid var(--qc-border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.qc-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 14px;
+  background: color-mix(
+    in srgb,
+    rgb(var(--v-theme-surface)) 97%,
+    rgb(var(--v-theme-on-surface))
+  );
+}
+
+.qc-menu-row--child {
+  padding-left: 42px;
+  background: transparent;
+  border-top: 1px solid var(--qc-border);
+}
+
+.qc-menu-icon {
+  flex: 0 0 auto;
+  color: rgb(var(--v-theme-primary));
+}
+
+.qc-menu-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.qc-menu-name {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qc-menu-detail {
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--qc-subtle);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qc-menu-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+}
+
+.qc-menu-children {
+  border-top: 1px solid var(--qc-border);
+}
+
+/* 浮层里的卡片一律给实底，避免 outlined 变体透出遮罩。 */
+.v-overlay__content > .v-card {
+  background-color: rgb(var(--v-theme-surface));
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+}

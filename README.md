@@ -4,51 +4,86 @@
 
 <!-- badge -->
 
-[![GitHub License](https://img.shields.io/github/license/mantoujun12/astrbot_plugin_qq_custom_menu)](LICENSE)
-[![codecov](https://codecov.io/gh/mantoujun12/astrbot_plugin_qq_custom_menu/graph/badge.svg)](https://codecov.io/gh/mantoujun12/astrbot_plugin_qq_custom_menu)
-[![CI](https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/actions/workflows/ci.yml/badge.svg)](https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/actions/workflows/ci.yml)
-[![GitHub Release](https://img.shields.io/github/v/release/mantoujun12/astrbot_plugin_qq_custom_menu?sort=date&display_name=tag)](https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/releases/latest)
-[![GitHub last commit](https://img.shields.io/github/last-commit/mantoujun12/astrbot_plugin_qq_custom_menu)](https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/commits/master)
-[![AstrBot](https://img.shields.io/badge/AstrBot-%234984b9?logo=Github)](https://github.com/AstrBotDevs/AstrBot)
-[![AstrBot Plugin](https://img.shields.io/badge/AstrBot-Plugin-4984b9?logo=github)](https://cloud.astrbot.app/plugin/mantoujun12/astrbot_plugin_qq_custom_menu)
-[![GitHub Issues](https://img.shields.io/github/issues/mantoujun12/astrbot_plugin_qq_custom_menu)](https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/issues)
-[![GitHub Pull Requests](https://img.shields.io/github/issues-pr/mantoujun12/astrbot_plugin_qq_custom_menu)](https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/pulls)
-[![GitHub Repo stars](https://img.shields.io/github/stars/mantoujun12/astrbot_plugin_qq_custom_menu)](https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/stargazers)
+[![CI Core](https://img.shields.io/github/actions/workflow/status/mantoujun12/astrbot_plugin_qq_custom_menu/ci.yml?style=flat-square&label=Core)](https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/actions/workflows/ci.yml)
+[![CI Dashboard](https://img.shields.io/github/actions/workflow/status/mantoujun12/astrbot_plugin_qq_custom_menu/ci-dashboard.yml?style=flat-square&label=Dashboard)](https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/actions/workflows/ci-dashboard.yml)
+[![Codecov](https://img.shields.io/codecov/c/github/mantoujun12/astrbot_plugin_qq_custom_menu?style=flat-square&logo=codecov&label=Coverage)](https://codecov.io/gh/mantoujun12/astrbot_plugin_qq_custom_menu)
+[![GitHub Release](https://img.shields.io/github/v/release/mantoujun12/astrbot_plugin_qq_custom_menu?display_name=tag&style=flat-square)](https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/releases/latest)
+[![GitHub last commit](https://img.shields.io/github/last-commit/mantoujun12/astrbot_plugin_qq_custom_menu?style=flat-square)](https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/commits/master)
+[![AstrBot Plugin](https://img.shields.io/badge/AstrBot-Plugin-4984b9?style=flat-square&logo=github)](https://cloud.astrbot.app/plugin/mantoujun12/astrbot_plugin_qq_custom_menu)
+[![GitHub Issues](https://img.shields.io/github/issues/mantoujun12/astrbot_plugin_qq_custom_menu?style=flat-square)](https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/issues)
+[![GitHub Pull Requests](https://img.shields.io/github/issues-pr/mantoujun12/astrbot_plugin_qq_custom_menu?style=flat-square)](https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/pulls)
+[![GitHub Repo stars](https://img.shields.io/github/stars/mantoujun12/astrbot_plugin_qq_custom_menu?style=flat-square)](https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/stargazers)
 
 <!-- badge -->
 
 QQ 官方机器人自定义菜单插件
 
-在 **AstrBot WebUI** 中配置菜单内容，让 QQ 官方机器人在私聊场景展示自定义菜单。
+在 **AstrBot WebUI** 中配置私聊菜单，让 QQ 官方机器人展示自定义菜单；插件自带可视化 Dashboard，可查看同步状态、编辑菜单、维护机器人凭证并一键同步。
 
 </div>
 
 ## 核心特性
 
-- 通过 **AstrBot WebUI** 配置 QQ 官方机器人要展示的菜单内容
-- 菜单内容由用户自定义，便于根据实际使用场景组织常用入口
-- 支持 QQ 官方机器人平台及 QQ 官方机器人 Webhook 平台
-- 当前仅支持私聊场景
+- **两种配置方式**：既可以在 AstrBot 插件配置页按 `template_list` 维护，也可以打开插件可视化视图（Dashboard）管理
+- **完整菜单编辑**：支持「发送消息」「跳转链接」「子菜单」三类条目，子菜单通过 `parent` 引用母菜单名称
+- **多机器人**：每个平台凭证对应一套独立同步流程，启动时逐个平台读取并写入菜单
+- **同步状态可视化**：Dashboard 状态页展示每个平台的 `已同步 / 待同步 / 尚未同步 / 同步已关闭` 状态
+- **实时同步进度**：手动同步通过 SSE 推送逐平台进度与日志，失败平台不会中断其余平台
+- **凭证安全**：Dashboard 只展示 `ClientSecret` 掩码；保存时留空表示沿用已保存的密钥
+- **链接自动归一化**：省略协议或误用 `http://` 的链接会统一补全为 QQ 要求的 `https://`
+- **变更检测**：本地摘要记录上次成功同步的菜单，远端与配置一致时跳过 `PUT`，不信任过期摘要
+- **国际化**：运行期日志与 Dashboard 均提供简体中文 / English
 
-## 使用说明
+## 安装
+
+插件面向 QQ 官方机器人（`qq_official` / `qq_official_webhook`），需要自行准备机器人的 `AppID` 与 `ClientSecret`。
+
+1. **插件市场（推荐）**：在 AstrBot WebUI 的插件市场搜索 `astrbot_plugin_qq_custom_menu`，或直接打开[插件主页](https://cloud.astrbot.app/plugin/mantoujun12/astrbot_plugin_qq_custom_menu)安装。
+2. **手动安装**：从 [Releases](https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/releases/latest) 下载 zip，解压到 AstrBot 的 `data/plugins/` 下（解压后应得到一个包含 `main.py` 与 `metadata.yaml` 的插件目录），再重启 AstrBot 或在插件页重载插件；依赖会由插件管理器按 `requirements.txt` 安装。
+3. 安装完成后打开本插件的可视化视图，按下面的「Dashboard」与「配置说明」维护菜单。
+
+## 快速开始
 
 1. 在 AstrBot 中安装并启用本插件。
-2. 打开 **AstrBot WebUI → 插件配置**，填写 QQ 官方机器人 `AppID`、`ClientSecret`。
-3. 在「QQ 私聊自定义菜单」中点击「添加条目」，按类型添加菜单项：
-   - `发送消息`：填写菜单名称和点击后发送的消息，例如 `/help`
-   - `跳转链接`：填写菜单名称和点击后打开的链接
-   - `子菜单`：填写子菜单名称；再添加 `发送消息` 或 `跳转链接` 条目，并将「父菜单名称」填写为该子菜单名称，即可成为它的子项
-4. 保存配置并按照 AstrBot 的提示重载插件或重启 AstrBot。
-5. 插件启动时先通过 `GET /v2/menu` 读取当前菜单，再通过 QQ 菜单接口同步配置内容。
+2. 打开插件可视化视图，进入「机器人」页填写 QQ 官方机器人的 `AppID` 与 `ClientSecret`。
+3. 进入「菜单配置」页添加菜单条目，点击「保存并同步」。
+4. 到「状态概览」页查看同步进度与每个平台的状态。
+5. 也可以在 AstrBot 插件配置页直接维护同样的配置；两种入口写的是同一份插件配置。
+
+> 插件启动时会自动同步一次。修改配置后可以重启 AstrBot / 重载插件，或在 Dashboard 里手动同步。
+
+## Dashboard
+
+Dashboard 构建产物提交在 `pages/dashboard/`，AstrBot 会把它作为插件视图加载。
+
+| 页面 | 能力 |
+| --- | --- |
+| 状态概览 | 菜单统计、平台同步状态、菜单预览、手动同步与实时进度 |
+| 菜单配置 | 一级菜单 / 子菜单 / 发送消息 / 跳转链接的增删改，保存或保存并同步 |
+| 机器人 | 维护插件级 `AppID` / `ClientSecret` / 平台类型；展示当前生效平台 |
+| 设置 | 日志语言、启动同步开关、插件版本与仓库入口 |
+
+说明：
+
+- 平台凭证只能填在插件自己的配置中，或回退使用 AstrBot 平台配置里的 QQ 官方机器人；Dashboard 无法读取 AstrBot 适配器的内部机器人信息。
+- 回退使用 AstrBot 平台配置时，Dashboard 只展示脱敏后的平台，不能直接编辑；在「机器人」页添加插件凭证后会优先使用插件配置。
+- 本地 `pnpm dev` 没有 AstrBot bridge，页面会显示明确标注的 mock 数据，保存与同步不会伪装成功。
 
 ## 配置说明
+
+### `language`
+
+- 类型：`string`
+- 可选：`zh-CN`、`en-US`
+- 默认值：`zh-CN`
+- 含义：插件运行期日志语言，不影响用户填写的菜单内容。
 
 ### `sync_menu`
 
 - 类型：`bool`
 - 默认值：`true`
-- 含义：启动时是否同步自定义菜单。
-- 关闭后：仅读取 QQ 当前菜单，不会覆盖 QQ 机器人菜单。
+- 含义：是否在启动时同步自定义菜单。
+- 关闭后：插件只通过 `GET /v2/menu` 读取 QQ 当前菜单，不会覆盖线上内容；Dashboard 会显示「同步已关闭」。
 
 ### `qq_platforms`
 
@@ -59,7 +94,7 @@ QQ 官方机器人自定义菜单插件
   - `secret`：QQ 官方机器人 `ClientSecret`
   - `platform`：平台类型，可选 `qq_official` / `qq_official_webhook`
 - 留空时：回退读取 AstrBot 平台配置中的 QQ 官方平台。
-- 建议：多机器人场景下为每个机器人单独添加一条凭证。
+- 多机器人场景下建议为每个机器人单独添加一条凭证。
 
 ### `menu`
 
@@ -69,16 +104,115 @@ QQ 官方机器人自定义菜单插件
 - 模板 key：
   - `send_message`：发送消息菜单项，字段为 `name` / `message` / `parent`
   - `link`：跳转链接菜单项，字段为 `name` / `link` / `parent`
-  - `menu`：子菜单项，字段为 `name`；子菜单项通过 `parent` 字段引用母菜单名称
-- 一级菜单最多 10 个。
+  - `menu`：子菜单项，字段为 `name`
+- 子菜单项通过 `parent` 字段引用母菜单名称，不内嵌。
+- 一级菜单最多 10 个；Dashboard 还限制每个子菜单最多 10 个子项。
 - `link` 未填写协议时会自动归一化为 `https://` 开头。
 - `menu` 为空且 `sync_menu` 开启时，会清空 QQ 机器人当前的远程自定义菜单。
+
+### 配置文件示例
+
+```yaml
+language: zh-CN
+sync_menu: true
+qq_platforms:
+  - appid: "102xxxxxx"
+    secret: "••••••••"
+    platform: qq_official
+menu:
+  - __template_key: send_message
+    name: 帮助
+    message: /help
+    parent: ""
+  - __template_key: menu
+    name: 更多
+  - __template_key: link
+    name: 文档
+    link: https://docs.example.com
+    parent: 更多
+```
+
+## 同步行为
+
+1. 对每个平台凭证创建独立 `QQClient`，先换取 `access_token`，再调用 `GET /v2/menu` 读取远端菜单。
+2. `sync_menu` 开启时，将配置转换为 QQ 菜单结构；远端与配置一致则跳过 `PUT`，否则调用 `PUT /v2/menu` 整表覆盖。
+3. 同步成功后把菜单摘要写入 AstrBot 插件数据目录下的 `menu_state.yaml`，供状态页判断是否已同步。
+4. 单个平台失败只影响该平台，Dashboard 会展示失败原因，其余平台继续同步。
+5. 菜单为空且同步开启时，`PUT` 会清空 QQ 上已有的自定义菜单；Dashboard 会在保存前提示。
+
+## 开发与测试
+
+插件通过 AstrBot 加载，功能测试仍需要在运行的 AstrBot 实例下进行；业务逻辑和 Dashboard 都可以跑离线测试。
+
+### 后端（Python 3.10+）
+
+```bash
+pip install -r requirements.txt -r requirements-dev.txt
+pytest -q
+pytest --cov --cov-branch --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
+ruff check . --fix
+ruff format --check .
+pre-commit run --all-files   # 可选，与 CI 同一套 hooks
+```
+
+- 用例都在 `tests/`，`tests/conftest.py` 会注入轻量 AstrBot stub，无需安装 AstrBot。
+- `tests/test_main.py` 覆盖插件装配层；`tests/test_web_api.py` / `tests/test_sync_runner.py` 覆盖 Dashboard 后端；`tests/test_package_script.py` / `tests/test_bump_script.py` 覆盖发布脚本。
+- 异步用例直接写 `async def`（`asyncio_mode = "auto"`）。
+
+### Dashboard（Vue 3 + Vite 8 + Vuetify 4）
+
+需要 Node `^22.12.0 || >=24` 与 pnpm 9+（CI 使用 Node 24 + pnpm 12，见 [package.json](web/dashboard/package.json) 的 `engines`）。源码在 `web/dashboard/`，构建产物提交在 `pages/dashboard/`：
+
+```bash
+cd web/dashboard
+pnpm install
+pnpm dev            # 本地 dev server，没有 bridge，走 mock 并显式标注
+pnpm build          # vue-tsc 类型检查 + Vite 打包，直接写 pages/dashboard/
+pnpm test           # Vitest 单次运行
+pnpm test:coverage  # 覆盖率，阈值见 vitest.config.ts
+pnpm test:report    # 额外产出 test-report.junit.xml
+pnpm test:codecov   # 覆盖率 + JUnit，CI 用的入口
+```
+
+`pnpm build` 会先执行 `vue-tsc` 类型检查，并直接生成 `pages/dashboard/` 产物；不要手工编辑构建产物，改源码后重新构建即可。
+
+### 打包与发布
+
+```bash
+python scripts/bump_version.py --check   # 校验三处版本号一致
+python scripts/bump_version.py minor     # 同步 metadata.yaml / core/paths.py / web/dashboard/package.json
+python scripts/package_plugin.py         # 生成 dist/<插件名>-<版本>.zip
+```
+
+`metadata.yaml` 是唯一版本源，三处版本号必须一致，否则自动发布工作流会拒绝发布。推送到 `master` 且 `metadata.yaml` 有改动时，[release.yml](.github/workflows/release.yml) 会校验版本、用 `scripts/package_plugin.py` 打包、打 tag 并创建 Release；发布是幂等的，失败可在 Actions 里手动重跑。
+
+### 持续集成
+
+- [ci.yml](.github/workflows/ci.yml)：pre-commit lint + Python 3.10 / 3.11 / 3.12 / 3.13 Pytest 矩阵
+- [ci-dashboard.yml](.github/workflows/ci-dashboard.yml)：Node 24 + pnpm 12 上跑 Vitest、构建 Dashboard，并校验 `pages/dashboard` 无漂移
+- [codecov-core.yml](.github/workflows/codecov-core.yml) / [codecov-dashboard.yml](.github/workflows/codecov-dashboard.yml)：把覆盖率与 JUnit 测试报告上传到 [Codecov](https://codecov.io/gh/mantoujun12/astrbot_plugin_qq_custom_menu)，前后端分别使用 flag `unittests` 与 `dashboard`
+
+## 目录结构
+
+```text
+main.py                   插件入口（@register / initialize / terminate）
+core/                     业务逻辑：config、menu、qq_api、state、sync_runner、web_api、paths、i18n
+_conf_schema.json         WebUI 插件配置 schema
+metadata.yaml             插件元数据（版本号唯一来源）
+.astrbot-plugin/          WebUI 侧 i18n（metadata / config / views）
+web/dashboard/            Dashboard 源码（Vue 3 + TypeScript + Vite + Vuetify + Vitest）
+pages/dashboard/          Dashboard 构建产物（提交进仓库的生成文件）
+tests/                    离线 pytest 套件
+scripts/                  bump_version.py、package_plugin.py
+.github/                  CI、Codecov、Release、Dependabot、Issue 模板
+```
 
 ## 已知限制
 
 ### QQ 官方接口限制
 
 - 一级菜单最多 10 个。
+- 每个子菜单最多 10 个子项（Dashboard 保存时校验）。
 - 子菜单仅支持 `send_message` / `link`。
 - `link` 必须为 `https://` 开头。
 - 空菜单会清空远端自定义菜单。
@@ -86,22 +220,25 @@ QQ 官方机器人自定义菜单插件
 ### 本项目限制
 
 - 当前仅支持私聊场景。
-- 使用前需要配置并启用 QQ 官方机器人适配器。
+- 使用前需要配置并启用 QQ 官方机器人适配器，或填写插件级凭证。
 - 菜单同步依赖 QQ 官方机器人开放平台的 Access Token 鉴权。
 - 菜单展示效果受 QQ 官方机器人开放平台接口能力及当前适配器版本影响。
+- Dashboard 的同步状态来自本地摘要，不会在每次打开页面时请求 QQ API；远端被外部修改后，状态可能仍显示「已同步」，下一次同步会以刚读取到的远端菜单为准。
 
 ## 下一步计划
 
-- [ ] i18n 国际化
-- [ ] 同步状态可视化 Dashboard
+- [x] i18n 国际化（简体中文 / English）
+- [x] 同步状态可视化 Dashboard
+- [x] 同步结果的状态持久化与变更检测
+- [x] 菜单编辑、机器人凭证维护与实时同步进度
 - [ ] 群聊 / 频道场景支持
-- [ ] 同步结果的状态持久化与变更检测
+- [ ] 连接测试与更细的同步诊断
 
-## 相关链接
+## 参考链接
 
 - [AstrBot](https://github.com/AstrBotDevs/AstrBot)
 - [AstrBot 插件开发指南](https://docs.astrbot.app/dev/star/plugin-new.html)
-- [AstrBot Plugin Pages 文档](https://docs.astrbot.app/dev/plugin-pages/index.html)
+- [AstrBot Plugin Pages 文档](https://docs.astrbot.app/dev/star/guides/plugin-pages.html)
 - [QQ 机器人开放平台 API v2 文档](https://bot.q.qq.com/wiki/develop/api-v2/)
 - [QQ 机器人开放平台开发文档](https://bot.q.qq.com/wiki/)
 

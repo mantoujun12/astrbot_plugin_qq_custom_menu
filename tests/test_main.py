@@ -190,3 +190,94 @@ async def test_terminate_skips_already_closed_session() -> None:
     await plugin.terminate()
 
     assert plugin._http is None
+
+
+class FakeMenuSyncer:
+    def __init__(self) -> None:
+        self.configs: list[Any] = []
+        self.platforms: list[Any] = []
+
+    def set_config(self, config: Any) -> None:
+        self.configs.append(config)
+
+    def set_platforms(self, platforms: Any) -> None:
+        self.platforms.append(platforms)
+
+
+class AsyncSaveConfig(FakeConfig):
+    def __init__(self, data: dict[str, Any] | None = None) -> None:
+        super().__init__(data)
+        self.async_saved: list[Any] = []
+
+    async def save_config_async(self, values: dict[str, Any] | None = None) -> None:
+        self.async_saved.append(values)
+        if values:
+            self.update(values)
+
+
+@pytest.mark.asyncio
+async def test_save_config_prefers_async_api(monkeypatch: Any, tmp_path: Path) -> None:
+    main = load_main()
+    monkeypatch.setattr(main, "resolve_plugin_data_dir", lambda context: tmp_path)
+    config = AsyncSaveConfig()
+    plugin = main.QQCustomMenuPlugin(FakeContext(), config)
+    syncer = FakeMenuSyncer()
+    plugin._syncer = syncer
+
+    await plugin._save_config({"language": "en-US"})
+
+    assert config.async_saved == [{"language": "en-US"}]
+    assert config["language"] == "en-US"
+    assert syncer.configs == [config]
+    assert syncer.platforms == [[]]
+
+
+@pytest.mark.asyncio
+async def test_save_config_falls_back_to_sync_api(monkeypatch: Any, tmp_path: Path) -> None:
+    main = load_main()
+    monkeypatch.setattr(main, "resolve_plugin_data_dir", lambda context: tmp_path)
+    config = FakeConfig()
+    plugin = main.QQCustomMenuPlugin(FakeContext(), config)
+
+    await plugin._save_config({"sync_menu": False})
+
+    assert config.saved == 1
+    assert config["sync_menu"] is False
+
+
+@pytest.mark.asyncio
+async def test_save_config_plain_dict(monkeypatch: Any, tmp_path: Path) -> None:
+    main = load_main()
+    monkeypatch.setattr(main, "resolve_plugin_data_dir", lambda context: tmp_path)
+    config: dict[str, Any] = {}
+    plugin = main.QQCustomMenuPlugin(FakeContext(), config)
+
+    await plugin._save_config({"language": "en-US"})
+
+    assert config["language"] == "en-US"
+
+
+@pytest.mark.asyncio
+async def test_terminate_closes_web_api(monkeypatch: Any, tmp_path: Path) -> None:
+    main = load_main()
+
+    class Runner:
+        def __init__(self) -> None:
+            self.closed = False
+
+        async def close(self) -> None:
+            self.closed = True
+
+    class Bundle:
+        def __init__(self) -> None:
+            self.runner = Runner()
+
+    bundle = Bundle()
+    monkeypatch.setattr(main, "register_web_apis", lambda *args, **kwargs: bundle)
+    monkeypatch.setattr(main, "resolve_plugin_data_dir", lambda context: tmp_path)
+
+    plugin = main.QQCustomMenuPlugin(FakeContext(), FakeConfig())
+    await plugin.terminate()
+
+    assert bundle.runner.closed is True
+    assert plugin._web_api is None

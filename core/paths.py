@@ -12,6 +12,8 @@ from astrbot.api import logger
 
 LOG_TAG = "[qq-custom-menu]"
 PLUGIN_NAME = "astrbot_plugin_qq_custom_menu"
+# 插件版本，与 metadata.yaml 的 version 保持一致；供 @register 与视图状态接口共用。
+PLUGIN_VERSION = "v0.2.3"
 
 
 def _call_or_none(func: Any, *args: Any) -> Path | None:
@@ -88,4 +90,4 @@ def resolve_plugin_data_dir(context: Any, plugin_name: str = PLUGIN_NAME) -> Pat
     raise RuntimeError(f"{LOG_TAG} unable to resolve a writable AstrBot plugin data directory")
 
 
-__all__ = ["PLUGIN_NAME", "resolve_plugin_data_dir"]
+__all__ = ["PLUGIN_NAME", "PLUGIN_VERSION", "resolve_plugin_data_dir"]

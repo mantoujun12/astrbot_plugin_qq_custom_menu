@@ -97,3 +97,29 @@ def test_module_initialize_and_get_instance() -> None:
     translator = i18n.initialize(write_locales("module"), "en-US")
     assert i18n.get_instance() is translator
     assert i18n.t("hello", name="Codex") == "Hello, Codex"
+
+
+def test_non_string_language_falls_back() -> None:
+    translator = i18n.Translator(write_locales("non-string-language"), None)  # type: ignore[arg-type]
+    assert translator.language == i18n.DEFAULT_LANGUAGE
+    assert translator.t("hello", name="世界") == "你好，世界"
+
+
+def test_invalid_json_falls_back(caplog: Any) -> None:
+    locales = write_locales("invalid-json")
+    (locales / "en-US.json").write_text("{not json", encoding="utf-8")
+
+    translator = i18n.Translator(locales, "en-US")
+
+    assert translator.language == i18n.DEFAULT_LANGUAGE
+    assert "load locale" in caplog.text
+
+
+def test_non_object_json_falls_back(caplog: Any) -> None:
+    locales = write_locales("non-object-json")
+    (locales / "en-US.json").write_text("[]", encoding="utf-8")
+
+    translator = i18n.Translator(locales, "en-US")
+
+    assert translator.language == i18n.DEFAULT_LANGUAGE
+    assert "not a JSON object" in caplog.text

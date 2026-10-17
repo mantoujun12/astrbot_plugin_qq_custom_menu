@@ -86,5 +86,173 @@
         }
       }
     }
+  },
+  "views": {
+    "dashboard": {
+      "title": "QQ 自定义菜单",
+      "description": "在 AstrBot WebUI 维护 QQ 官方机器人私聊菜单，查看同步状态并一键同步。",
+      "nav": {
+        "status": "状态概览",
+        "menu": "菜单配置",
+        "platforms": "机器人",
+        "settings": "设置",
+        "collapse": "收起侧边栏",
+        "expand": "展开侧边栏",
+        "openDrawer": "打开侧边栏",
+        "closeDrawer": "关闭侧边栏"
+      },
+      "common": {
+        "cancel": "取消",
+        "save": "保存",
+        "reload": "重新载入",
+        "delete": "删除"
+      },
+      "status": {
+        "title": "状态概览",
+        "subtitle": "查看菜单配置、同步状态与各 QQ 平台的凭证情况。",
+        "refresh": "刷新",
+        "loadFailed": "获取状态失败",
+        "mockHint": "本地开发环境：展示的是 mock 数据，未连接 AstrBot 后端。",
+        "cards": {
+          "platforms": "QQ 平台",
+          "topLevel": "一级菜单",
+          "subItems": "子项",
+          "total": "菜单条目"
+        },
+        "state": {
+          "synced": "已同步",
+          "pending": "待同步",
+          "unknown": "尚未同步",
+          "disabled": "同步已关闭"
+        },
+        "source": {
+          "plugin": "插件配置",
+          "astrbot": "AstrBot 平台配置"
+        },
+        "secret": "ClientSecret",
+        "secretSet": "已配置",
+        "secretMissing": "未配置",
+        "syncDisabled": "「启动时同步自定义菜单」已关闭：插件只会读取 QQ 菜单，不会覆盖线上内容。",
+        "fallbackHint": "当前平台凭证来自 AstrBot 平台配置，只能查看；在「机器人」页添加插件配置后会优先使用插件凭证。",
+        "empty": {
+          "platforms": {
+            "title": "还没有可用的 QQ 平台",
+            "description": "到「机器人」页填写 AppID 与 ClientSecret，或在 AstrBot 平台配置里启用 QQ 官方机器人。",
+            "action": "去配置机器人"
+          },
+          "menu": {
+            "description": "尚未配置菜单条目；同步会清空 QQ 上已有的自定义菜单。"
+          }
+        },
+        "previewTitle": "菜单预览",
+        "previewSubtitle": "这是插件将写入 QQ 的菜单结构。",
+        "editMenu": "编辑菜单",
+        "sync": {
+          "title": "同步菜单",
+          "subtitle": "把当前配置写入 QQ 官方机器人菜单，进度实时推送。",
+          "action": "同步菜单",
+          "running": "正在同步…",
+          "progress": "进度 {completed}/{total}",
+          "done": "同步完成：成功 {succeeded} 个平台，失败 {failed} 个",
+          "retry": "重试",
+          "empty": "还没有同步记录。",
+          "disabledMock": "本地开发环境没有 AstrBot 后端，同步入口不可用。"
+        }
+      },
+      "menu": {
+        "title": "菜单配置",
+        "subtitle": "维护 QQ 私聊菜单的一级菜单与子项；保存后会写回插件配置。",
+        "saveAndSync": "保存并同步",
+        "type": {
+          "send_message": "发送消息",
+          "link": "跳转链接",
+          "menu": "子菜单"
+        },
+        "childCount": "{count} 个子项",
+        "empty": "还没有菜单条目",
+        "addChild": "添加子项",
+        "edit": "编辑",
+        "delete": "删除",
+        "dialogEdit": "编辑菜单条目",
+        "dialogAdd": "添加菜单条目",
+        "parentLabel": "父菜单：{parent}",
+        "fieldType": "类型",
+        "fieldName": "菜单名称",
+        "fieldMessage": "点击后发送的消息",
+        "messageHint": "例如 /help",
+        "fieldLink": "点击后打开的链接",
+        "linkHint": "QQ 要求 https://；未填写协议时会自动补全。",
+        "menuHint": "子菜单本身不发送内容；保存后可继续为它添加发送消息或跳转链接子项。",
+        "mockHint": "本地开发环境：展示的是 mock 数据，不能保存配置。",
+        "saved": "菜单已保存并生效。",
+        "emptyWarning": "菜单为空；在「启动时同步自定义菜单」开启时，同步会清空 QQ 上已有的自定义菜单。",
+        "listTitle": "菜单条目",
+        "listSubtitle": "一级菜单 {top}/{maxTop}；每个子菜单最多 {maxSub} 个子项。",
+        "addTop": "添加一级菜单",
+        "validation": {
+          "topLimit": "一级菜单最多 {max} 个",
+          "duplicate": "一级菜单名称不能重复",
+          "nameEmpty": "菜单名称不能为空",
+          "menuParent": "子菜单不能设置父菜单",
+          "parentMissing": "父菜单「{parent}」不存在",
+          "messageEmpty": "菜单「{name}」缺少消息内容",
+          "linkEmpty": "菜单「{name}」缺少链接",
+          "subLimit": "子菜单「{name}」最多 {max} 个子项"
+        }
+      },
+      "platforms": {
+        "title": "机器人",
+        "subtitle": "每台 QQ 官方机器人独立维护 AppID 与 ClientSecret；插件配置优先于 AstrBot 平台配置。",
+        "mockHint": "本地开发环境：展示的是 mock 数据，不能保存配置。",
+        "fallbackHint": "插件尚未配置凭证，当前使用 AstrBot 平台配置中的 QQ 官方机器人；在下方添加条目后会优先使用插件凭证。",
+        "empty": "还没有插件配置的机器人",
+        "emptyHint": "添加 AppID 与 ClientSecret 后，插件启动时会同步这些机器人的菜单。",
+        "newTitle": "新机器人",
+        "newSubtitle": "填写凭证后保存",
+        "savedSubtitle": "已保存的凭证",
+        "appid": "AppID",
+        "secret": "ClientSecret",
+        "secretPlaceholder": "{masked}（留空表示沿用）",
+        "platform": "平台类型",
+        "add": "添加机器人",
+        "runtimeTitle": "当前生效的平台",
+        "runtimeSubtitle": "启动同步与状态页使用这份列表。",
+        "sourcePlugin": "插件配置",
+        "sourceAstrbot": "AstrBot 平台配置",
+        "saved": "机器人凭证已保存并生效。",
+        "type": {
+          "qq_official": "QQ 官方机器人",
+          "qq_official_webhook": "QQ 官方机器人 Webhook"
+        },
+        "validation": {
+          "appidEmpty": "第 {index} 个平台缺少 AppID",
+          "duplicate": "AppID 重复：{appid}",
+          "typeInvalid": "平台 {appid} 的类型不合法",
+          "secretEmpty": "平台 {appid} 缺少 ClientSecret"
+        }
+      },
+      "settings": {
+        "title": "设置",
+        "subtitle": "插件级通用设置：日志语言与启动同步开关。",
+        "basicTitle": "基础配置",
+        "basicSubtitle": "日志语言只影响插件日志。",
+        "language": "日志语言",
+        "languageName": {
+          "zh-CN": "简体中文",
+          "en-US": "English"
+        },
+        "syncMenu": "启动时同步自定义菜单",
+        "syncMenuHint": "关闭后插件只读取 QQ 当前菜单，不会覆盖线上内容。",
+        "mockHint": "本地开发环境：可编辑预览，但不能保存配置。",
+        "saved": "设置已保存并生效。",
+        "aboutTitle": "关于插件",
+        "aboutSubtitle": "插件简介与仓库入口。",
+        "aboutName": "QQ 自定义菜单",
+        "aboutDescription": "在 AstrBot WebUI 维护菜单条目，并同步到 QQ 官方机器人私聊菜单。",
+        "githubTitle": "GitHub 仓库",
+        "githubDescription": "查看项目源码、更新日志与问题反馈。",
+        "githubAction": "访问 GitHub"
+      }
+    }
   }
 }

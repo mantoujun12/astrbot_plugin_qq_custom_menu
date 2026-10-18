@@ -13,6 +13,8 @@ function configFixture(overrides: Partial<PluginConfigResponse> = {}): PluginCon
     plugin: { name: 'astrbot_plugin_qq_custom_menu', version: 'v0.2.3' },
     language: 'zh-CN',
     sync_menu: true,
+    primary_color: '#3c96ca',
+    secondary_color: '#2f86bd',
     qq_platforms: [],
     runtime_platforms: [],
     menu: [],
@@ -53,6 +55,9 @@ describe('SettingsView', () => {
     expect(wrapper.text()).toContain('设置')
     expect(wrapper.text()).toContain('日志语言')
     expect(wrapper.text()).toContain('启动时同步私聊菜单')
+    expect(wrapper.text()).toContain('主题配色')
+    expect(wrapper.text()).toContain('主色')
+    expect(wrapper.text()).toContain('辅助色')
     expect(wrapper.text()).toContain('v0.2.3')
     expect(wrapper.find('.qc-github-link').attributes('href')).toContain('github.com')
   })
@@ -70,6 +75,8 @@ describe('SettingsView', () => {
     expect(api.saveConfig).toHaveBeenCalledWith({
       language: 'zh-CN',
       sync_menu: false,
+      primary_color: '#3c96ca',
+      secondary_color: '#2f86bd',
     })
     expect(wrapper.text()).toContain('设置已保存并生效')
   })
@@ -84,6 +91,39 @@ describe('SettingsView', () => {
     await flush()
 
     expect(wrapper.text()).toContain('save failed')
+  })
+
+  it('saves normalized theme colors', async () => {
+    const { api, mount } = await loadView()
+    vi.mocked(api.fetchConfig).mockResolvedValue(configFixture())
+    vi.mocked(api.saveConfig).mockResolvedValue(
+      configFixture({ primary_color: '#aabbcc', secondary_color: '#112233' }),
+    )
+
+    const wrapper = await mount()
+    await wrapper.find('[data-field="settings-primary-color"] input').setValue(' #AABBCC ')
+    await wrapper.find('[data-field="settings-secondary-color"] input').setValue('#112233')
+    await saveButton(wrapper)?.trigger('click')
+    await flush()
+
+    expect(api.saveConfig).toHaveBeenCalledWith({
+      language: 'zh-CN',
+      sync_menu: true,
+      primary_color: '#aabbcc',
+      secondary_color: '#112233',
+    })
+  })
+
+  it('disables saving when a theme color is invalid', async () => {
+    const { api, mount } = await loadView()
+    vi.mocked(api.fetchConfig).mockResolvedValue(configFixture())
+
+    const wrapper = await mount()
+    await wrapper.find('[data-field="settings-primary-color"] input').setValue('red')
+    await flush()
+
+    expect(saveButton(wrapper)?.attributes('disabled')).toBeDefined()
+    expect(api.saveConfig).not.toHaveBeenCalled()
   })
 
   it('shows load errors', async () => {

@@ -13,6 +13,14 @@
         "English"
       ]
     },
+    "primary_color": {
+      "description": "插件视图主色",
+      "hint": "插件视图的主强调色，使用 #RRGGBB 格式；也可以到插件视图的「设置」页调整。"
+    },
+    "secondary_color": {
+      "description": "插件视图辅助色",
+      "hint": "插件视图的辅助强调色，使用 #RRGGBB 格式；也可以到插件视图的「设置」页调整。"
+    },
     "sync_menu": {
       "description": "启动时同步自定义菜单",
       "hint": "关闭后仅读取 QQ 当前私聊菜单，不会覆盖线上内容。"
@@ -329,7 +337,7 @@
       },
       "settings": {
         "title": "设置",
-        "subtitle": "插件级通用设置：日志语言与启动同步开关。",
+        "subtitle": "插件级通用设置：日志语言、启动同步与主题配色。",
         "basicTitle": "基础配置",
         "basicSubtitle": "日志语言只影响插件日志。",
         "language": "日志语言",
@@ -337,6 +345,12 @@
           "zh-CN": "简体中文",
           "en-US": "English"
         },
+        "themeTitle": "主题配色",
+        "themeSubtitle": "调整插件视图的主色和辅助色，保存后立即应用到浅色与深色主题。",
+        "primaryColor": "主色",
+        "secondaryColor": "辅助色",
+        "colorHint": "使用 #RRGGBB 格式。",
+        "colorInvalid": "请输入 #RRGGBB 格式的颜色。",
         "syncMenu": "启动时同步私聊菜单",
         "syncMenuHint": "关闭后插件只读取私聊菜单，不会覆盖线上内容。",
         "mockHint": "本地开发环境：可编辑预览，但不能保存配置。",

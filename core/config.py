@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from astrbot.api import logger
@@ -19,6 +20,11 @@ MENU_LIMITS: dict[str, int] = {
     "top_level_max": MENU_TOP_LEVEL_MAX,
     "sub_items_max": MENU_SUB_ITEM_MAX,
 }
+
+# 插件视图主题默认色，与 web/dashboard/src/theme/index.ts 的浅色调色板保持一致。
+DEFAULT_PRIMARY_COLOR = "#3c96ca"
+DEFAULT_SECONDARY_COLOR = "#2f86bd"
+_HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 # template_list 模板 key -> QQ 菜单 type
 _TEMPLATE_MENU_TYPES = {
@@ -295,6 +301,24 @@ def mask_secret(value: Any) -> str:
     return f"{text[:2]}{'*' * (len(text) - 4)}{text[-2:]}"
 
 
+def get_theme_colors(config: dict[str, Any]) -> dict[str, str]:
+    """读取插件视图主题色，缺失或非法值回退到默认配色。"""
+    primary = config.get("primary_color")
+    secondary = config.get("secondary_color")
+    primary_text = primary.strip() if isinstance(primary, str) else ""
+    secondary_text = secondary.strip() if isinstance(secondary, str) else ""
+    return {
+        "primary_color": (
+            primary_text.lower() if _HEX_COLOR_RE.fullmatch(primary_text) else DEFAULT_PRIMARY_COLOR
+        ),
+        "secondary_color": (
+            secondary_text.lower()
+            if _HEX_COLOR_RE.fullmatch(secondary_text)
+            else DEFAULT_SECONDARY_COLOR
+        ),
+    }
+
+
 def _editor_entry_append(
     entries: list[dict[str, Any]],
     item: dict[str, Any],
@@ -393,6 +417,7 @@ def export_config(
     return {
         "language": str(config.get("language") or DEFAULT_LANGUAGE),
         "sync_menu": config.get("sync_menu", True) is not False,
+        **get_theme_colors(config),
         "qq_platforms": plugin_platforms,
         "runtime_platforms": _runtime_platforms(config, runtime_platforms),
         "menu": get_menu_entries(config),
@@ -596,6 +621,16 @@ def normalize_config_payload(
         else:
             values["sync_menu"] = sync_menu
 
+    for field in ("primary_color", "secondary_color"):
+        if field not in payload:
+            continue
+        raw_color = payload.get(field)
+        color = raw_color.strip() if isinstance(raw_color, str) else ""
+        if not _HEX_COLOR_RE.fullmatch(color):
+            errors.append(t("web.config_theme_color_invalid", field=field))
+        else:
+            values[field] = color.lower()
+
     if "qq_platforms" in payload:
         platforms, platform_errors = _normalize_platforms(existing, payload.get("qq_platforms"))
         errors.extend(platform_errors)
@@ -612,6 +647,8 @@ def normalize_config_payload(
 
 
 __all__ = [
+    "DEFAULT_PRIMARY_COLOR",
+    "DEFAULT_SECONDARY_COLOR",
     "MENU_LIMITS",
     "MENU_SUB_ITEM_MAX",
     "MENU_TOP_LEVEL_MAX",
@@ -623,6 +660,7 @@ __all__ = [
     "get_menu_entries",
     "get_platforms",
     "get_plugin_platforms",
+    "get_theme_colors",
     "mask_appid",
     "mask_secret",
     "menu_from_entries",

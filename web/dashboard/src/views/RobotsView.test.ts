@@ -181,6 +181,8 @@ describe('RobotsView', () => {
       plugin: { name: 'astrbot_plugin_qq_custom_menu', version: 'v0.2.3' },
       language: 'zh-CN',
       sync_menu: true,
+      primary_color: '#3c96ca',
+      secondary_color: '#2f86bd',
       qq_platforms: [
         {
           appid: '987654321',
@@ -224,6 +226,8 @@ describe('RobotsView', () => {
       plugin: { name: 'astrbot_plugin_qq_custom_menu', version: 'v0.2.3' },
       language: 'zh-CN',
       sync_menu: true,
+      primary_color: '#3c96ca',
+      secondary_color: '#2f86bd',
       qq_platforms: [
         {
           appid: '987654321',

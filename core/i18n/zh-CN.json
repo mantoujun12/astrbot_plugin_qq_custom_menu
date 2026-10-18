@@ -22,6 +22,7 @@
   "web.config_save_failed": "保存配置失败：{exc}",
   "web.config_language_invalid": "日志语言必须是 {languages} 之一。",
   "web.config_sync_menu_invalid": "sync_menu 必须是布尔值。",
+  "web.config_theme_color_invalid": "主题颜色 {field} 必须是 #RRGGBB 格式。",
   "web.config_platforms_invalid": "qq_platforms 必须是列表。",
   "web.config_platform_invalid": "第 {index} 个平台配置必须是对象。",
   "web.config_appid_empty": "第 {index} 个平台缺少 AppID。",

@@ -36,7 +36,10 @@ class QQClient:
         return self._token
 
     async def request(
-        self, method: str, path: str, body: dict[str, Any] | None = None
+        self,
+        method: str,
+        path: str,
+        body: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         token = await self._token_value()
         async with self.http.request(
@@ -45,7 +48,10 @@ class QQClient:
             headers={"Authorization": f"QQBot {token}"},
             json=body,
         ) as response:
-            data = await response.json(content_type=None)
+            try:
+                data = await response.json(content_type=None)
+            except Exception:
+                data = {"raw": await response.text()}
             if response.status >= 400:
                 raise RuntimeError(
                     t(

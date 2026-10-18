@@ -6,6 +6,7 @@ import {
   mdiMessageTextOutline,
   mdiPencilOutline,
   mdiPlus,
+  mdiToggleSwitchOutline,
   mdiTrashCanOutline,
 } from '@mdi/js'
 import { useBridge } from '../../composables/useBridge'
@@ -36,17 +37,22 @@ const groups = computed(() =>
 const TYPE_META = {
   send_message: {
     icon: mdiMessageTextOutline,
-    labelKey: 'views.dashboard.menu.type.send_message',
+    labelKey: 'pages.dashboard.menu.type.send_message',
     fallback: '发送消息',
   },
   link: {
     icon: mdiLinkVariant,
-    labelKey: 'views.dashboard.menu.type.link',
+    labelKey: 'pages.dashboard.menu.type.link',
     fallback: '跳转链接',
+  },
+  switch: {
+    icon: mdiToggleSwitchOutline,
+    labelKey: 'pages.dashboard.menu.type.switch',
+    fallback: '开关',
   },
   menu: {
     icon: mdiMenuDownOutline,
-    labelKey: 'views.dashboard.menu.type.menu',
+    labelKey: 'pages.dashboard.menu.type.menu',
     fallback: '子菜单',
   },
 } as const
@@ -62,7 +68,10 @@ function detail(entry: MenuEntry): string {
   if (entry.type === 'link') {
     return entry.link ?? ''
   }
-  return t('views.dashboard.menu.childCount', '{count} 个子项').replace(
+  if (entry.type === 'switch') {
+    return entry.switch_id ? `switch_id: ${entry.switch_id}` : ''
+  }
+  return t('pages.dashboard.menu.childCount', '{count} 个子项').replace(
     '{count}',
     String(childEntries(props.entries, entry.name).length),
   )
@@ -72,7 +81,7 @@ function detail(entry: MenuEntry): string {
 <template>
   <div class="qc-menu-tree">
     <div v-if="groups.length === 0" class="qc-metric-note qc-menu-empty">
-      {{ t('views.dashboard.menu.empty', '还没有菜单条目') }}
+      {{ t('pages.dashboard.menu.empty', '还没有菜单条目') }}
     </div>
 
     <div v-for="group in groups" :key="group.entry.name" class="qc-menu-group">
@@ -91,7 +100,7 @@ function detail(entry: MenuEntry): string {
             icon
             variant="text"
             size="small"
-            :aria-label="t('views.dashboard.menu.addChild', '添加子项')"
+            :aria-label="t('pages.dashboard.menu.addChild', '添加子项')"
             @click="$emit('addChild', group.entry.name)"
           >
             <v-icon :icon="mdiPlus" size="18" />
@@ -100,7 +109,7 @@ function detail(entry: MenuEntry): string {
             icon
             variant="text"
             size="small"
-            :aria-label="t('views.dashboard.menu.edit', '编辑')"
+            :aria-label="t('pages.dashboard.menu.edit', '编辑')"
             @click="$emit('edit', group.entry)"
           >
             <v-icon :icon="mdiPencilOutline" size="18" />
@@ -110,7 +119,7 @@ function detail(entry: MenuEntry): string {
             variant="text"
             size="small"
             color="error"
-            :aria-label="t('views.dashboard.menu.delete', '删除')"
+            :aria-label="t('pages.dashboard.menu.delete', '删除')"
             @click="$emit('delete', group.entry)"
           >
             <v-icon :icon="mdiTrashCanOutline" size="18" />
@@ -138,7 +147,7 @@ function detail(entry: MenuEntry): string {
               icon
               variant="text"
               size="small"
-              :aria-label="t('views.dashboard.menu.edit', '编辑')"
+              :aria-label="t('pages.dashboard.menu.edit', '编辑')"
               @click="$emit('edit', child)"
             >
               <v-icon :icon="mdiPencilOutline" size="18" />
@@ -148,7 +157,7 @@ function detail(entry: MenuEntry): string {
               variant="text"
               size="small"
               color="error"
-              :aria-label="t('views.dashboard.menu.delete', '删除')"
+              :aria-label="t('pages.dashboard.menu.delete', '删除')"
               @click="$emit('delete', child)"
             >
               <v-icon :icon="mdiTrashCanOutline" size="18" />

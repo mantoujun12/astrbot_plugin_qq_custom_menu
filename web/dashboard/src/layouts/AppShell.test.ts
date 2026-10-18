@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import AppShell from './AppShell.vue'
+import { resolvePageTitle } from './useAppShell'
 import { installBridge, mountView, waitUntil } from '../test/helpers'
 
 function makeRouter() {
@@ -48,5 +49,20 @@ describe('AppShell', () => {
     await waitUntil(() => wrapper.find('[aria-label="展开侧边栏"]').exists())
 
     expect(wrapper.text()).not.toContain('Host title')
+  })
+
+  it('does not treat the raw dashboard view name as the localized title', () => {
+    expect(resolvePageTitle('dashboard', undefined, '自定义菜单')).toBe(
+      '自定义菜单',
+    )
+    expect(resolvePageTitle('views.dashboard', undefined, 'Fallback')).toBe(
+      'Fallback',
+    )
+    expect(resolvePageTitle('pages.dashboard', 'Plugin title', 'Fallback')).toBe(
+      'Plugin title',
+    )
+    expect(resolvePageTitle('Host title', 'Plugin name', 'Fallback')).toBe(
+      'Host title',
+    )
   })
 })

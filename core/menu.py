@@ -1,4 +1,4 @@
-"""QQ 自定义菜单同步流程。"""
+"""QQ 私聊自定义菜单同步流程。"""
 
 from __future__ import annotations
 
@@ -9,9 +9,15 @@ from typing import Any
 import aiohttp
 from astrbot.api import logger
 
-from .config import get_menu, mask_appid
-from .i18n import t
+from .config import SCENE_C2C, mask_appid, menu_from_entries
+from .i18n import LOG_TAG, t
 from .qq_api import QQClient
+from .robot_config import (
+    MenuConfigError,
+    build_runtime_robots,
+    empty_menu_config,
+    load_menu_config,
+)
 from .state import MenuStateStore
 
 ProgressCallback = Callable[[str], Awaitable[None]]
@@ -29,6 +35,8 @@ async def _notify_event(callback: EventCallback | None, event: dict[str, Any]) -
 
 
 class MenuSynchronizer:
+    """逐机器人同步私聊自定义菜单。"""
+
     def __init__(
         self,
         http: aiohttp.ClientSession,
@@ -39,18 +47,32 @@ class MenuSynchronizer:
         self.http = http
         self.platforms = platforms
         self.config = config
+        self.data_dir = Path(data_dir) if data_dir is not None else None
         self.state = MenuStateStore(data_dir) if data_dir is not None else None
 
     def set_config(self, config: dict[str, Any]) -> None:
-        """Dashboard 保存配置后调用，让下一次同步读取最新内容。"""
+        """Dashboard 保存兼容配置后刷新内存引用。"""
         self.config = config
 
     def set_platforms(self, platforms: list[dict[str, str]]) -> None:
-        """Dashboard 保存凭证后调用，让下一次同步使用最新平台列表。"""
+        """Dashboard 保存兼容凭证后刷新回退平台列表。"""
         self.platforms = platforms
 
+    def _robot_config(self) -> dict[str, Any]:
+        if self.data_dir is None:
+            return empty_menu_config()
+        return load_menu_config(self.data_dir)
+
+    def build_runtime_robots(self) -> list[dict[str, Any]]:
+        """读取新版配置并与兼容配置按 AppID 合并。"""
+        return build_runtime_robots(
+            self.config,
+            self._robot_config(),
+            self.platforms,
+        )
+
     async def sync(self) -> None:
-        """启动时同步入口：保留原有行为，失败只记录日志。"""
+        """启动同步入口；异常由调用方记录，不影响插件启动。"""
         await self.sync_all()
 
     async def sync_all(
@@ -59,12 +81,27 @@ class MenuSynchronizer:
         on_progress: ProgressCallback | None = None,
         on_event: EventCallback | None = None,
     ) -> dict[str, Any]:
-        """同步所有平台，并通过回调推送文本进度与结构化事件。
+        """同步所有已启用的私聊菜单。"""
+        try:
+            robots = self.build_runtime_robots()
+        except MenuConfigError as exc:
+            message = t("log.robot_config_load_failed", exc=exc)
+            logger.error(f"{LOG_TAG} {message}", exc_info=True)
+            await _notify_event(
+                on_event,
+                {
+                    "type": "finish",
+                    "ok": False,
+                    "reason": "config_error",
+                    "platforms": 0,
+                    "succeeded": 0,
+                    "failed": 0,
+                    "error": str(exc),
+                },
+            )
+            raise
 
-        单个平台失败不会中止其余平台；返回值与 finish 事件中的统计一致。
-        """
-        total = len(self.platforms)
-        if not self.platforms:
+        if not robots:
             message = t("log.no_platforms")
             logger.warning(message)
             await _notify_progress(on_progress, message)
@@ -78,86 +115,119 @@ class MenuSynchronizer:
             await _notify_event(on_event, {"type": "finish", **result})
             return result
 
-        menu = get_menu(self.config)
-        sync_menu = self.config.get("sync_menu", True) is not False
-        if sync_menu and not menu["items"]:
-            # PUT 会整表覆盖远程菜单，菜单项为空时同步会清空 QQ 上已有的自定义菜单
-            message = t("log.menu_cleared")
-            logger.info(message)
-            await _notify_progress(on_progress, message)
-
+        apply = self.config.get("sync_menu", True) is not False
+        total = len(robots)
+        active_scenes = sum(
+            1 for robot in robots if robot["scenes"].get(SCENE_C2C, {}).get("enabled")
+        )
+        total_items = sum(
+            len(robot["scenes"].get(SCENE_C2C, {}).get("items") or [])
+            for robot in robots
+            if robot["scenes"].get(SCENE_C2C, {}).get("enabled")
+        )
         await _notify_event(
             on_event,
             {
                 "type": "start",
-                "mode": "sync" if sync_menu else "read",
+                "mode": "sync" if apply else "read",
                 "platforms": total,
-                "items": len(menu["items"]),
+                "scenes": active_scenes,
+                "items": total_items,
             },
         )
 
         succeeded = 0
         failed = 0
-        for index, platform in enumerate(self.platforms, start=1):
-            appid = platform["appid"]
+        for index, robot in enumerate(robots, start=1):
+            appid = str(robot.get("appid") or "")
             display_appid = mask_appid(appid)
+            scene = robot["scenes"].get(SCENE_C2C, {})
+            scene_result: dict[str, Any]
             try:
-                client = QQClient(appid, platform["secret"], self.http)
-                current = await client.get_menu()
-                read_message = t(
-                    "log.menu_read_ok",
-                    appid=display_appid,
-                    menu=current.get("menu"),
-                )
-                logger.info(read_message)
-                await _notify_progress(on_progress, read_message)
-
-                if not sync_menu:
-                    result: dict[str, Any] = {
+                if not scene.get("enabled"):
+                    scene_result = {
+                        "scene": SCENE_C2C,
                         "status": "ok",
-                        "action": "read",
+                        "action": "skipped",
                         "saved": 0,
                     }
                 else:
-                    # 是否 PUT 必须以刚读取到的远端菜单为准：本地摘要可能已过期，
-                    # 也可能在 PUT 成功后保存失败，不能单独用于跳过同步。
-                    remote_menu = current.get("menu")
-                    if remote_menu == menu:
+                    client = QQClient(appid, str(robot.get("secret") or ""), self.http)
+                    target = menu_from_entries(scene.get("items") or [])
+                    current = await client.get_menu()
+                    remote = current.get("menu")
+                    remote = remote if isinstance(remote, dict) else {"items": []}
+                    logger.info(
+                        t(
+                            "log.menu_read_ok",
+                            appid=display_appid,
+                            menu=remote,
+                        )
+                    )
+
+                    if not apply:
+                        scene_result = {
+                            "scene": SCENE_C2C,
+                            "status": "ok",
+                            "action": "read",
+                            "saved": 0,
+                        }
+                    elif remote == target:
                         if self.state is not None:
-                            # 远端已与配置一致，用远端内容修复可能过期的本地摘要。
-                            self.state.mark_synced(appid, remote_menu)
-                        message = t("log.menu_unchanged", appid=display_appid)
-                        logger.info(message)
-                        await _notify_progress(on_progress, message)
-                        result = {"status": "ok", "action": "unchanged", "saved": 0}
+                            self.state.mark_scene_synced(appid, SCENE_C2C, target)
+                        scene_result = {
+                            "scene": SCENE_C2C,
+                            "status": "ok",
+                            "action": "unchanged",
+                            "saved": 0,
+                        }
                     else:
-                        await client.update_menu(menu)
+                        if not target["items"]:
+                            logger.info(t("log.menu_cleared"))
+                        await client.update_menu(target)
                         if self.state is not None:
-                            self.state.mark_synced(appid, menu)
-                        message = t("log.menu_sync_ok", appid=display_appid)
-                        logger.info(message)
-                        await _notify_progress(on_progress, message)
-                        result = {
+                            self.state.mark_scene_synced(appid, SCENE_C2C, target)
+                        scene_result = {
+                            "scene": SCENE_C2C,
                             "status": "ok",
                             "action": "updated",
-                            "saved": len(menu["items"]),
+                            "saved": len(target["items"]),
                         }
                 succeeded += 1
+                message = t(
+                    "log.platform_sync_ok",
+                    appid=display_appid,
+                    scenes=1,
+                )
+                logger.info(message)
+                await _notify_progress(on_progress, message)
             except Exception as exc:
                 failed += 1
+                scene_result = {
+                    "scene": SCENE_C2C,
+                    "status": "error",
+                    "action": "failed",
+                    "saved": 0,
+                    "error": str(exc),
+                }
                 message = t("log.platform_failed", appid=display_appid, exc=exc)
                 logger.error(message, exc_info=True)
                 await _notify_progress(on_progress, message)
-                result = {"status": "error", "action": "failed", "saved": 0, "error": str(exc)}
 
             await _notify_event(
                 on_event,
                 {
                     "type": "platform",
                     "pf_id": display_appid,
+                    "name": str(robot.get("name") or display_appid),
+                    "kind": str(robot.get("source") or "robot"),
                     "index": index,
                     "total": total,
-                    **result,
+                    "status": scene_result["status"],
+                    "action": scene_result["action"],
+                    "saved": scene_result["saved"],
+                    "scenes": [scene_result],
+                    **({"error": scene_result["error"]} if scene_result.get("error") else {}),
                 },
             )
 
@@ -170,8 +240,9 @@ class MenuSynchronizer:
             "platforms": total,
             "succeeded": succeeded,
             "failed": failed,
-            "items": len(menu["items"]),
-            "sync_menu": sync_menu,
+            "scenes": active_scenes,
+            "items": total_items,
+            "sync_menu": apply,
         }
         await _notify_event(on_event, {"type": "finish", **result})
         return result

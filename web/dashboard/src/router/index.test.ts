@@ -15,12 +15,23 @@ describe('router', () => {
     expect(router.currentRoute.value.name).toBe('status')
   })
 
-  it.each(['/menu', '/platforms', '/settings'])('resolves %s', async (path) => {
+  it.each(['/robots', '/compatibility', '/settings'])('resolves %s', async (path) => {
     const router = await makeRouter()
     await router.push(path)
     await router.isReady()
 
     expect(router.currentRoute.value.path).toBe(path)
+  })
+
+  it.each([
+    ['/menu', 'compatibility'],
+    ['/platforms', 'robots'],
+  ])('keeps legacy route %s working', async (path, expected) => {
+    const router = await makeRouter()
+    await router.push(path)
+    await router.isReady()
+
+    expect(router.currentRoute.value.name).toBe(expected)
   })
 
   it('redirects unknown paths to status', async () => {

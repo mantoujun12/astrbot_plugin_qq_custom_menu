@@ -34,6 +34,8 @@ describe('MenuEntryDialog', () => {
         name: '帮助',
         message: '/help',
         link: undefined,
+        switch_id: undefined,
+        default: undefined,
         parent: '',
       },
     ])
@@ -69,6 +71,8 @@ describe('MenuEntryDialog', () => {
       name: '文档',
       message: undefined,
       link: 'https://docs.example.com',
+      switch_id: undefined,
+      default: undefined,
       parent: '',
     })
   })
@@ -107,5 +111,24 @@ describe('MenuEntryDialog', () => {
     await flush()
 
     expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([false])
+  })
+
+  it('saves a top-level switch entry', async () => {
+    const wrapper = mountDialog({})
+
+    const typeSelect = wrapper.findComponent({ name: 'VSelect' })
+    typeSelect.vm.$emit('update:modelValue', 'switch')
+    await flush()
+    await wrapper.find('[data-field="menu-name"] input').setValue('联网搜索')
+    await wrapper.find('[data-field="menu-switch-id"] input').setValue('search')
+    await wrapper.find('[data-field="menu-switch-default"] input').setValue(true)
+    await wrapper.find('[data-field="menu-save"]').trigger('click')
+
+    expect(wrapper.emitted('save')?.[0]?.[0]).toMatchObject({
+      type: 'switch',
+      name: '联网搜索',
+      switch_id: 'search',
+      default: true,
+    })
   })
 })

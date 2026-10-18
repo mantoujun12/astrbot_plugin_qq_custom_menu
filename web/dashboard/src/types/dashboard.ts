@@ -3,9 +3,11 @@
  * 与 core/web_api.py、core/menu.py、core/sync_runner.py 的结构一一对应。
  */
 
-export const MENU_TYPES = ['send_message', 'link', 'menu'] as const
+export const MENU_TYPES = ['send_message', 'link', 'switch', 'menu'] as const
+export const SCENES = ['c2c'] as const
 
 export type MenuType = (typeof MENU_TYPES)[number]
+export type Scene = (typeof SCENES)[number]
 
 /** Dashboard 编辑用的扁平菜单条目；parent 为空表示一级菜单。 */
 export interface MenuEntry {
@@ -13,6 +15,8 @@ export interface MenuEntry {
   name: string
   message?: string
   link?: string
+  switch_id?: string
+  default?: boolean
   parent: string
 }
 
@@ -24,10 +28,20 @@ export interface PlatformStatus {
   pf_id: string
   /** 脱敏后的 appid */
   appid: string
+  name?: string
   platform: string
   secret_set: boolean
-  source: 'plugin' | 'astrbot'
+  source: 'robot' | 'compatibility'
   state: SyncState
+  scenes?: SceneStatus[]
+}
+
+export interface SceneStatus {
+  scene: Scene
+  enabled: boolean
+  state: SyncState
+  item_count: number
+  digest: string
 }
 
 export interface QqMenuItem {
@@ -35,6 +49,10 @@ export interface QqMenuItem {
   name: string
   send_message?: string
   link?: string
+  switch?: {
+    switch_id: string
+    default: boolean
+  }
   sub_menu_items?: QqMenuItem[]
 }
 
@@ -54,6 +72,10 @@ export interface StatusResponse {
   sync_menu: boolean
   platforms: PlatformStatus[]
   menu: MenuStats
+  robots?: {
+    new: number
+    compatibility: number
+  }
   state: { available: boolean }
 }
 
@@ -70,7 +92,7 @@ export interface RuntimePlatform {
   appid: string
   platform: string
   secret_set: boolean
-  source: 'plugin' | 'astrbot'
+  source: 'plugin'
 }
 
 export interface MenuLimits {
@@ -84,7 +106,6 @@ export interface PluginConfigResponse {
   sync_menu: boolean
   qq_platforms: ConfigPlatform[]
   runtime_platforms: RuntimePlatform[]
-  using_fallback: boolean
   menu: MenuEntry[]
   limits: MenuLimits
 }
@@ -115,6 +136,7 @@ export interface SyncStartEvent {
   seq: number
   mode: 'sync' | 'read'
   platforms: number
+  scenes?: number
   items: number
 }
 
@@ -122,12 +144,21 @@ export interface SyncPlatformEvent {
   type: 'platform'
   seq: number
   pf_id: string
+  name?: string
+  kind?: 'robot' | 'compatibility'
   index: number
   total: number
   status: 'ok' | 'error'
-  action?: 'updated' | 'unchanged' | 'read' | 'failed'
+  action?: 'updated' | 'unchanged' | 'read' | 'failed' | 'skipped'
   saved?: number
   error?: string | null
+  scenes?: Array<{
+    scene: Scene
+    status: 'ok' | 'error'
+    action?: string
+    saved?: number
+    error?: string | null
+  }>
 }
 
 export interface SyncFinishEvent {
@@ -138,6 +169,7 @@ export interface SyncFinishEvent {
   platforms: number
   succeeded: number
   failed: number
+  scenes?: number
   error?: string | null
 }
 

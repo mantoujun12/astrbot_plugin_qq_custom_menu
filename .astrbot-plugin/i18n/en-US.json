@@ -15,11 +15,11 @@
     },
     "sync_menu": {
       "description": "Sync custom menu on startup",
-      "hint": "When disabled, the plugin only reads the current QQ menu and does not overwrite it."
+      "hint": "When disabled, the plugin only reads the current private-chat menu and does not overwrite it."
     },
     "qq_platforms": {
-      "description": "QQ official bot platform credentials",
-      "hint": "Fill in AppID and ClientSecret; if empty, the plugin reads QQ official platforms from AstrBot platform config.",
+      "description": "Compatibility platform credentials",
+      "hint": "This page keeps the legacy global config. Use Robots in the plugin view for per-robot setup. AppIDs not managed there can still use these credentials.",
       "templates": {
         "qq_platform": {
           "name": "QQ Bot",
@@ -42,8 +42,8 @@
       }
     },
     "menu": {
-      "description": "QQ private chat custom menu",
-      "hint": "Click Add Entry, choose a menu type and fill in the fields. Up to 10 top-level items; for sub-menus, add a Sub-menu entry first, then add Send Message or Link entries and set Parent Menu Name to that sub-menu name.",
+      "description": "Compatibility private-chat custom menu",
+      "hint": "The legacy global private-chat menu remains editable here. AppIDs managed by Robots no longer use it. Up to 10 top-level items and 5 children per sub-menu.",
       "templates": {
         "send_message": {
           "name": "Send Message",
@@ -76,6 +76,21 @@
             }
           }
         },
+        "switch": {
+          "name": "Switch",
+          "items": {
+            "name": {
+              "description": "Switch name"
+            },
+            "switch_id": {
+              "description": "Switch ID",
+              "hint": "The switch state is included in message ext after the user toggles it."
+            },
+            "default": {
+              "description": "Enabled by default"
+            }
+          }
+        },
         "menu": {
           "name": "Sub-menu",
           "items": {
@@ -87,14 +102,14 @@
       }
     }
   },
-  "views": {
+  "pages": {
     "dashboard": {
-      "title": "QQ Custom Menu",
+      "title": "Custom Menu",
       "description": "Maintain the QQ official bot private-chat menu in AstrBot WebUI, inspect sync state and trigger a sync.",
       "nav": {
         "status": "Overview",
-        "menu": "Menu",
-        "platforms": "Robots",
+        "robots": "Robots",
+        "compatibility": "Compatibility",
         "settings": "Settings",
         "collapse": "Collapse sidebar",
         "expand": "Expand sidebar",
@@ -126,31 +141,28 @@
           "disabled": "Sync disabled"
         },
         "source": {
-          "plugin": "Plugin config",
-          "astrbot": "AstrBot platform config"
+          "robot": "Robots",
+          "compatibility": "Compatibility config"
         },
         "secret": "ClientSecret",
+        "itemUnit": "item(s)",
         "secretSet": "Configured",
         "secretMissing": "Missing",
-        "syncDisabled": "\"Sync custom menu on startup\" is disabled: the plugin only reads the QQ menu and never overwrites it.",
-        "fallbackHint": "Credentials currently come from AstrBot platform config and are read-only; adding plugin entries on the Robots page takes precedence.",
+        "syncDisabled": "\"Sync on startup\" is disabled: the plugin only reads private-chat menus without overwriting them.",
         "empty": {
           "platforms": {
             "title": "No QQ platform available yet",
-            "description": "Fill in AppID and ClientSecret on the Robots page, or enable a QQ official bot in AstrBot platform config.",
+            "description": "Add a robot on Robots, or enter legacy platform credentials on Compatibility.",
             "action": "Configure robots"
           },
           "menu": {
-            "description": "No menu entries configured; syncing would clear the existing custom menu on QQ."
+            "description": "No menu items configured; syncing clears old content in enabled scenes."
           }
         },
-        "previewTitle": "Menu preview",
-        "previewSubtitle": "This is the menu structure the plugin will write to QQ.",
-        "editMenu": "Edit menu",
         "sync": {
-          "title": "Sync menu",
-          "subtitle": "Write the current configuration to the QQ official bot menu with live progress.",
-          "action": "Sync menu",
+          "title": "Sync private-chat menu",
+          "subtitle": "Write the private-chat menu with live progress.",
+          "action": "Start sync",
           "running": "Syncing...",
           "progress": "Progress {completed}/{total}",
           "done": "Sync finished: {succeeded} platform(s) succeeded, {failed} failed",
@@ -166,6 +178,7 @@
         "type": {
           "send_message": "Send message",
           "link": "Link",
+          "switch": "Switch",
           "menu": "Sub-menu"
         },
         "childCount": "{count} child item(s)",
@@ -181,6 +194,9 @@
         "fieldMessage": "Message sent after click",
         "messageHint": "For example /help",
         "fieldLink": "Link opened after click",
+        "fieldSwitchId": "Switch ID",
+        "switchHint": "The switch state is included in message ext after the user toggles it.",
+        "switchDefault": "Enabled by default",
         "linkHint": "QQ requires https://; missing schemes are normalized automatically.",
         "menuHint": "A sub-menu has no payload; after saving, add Send Message or Link children to it.",
         "mockHint": "Local dev environment: showing mock data, saving is disabled.",
@@ -197,14 +213,16 @@
           "parentMissing": "Parent \"{parent}\" does not exist",
           "messageEmpty": "Menu \"{name}\" is missing message content",
           "linkEmpty": "Menu \"{name}\" is missing a link",
+          "switchParent": "A switch cannot be a sub-menu item",
+          "switchIdEmpty": "Menu \"{name}\" is missing a switch ID",
+          "switchIdDuplicate": "Switch ID must be unique: {switchId}",
           "subLimit": "Sub-menu \"{name}\" allows at most {max} children"
         }
       },
       "platforms": {
         "title": "Robots",
-        "subtitle": "Each QQ official bot keeps its own AppID and ClientSecret; plugin config takes precedence over AstrBot platform config.",
+        "subtitle": "Each QQ official bot keeps its own AppID and ClientSecret.",
         "mockHint": "Local dev environment: showing mock data, saving is disabled.",
-        "fallbackHint": "No plugin credentials configured; the plugin currently uses QQ official bots from AstrBot platform config. Adding entries below takes precedence.",
         "empty": "No plugin-configured robots yet",
         "emptyHint": "After adding AppID and ClientSecret, the plugin syncs these robots' menus on startup.",
         "newTitle": "New robot",
@@ -218,7 +236,6 @@
         "runtimeTitle": "Effective platforms",
         "runtimeSubtitle": "Startup sync and the overview page use this list.",
         "sourcePlugin": "Plugin config",
-        "sourceAstrbot": "AstrBot platform config",
         "saved": "Robot credentials saved and applied.",
         "type": {
           "qq_official": "QQ official bot",
@@ -231,6 +248,85 @@
           "secretEmpty": "Platform {appid} is missing ClientSecret"
         }
       },
+      "robots": {
+        "title": "Robots",
+        "subtitle": "Maintain a private-chat menu for each robot without overwriting one another.",
+        "saveAndSync": "Save and sync",
+        "importLegacy": "Import compatibility config",
+        "addRobot": "Add robot",
+        "createSubtitle": "Enter credentials first; configure the private-chat menu after creation.",
+        "createConfirm": "Create",
+        "created": "Robot added as a draft; save to persist it.",
+        "saved": "Robot config saved.",
+        "mockHint": "Local dev environment: showing mock data, saving is disabled.",
+        "name": "Robot name",
+        "platformType": "Platform type",
+        "secretKeep": "Leave empty to keep the current value",
+        "secretSetHint": "A ClientSecret is saved; leave this field empty to keep it.",
+        "secretSaved": "Current secret: {masked}",
+        "listTitle": "Robots",
+        "listSubtitle": "Select a robot to edit its scenes.",
+        "emptyRobots": "No robots yet. Add one first.",
+        "editorEmpty": "Select or add a robot.",
+        "robotSummary": "{scenes} scene(s) enabled, {items} menu item(s).",
+        "untitledRobot": "Untitled robot",
+        "removedLocal": "Removed locally; save to persist the change.",
+        "basicTitle": "Basics",
+        "basicSubtitle": "Name, AppID and ClientSecret belong to this robot only.",
+        "platformTypeName": {
+          "qq_official": "QQ official bot",
+          "qq_official_webhook": "QQ official bot Webhook"
+        },
+        "scene": {
+          "c2c": "Private chat"
+        },
+        "c2c": {
+          "subtitle": "Writes the QQ global custom menu with messages, links, sub-menus and switches.",
+          "limits": "Top-level {top}/{maxTop}; each sub-menu allows at most {maxSub} items.",
+          "add": "Add top-level menu",
+          "disabled": "Private chat is disabled; the plugin will not modify the QQ custom menu."
+        },
+        "validation": {
+          "nameEmpty": "Robot name cannot be empty",
+          "nameTooLong": "Robot name allows at most {max} characters",
+          "appidEmpty": "AppID cannot be empty",
+          "appidDuplicate": "AppID must be unique: {appid}",
+          "secretEmpty": "New robots require ClientSecret"
+        },
+        "deleteRobot": "Delete robot config",
+        "deleteConfirmTitle": "Delete robot config?",
+        "deleteConfirmText": "Deleting only removes local config and does not clear the live QQ menu. It takes effect after saving.",
+        "deleteConfirm": "Delete",
+        "dangerTitle": "Delete robot config",
+        "dangerText": "Deleting only removes local config and does not automatically clear live QQ menus.",
+        "importTitle": "Import compatibility config",
+        "importSubtitle": "Enter legacy AppIDs to import, one per line or comma-separated.",
+        "importAppids": "AppID list",
+        "importEmpty": "No AppID is available in the compatibility config; enter one manually.",
+        "importNoAppids": "Enter at least one AppID.",
+        "importConfirm": "Import",
+        "imported": "Robots imported from compatibility config; review before syncing."
+      },
+      "compatibility": {
+        "title": "Compatibility Config",
+        "subtitle": "Keeps the legacy global private-chat menu and credentials. Robots managed by the Robots page no longer use this menu.",
+        "saveAndSync": "Save and sync",
+        "saved": "Compatibility config saved.",
+        "mockHint": "Local dev environment: showing mock data, saving is disabled.",
+        "platformsTitle": "Compatibility platform credentials",
+        "platformsSubtitle": "Leave ClientSecret empty to keep the saved value.",
+        "addPlatform": "Add platform",
+        "noPlatforms": "No compatibility platform credentials yet.",
+        "platformType": "Platform type",
+        "platformTypeName": {
+          "qq_official": "QQ official bot",
+          "qq_official_webhook": "QQ official bot Webhook"
+        },
+        "menuTitle": "Compatibility private-chat menu",
+        "menuSubtitle": "Top-level {top}/{maxTop}; each sub-menu allows at most {maxSub} items.",
+        "addMenu": "Add top-level menu",
+        "emptyWarning": "The compatibility menu is empty; sync clears QQ custom menus for AppIDs not managed by new robot config."
+      },
       "settings": {
         "title": "Settings",
         "subtitle": "Plugin-wide settings: log language and startup sync.",
@@ -241,14 +337,14 @@
           "zh-CN": "简体中文",
           "en-US": "English"
         },
-        "syncMenu": "Sync custom menu on startup",
-        "syncMenuHint": "When disabled, the plugin only reads the current QQ menu and never overwrites it.",
+        "syncMenu": "Sync private-chat menu on startup",
+        "syncMenuHint": "When disabled, the plugin only reads private-chat menus without overwriting them.",
         "mockHint": "Local dev environment: editable preview, saving is disabled.",
         "saved": "Settings saved and applied.",
         "aboutTitle": "About",
         "aboutSubtitle": "Plugin summary and repository link.",
-        "aboutName": "QQ Custom Menu",
-        "aboutDescription": "Maintain menu entries in AstrBot WebUI and sync them to the QQ official bot private-chat menu.",
+        "aboutName": "Custom Menu",
+        "aboutDescription": "Maintain a private-chat menu for each robot and sync it to the QQ official API.",
         "githubTitle": "GitHub repository",
         "githubDescription": "View source code, changelog and issue tracker.",
         "githubAction": "Open GitHub"

@@ -7,10 +7,20 @@ function platform(overrides: Partial<PlatformStatus> = {}): PlatformStatus {
   return {
     pf_id: '102*****89',
     appid: '102*****89',
+    name: '主机器人',
     platform: 'qq_official',
     secret_set: true,
-    source: 'plugin',
+    source: 'compatibility',
     state: 'synced',
+    scenes: [
+      {
+        scene: 'c2c',
+        enabled: true,
+        state: 'synced',
+        item_count: 2,
+        digest: 'c2c',
+      },
+    ],
     ...overrides,
   }
 }
@@ -22,10 +32,13 @@ describe('PlatformStatusCard', () => {
     })
 
     expect(wrapper.text()).toContain('102*****89')
+    expect(wrapper.text()).toContain('主机器人')
+    expect(wrapper.find('[data-field="robot-title"]').text()).toBe('主机器人')
     expect(wrapper.text()).toContain('qq_official')
-    expect(wrapper.text()).toContain('插件配置')
+    expect(wrapper.text()).toContain('兼容性配置')
     expect(wrapper.text()).toContain('已同步')
     expect(wrapper.text()).toContain('已配置')
+    expect(wrapper.text()).toContain('私聊')
   })
 
   it.each([
@@ -40,14 +53,14 @@ describe('PlatformStatusCard', () => {
     expect(wrapper.text()).toContain(label)
   })
 
-  it('marks missing secrets and fallback platforms', () => {
+  it('marks missing secrets', () => {
     const wrapper = mountView(PlatformStatusCard, {
       props: {
-        platform: platform({ source: 'astrbot', secret_set: false }),
+        platform: platform({ source: 'robot', secret_set: false }),
       },
     })
 
-    expect(wrapper.text()).toContain('AstrBot 平台配置')
+    expect(wrapper.text()).toContain('机器人')
     expect(wrapper.text()).toContain('未配置')
   })
 })

@@ -51,7 +51,7 @@ class QQCustomMenuPlugin(Star):
             self.context,
             lambda: self._syncer,
             lambda: dict(self.config),
-            get_platforms=lambda: get_platforms(self.config, self.context),
+            get_platforms=lambda: get_platforms(self.config),
             save_config=self._save_config,
             data_dir=self.data_dir,
             version=PLUGIN_VERSION,
@@ -71,13 +71,13 @@ class QQCustomMenuPlugin(Star):
         self.config.update(values)
         if self._syncer is not None:
             self._syncer.set_config(self.config)
-            self._syncer.set_platforms(get_platforms(self.config, self.context))
+            self._syncer.set_platforms(get_platforms(self.config))
 
     async def initialize(self) -> None:
         self._http = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=15))
         self._syncer = MenuSynchronizer(
             self._http,
-            get_platforms(self.config, self.context),
+            get_platforms(self.config),
             self.config,
             self.data_dir,
         )

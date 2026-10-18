@@ -18,8 +18,8 @@ const GITHUB_REPOSITORY_URL =
   'https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu'
 
 const LANGUAGE_OPTIONS = computed(() => [
-  { title: t('views.dashboard.settings.languageName.zh-CN', '简体中文'), value: 'zh-CN' },
-  { title: t('views.dashboard.settings.languageName.en-US', 'English'), value: 'en-US' },
+  { title: t('pages.dashboard.settings.languageName.zh-CN', '简体中文'), value: 'zh-CN' },
+  { title: t('pages.dashboard.settings.languageName.en-US', 'English'), value: 'en-US' },
 ])
 
 const config = ref<PluginConfigResponse | null>(null)
@@ -74,7 +74,7 @@ async function save(): Promise<void> {
     config.value = next
     language.value = next.language
     syncMenu.value = next.sync_menu
-    notice.value = t('views.dashboard.settings.saved', '设置已保存并生效。')
+    notice.value = t('pages.dashboard.settings.saved', '设置已保存并生效。')
   } catch (err) {
     error.value = err instanceof Error ? err.message : String(err)
   } finally {
@@ -87,11 +87,11 @@ async function save(): Promise<void> {
   <v-container fluid class="qc-page pa-4 pa-md-6">
     <div class="qc-header">
       <div class="qc-header-main">
-        <h1 class="qc-title">{{ t('views.dashboard.settings.title', '设置') }}</h1>
+        <h1 class="qc-title">{{ t('pages.dashboard.settings.title', '设置') }}</h1>
         <p class="qc-subtitle">
           {{
             t(
-              'views.dashboard.settings.subtitle',
+              'pages.dashboard.settings.subtitle',
               '插件级通用设置：日志语言与启动同步开关。',
             )
           }}
@@ -106,7 +106,7 @@ async function save(): Promise<void> {
           :disabled="!hasBackend"
           @click="load"
         >
-          {{ t('views.dashboard.common.reload', '重新载入') }}
+          {{ t('pages.dashboard.common.reload', '重新载入') }}
         </v-btn>
         <v-btn
           variant="tonal"
@@ -116,7 +116,7 @@ async function save(): Promise<void> {
           :prepend-icon="mdiContentSave"
           @click="save"
         >
-          {{ t('views.dashboard.common.save', '保存') }}
+          {{ t('pages.dashboard.common.save', '保存') }}
         </v-btn>
       </div>
     </div>
@@ -131,7 +131,7 @@ async function save(): Promise<void> {
     >
       {{
         t(
-          'views.dashboard.settings.mockHint',
+          'pages.dashboard.settings.mockHint',
           '本地开发环境：可编辑预览，但不能保存配置。',
         )
       }}
@@ -164,10 +164,10 @@ async function save(): Promise<void> {
     <v-card v-if="config" class="qc-card mb-4" variant="outlined">
       <v-card-item class="px-5 pt-5">
         <v-card-title class="text-body-large">
-          {{ t('views.dashboard.settings.basicTitle', '基础配置') }}
+          {{ t('pages.dashboard.settings.basicTitle', '基础配置') }}
         </v-card-title>
         <v-card-subtitle>
-          {{ t('views.dashboard.settings.basicSubtitle', '日志语言只影响插件日志。') }}
+          {{ t('pages.dashboard.settings.basicSubtitle', '日志语言只影响插件日志。') }}
         </v-card-subtitle>
       </v-card-item>
 
@@ -177,7 +177,7 @@ async function save(): Promise<void> {
           data-field="settings-language"
           :items="LANGUAGE_OPTIONS"
           :disabled="!editable"
-          :label="t('views.dashboard.settings.language', '日志语言')"
+          :label="t('pages.dashboard.settings.language', '日志语言')"
           variant="outlined"
           density="compact"
           class="mb-4"
@@ -187,11 +187,11 @@ async function save(): Promise<void> {
           v-model="syncMenu"
           data-field="settings-sync-menu"
           :disabled="!editable"
-          :label="t('views.dashboard.settings.syncMenu', '启动时同步自定义菜单')"
+          :label="t('pages.dashboard.settings.syncMenu', '启动时同步私聊菜单')"
           :hint="
             t(
-              'views.dashboard.settings.syncMenuHint',
-              '关闭后插件只读取 QQ 当前菜单，不会覆盖线上内容。',
+              'pages.dashboard.settings.syncMenuHint',
+              '关闭后插件只读取私聊菜单，不会覆盖线上内容。',
             )
           "
           persistent-hint
@@ -205,10 +205,10 @@ async function save(): Promise<void> {
     <v-card v-if="config" class="qc-card qc-about-plugin" variant="outlined">
       <v-card-item class="px-5 pt-5">
         <v-card-title class="text-body-large">
-          {{ t('views.dashboard.settings.aboutTitle', '关于插件') }}
+          {{ t('pages.dashboard.settings.aboutTitle', '关于插件') }}
         </v-card-title>
         <v-card-subtitle>
-          {{ t('views.dashboard.settings.aboutSubtitle', '插件简介与仓库入口。') }}
+          {{ t('pages.dashboard.settings.aboutSubtitle', '插件简介与仓库入口。') }}
         </v-card-subtitle>
       </v-card-item>
 
@@ -216,13 +216,13 @@ async function save(): Promise<void> {
         <div class="d-flex flex-wrap align-center justify-space-between gap-4">
           <div>
             <div class="text-body-1 font-weight-medium">
-              {{ t('views.dashboard.settings.aboutName', 'QQ 自定义菜单') }}
+              {{ t('pages.dashboard.settings.aboutName', '自定义菜单') }}
             </div>
             <p class="text-body-2 text-medium-emphasis mt-1 mb-0">
               {{
                 t(
-                  'views.dashboard.settings.aboutDescription',
-                  '在 AstrBot WebUI 维护菜单条目，并同步到 QQ 官方机器人私聊菜单。',
+                  'pages.dashboard.settings.aboutDescription',
+                  '按机器人维护私聊自定义菜单，并同步到 QQ 官方接口。',
                 )
               }}
             </p>
@@ -237,12 +237,12 @@ async function save(): Promise<void> {
         <div class="d-flex flex-wrap align-center justify-space-between gap-4">
           <div>
             <div class="text-body-1 font-weight-medium">
-              {{ t('views.dashboard.settings.githubTitle', 'GitHub 仓库') }}
+              {{ t('pages.dashboard.settings.githubTitle', 'GitHub 仓库') }}
             </div>
             <p class="text-body-2 text-medium-emphasis mt-1 mb-0">
               {{
                 t(
-                  'views.dashboard.settings.githubDescription',
+                  'pages.dashboard.settings.githubDescription',
                   '查看项目源码、更新日志与问题反馈。',
                 )
               }}
@@ -257,7 +257,7 @@ async function save(): Promise<void> {
             variant="tonal"
             :prepend-icon="mdiGithub"
           >
-            {{ t('views.dashboard.settings.githubAction', '访问 GitHub') }}
+            {{ t('pages.dashboard.settings.githubAction', '访问 GitHub') }}
           </v-btn>
         </div>
       </v-card-text>

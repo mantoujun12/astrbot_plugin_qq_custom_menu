@@ -13,7 +13,7 @@ import {
 } from './menuForm'
 import type { MenuEntry, MenuLimits } from '../types/dashboard'
 
-const LIMITS: MenuLimits = { top_level_max: 10, sub_items_max: 10 }
+const LIMITS: MenuLimits = { top_level_max: 10, sub_items_max: 5 }
 const t = (_key: string, fallback?: string): string => fallback ?? _key
 
 function entry(overrides: Partial<MenuEntry> = {}): MenuEntry {
@@ -40,6 +40,8 @@ describe('menuForm helpers', () => {
       name: '',
       message: '',
       link: undefined,
+      switch_id: undefined,
+      default: undefined,
       parent: '',
     })
     expect(newEntry('link', '更多')).toEqual({
@@ -47,6 +49,8 @@ describe('menuForm helpers', () => {
       name: '',
       message: undefined,
       link: '',
+      switch_id: undefined,
+      default: undefined,
       parent: '更多',
     })
     expect(newEntry('menu')).toEqual({
@@ -54,6 +58,17 @@ describe('menuForm helpers', () => {
       name: '',
       message: undefined,
       link: undefined,
+      switch_id: undefined,
+      default: undefined,
+      parent: '',
+    })
+    expect(newEntry('switch')).toEqual({
+      type: 'switch',
+      name: '',
+      message: undefined,
+      link: undefined,
+      switch_id: '',
+      default: false,
       parent: '',
     })
   })
@@ -94,6 +109,7 @@ describe('menuForm helpers', () => {
       entry({ type: 'menu', name: '更多', message: undefined }),
       entry({ name: '关于', message: '/about', parent: '更多' }),
       entry({ type: 'link', name: '文档', message: undefined, link: 'docs.app', parent: '更多' }),
+      entry({ type: 'switch', name: '联网', switch_id: 'search', default: false }),
     ]
     expect(validateMenu(entries, LIMITS, t)).toEqual({ ok: true, reason: '' })
   })
@@ -109,6 +125,11 @@ describe('menuForm helpers', () => {
       [entry({ name: '孤儿', message: '/x', parent: '不存在' })],
       [entry({ name: '无消息', message: '  ' })],
       [entry({ type: 'link', name: '无链接', message: undefined, link: '  ' })],
+      [entry({ type: 'switch', name: '缺开关 ID', switch_id: '  ', default: false })],
+      [
+        entry({ type: 'switch', name: '开关一', switch_id: 'same', default: false }),
+        entry({ type: 'switch', name: '开关二', switch_id: 'same', default: true }),
+      ],
       [
         entry({ type: 'menu', name: '更多', message: undefined }),
         ...Array.from({ length: 11 }, (_, index) =>
@@ -129,11 +150,19 @@ describe('menuForm helpers', () => {
       entry({ name: ' 帮助 ', message: ' /help ' }),
       entry({ type: 'menu', name: '更多', message: undefined }),
       entry({ type: 'link', name: '文档', message: undefined, link: ' docs.app ' }),
+      entry({ type: 'switch', name: ' 联网 ', switch_id: ' search ', default: true }),
     ]
     expect(buildMenuPayload(entries)).toEqual([
       { type: 'send_message', name: '帮助', parent: '', message: '/help' },
       { type: 'menu', name: '更多', parent: '' },
       { type: 'link', name: '文档', parent: '', link: 'https://docs.app' },
+      {
+        type: 'switch',
+        name: '联网',
+        parent: '',
+        switch_id: 'search',
+        default: true,
+      },
     ])
   })
 
@@ -148,6 +177,11 @@ describe('menuForm helpers', () => {
           { type: 'unknown', name: '未知' },
         ],
       },
+      {
+        type: 'switch',
+        name: '联网',
+        switch: { switch_id: 'search', default: true },
+      },
     ]
 
     expect(qqItemsToEntries(items)).toEqual([
@@ -155,6 +189,13 @@ describe('menuForm helpers', () => {
       { type: 'menu', name: '更多', parent: '' },
       { type: 'link', name: '文档', parent: '更多', link: 'https://docs.app' },
       { type: 'send_message', name: '未知', parent: '更多', message: '' },
+      {
+        type: 'switch',
+        name: '联网',
+        parent: '',
+        switch_id: 'search',
+        default: true,
+      },
     ])
   })
 })

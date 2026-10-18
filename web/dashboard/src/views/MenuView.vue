@@ -133,7 +133,7 @@ async function save(options: { sync?: boolean } = {}): Promise<void> {
     const next = await saveConfig({ menu: buildMenuPayload(entries.value) })
     config.value = next
     entries.value = cloneEntries(next.menu)
-    notice.value = t('views.dashboard.menu.saved', '菜单已保存并生效。')
+    notice.value = t('pages.dashboard.menu.saved', '菜单已保存并生效。')
     if (options.sync) {
       await startSync()
       await router.push({ name: 'status' })
@@ -150,11 +150,11 @@ async function save(options: { sync?: boolean } = {}): Promise<void> {
   <v-container fluid class="qc-page pa-4 pa-md-6">
     <div class="qc-header">
       <div class="qc-header-main">
-        <h1 class="qc-title">{{ t('views.dashboard.menu.title', '菜单配置') }}</h1>
+        <h1 class="qc-title">{{ t('pages.dashboard.menu.title', '菜单配置') }}</h1>
         <p class="qc-subtitle">
           {{
             t(
-              'views.dashboard.menu.subtitle',
+              'pages.dashboard.menu.subtitle',
               '维护 QQ 私聊菜单的一级菜单与子项；保存后会写回插件配置。',
             )
           }}
@@ -169,7 +169,7 @@ async function save(options: { sync?: boolean } = {}): Promise<void> {
           :disabled="!hasBackend"
           @click="load"
         >
-          {{ t('views.dashboard.common.reload', '重新载入') }}
+          {{ t('pages.dashboard.common.reload', '重新载入') }}
         </v-btn>
         <v-btn
           variant="tonal"
@@ -179,7 +179,7 @@ async function save(options: { sync?: boolean } = {}): Promise<void> {
           :prepend-icon="mdiSync"
           @click="save({ sync: true })"
         >
-          {{ t('views.dashboard.menu.saveAndSync', '保存并同步') }}
+          {{ t('pages.dashboard.menu.saveAndSync', '保存并同步') }}
         </v-btn>
         <v-btn
           variant="tonal"
@@ -189,7 +189,7 @@ async function save(options: { sync?: boolean } = {}): Promise<void> {
           :prepend-icon="mdiContentSave"
           @click="save()"
         >
-          {{ t('views.dashboard.common.save', '保存') }}
+          {{ t('pages.dashboard.common.save', '保存') }}
         </v-btn>
       </div>
     </div>
@@ -204,7 +204,7 @@ async function save(options: { sync?: boolean } = {}): Promise<void> {
     >
       {{
         t(
-          'views.dashboard.menu.mockHint',
+          'pages.dashboard.menu.mockHint',
           '本地开发环境：展示的是 mock 数据，不能保存配置。',
         )
       }}
@@ -242,7 +242,7 @@ async function save(options: { sync?: boolean } = {}): Promise<void> {
     >
       {{
         t(
-          'views.dashboard.menu.emptyWarning',
+          'pages.dashboard.menu.emptyWarning',
           '菜单为空；在「启动时同步自定义菜单」开启时，同步会清空 QQ 上已有的自定义菜单。',
         )
       }}
@@ -253,12 +253,12 @@ async function save(options: { sync?: boolean } = {}): Promise<void> {
     <v-card v-if="config" class="qc-card" variant="outlined">
       <v-card-item class="px-5 pt-5">
         <v-card-title class="text-body-large">
-          {{ t('views.dashboard.menu.listTitle', '菜单条目') }}
+          {{ t('pages.dashboard.menu.listTitle', '菜单条目') }}
         </v-card-title>
         <v-card-subtitle>
           {{
             t(
-              'views.dashboard.menu.listSubtitle',
+              'pages.dashboard.menu.listSubtitle',
               '一级菜单 {top}/{maxTop}；每个子菜单最多 {maxSub} 个子项。',
             )
               .replace('{top}', String(topLevelCount))
@@ -274,7 +274,7 @@ async function save(options: { sync?: boolean } = {}): Promise<void> {
             :prepend-icon="mdiPlus"
             @click="openAddTop"
           >
-            {{ t('views.dashboard.menu.addTop', '添加一级菜单') }}
+            {{ t('pages.dashboard.menu.addTop', '添加一级菜单') }}
           </v-btn>
         </template>
       </v-card-item>

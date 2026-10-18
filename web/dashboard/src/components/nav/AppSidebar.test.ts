@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { mdiCogOutline } from '@mdi/js'
+import { mdiCogOutline, mdiHistory } from '@mdi/js'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import AppSidebar from './AppSidebar.vue'
+import NavItem from './NavItem.vue'
 import { mountView } from '../../test/helpers'
 
 function makeRouter() {
@@ -19,19 +20,26 @@ describe('AppSidebar', () => {
 
     const wrapper = mountView(AppSidebar, {
       props: {
-        title: 'QQ 自定义菜单',
+        title: '自定义菜单',
         toggleIcon: mdiCogOutline,
         toggleLabel: '收起侧边栏',
       },
       global: { plugins: [router] },
     })
 
-    expect(wrapper.text()).toContain('QQ 自定义菜单')
+    expect(wrapper.text()).toContain('自定义菜单')
     expect(wrapper.text()).toContain('状态概览')
-    expect(wrapper.text()).toContain('菜单配置')
     expect(wrapper.text()).toContain('机器人')
+    expect(wrapper.text()).toContain('兼容性')
     expect(wrapper.text()).toContain('设置')
     expect(wrapper.text()).toContain('v0.2.3')
+
+    expect(wrapper.find('[data-nav-section="main"]').text()).not.toContain('兼容性')
+    expect(wrapper.find('[data-nav-section="bottom"]').text()).toContain('兼容性')
+    const compatibility = wrapper
+      .findAllComponents(NavItem)
+      .find((item) => item.props('to') === '/compatibility')
+    expect(compatibility?.props('icon')).toBe(mdiHistory)
   })
 
   it('emits toggle when the brand button is clicked', async () => {
@@ -41,7 +49,7 @@ describe('AppSidebar', () => {
 
     const wrapper = mountView(AppSidebar, {
       props: {
-        title: 'QQ 自定义菜单',
+        title: '自定义菜单',
         toggleIcon: mdiCogOutline,
         toggleLabel: '收起侧边栏',
       },
@@ -61,14 +69,14 @@ describe('AppSidebar', () => {
     const wrapper = mountView(AppSidebar, {
       props: {
         rail: true,
-        title: 'QQ 自定义菜单',
+        title: '自定义菜单',
         toggleIcon: mdiCogOutline,
         toggleLabel: '展开侧边栏',
       },
       global: { plugins: [router] },
     })
 
-    expect(wrapper.text()).not.toContain('QQ 自定义菜单')
+    expect(wrapper.text()).not.toContain('自定义菜单')
     expect(wrapper.text()).not.toContain('v0.2.3')
   })
 })

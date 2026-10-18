@@ -61,7 +61,7 @@ export function validatePlatforms(
       return {
         ok: false,
         reason: t(
-          'views.dashboard.platforms.validation.appidEmpty',
+          'pages.dashboard.platforms.validation.appidEmpty',
           '第 {index} 个平台缺少 AppID',
         ).replace('{index}', String(index + 1)),
       }
@@ -70,7 +70,7 @@ export function validatePlatforms(
       return {
         ok: false,
         reason: t(
-          'views.dashboard.platforms.validation.duplicate',
+          'pages.dashboard.platforms.validation.duplicate',
           'AppID 重复：{appid}',
         ).replace('{appid}', appid),
       }
@@ -80,7 +80,7 @@ export function validatePlatforms(
       return {
         ok: false,
         reason: t(
-          'views.dashboard.platforms.validation.typeInvalid',
+          'pages.dashboard.platforms.validation.typeInvalid',
           '平台 {appid} 的类型不合法',
         ).replace('{appid}', appid),
       }
@@ -89,7 +89,7 @@ export function validatePlatforms(
       return {
         ok: false,
         reason: t(
-          'views.dashboard.platforms.validation.secretEmpty',
+          'pages.dashboard.platforms.validation.secretEmpty',
           '平台 {appid} 缺少 ClientSecret',
         ).replace('{appid}', appid),
       }

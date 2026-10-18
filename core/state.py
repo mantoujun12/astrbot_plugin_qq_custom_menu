@@ -22,7 +22,7 @@ LOCK_STALE_SECONDS = 30.0
 
 
 class MenuStateStore:
-    """记录每个 appid 上次成功同步的菜单摘要。"""
+    """记录每个 appid、场景上次成功同步的内容摘要。"""
 
     def __init__(self, data_dir: Path | str) -> None:
         self.data_dir = Path(data_dir)
@@ -52,9 +52,36 @@ class MenuStateStore:
         return self.load().get(appid) == menu_digest(menu)
 
     def mark_synced(self, appid: str, menu: dict[str, Any]) -> None:
+        """写入兼容性私聊菜单摘要。"""
         with self._locked():
             state = self.load()
             state[appid] = menu_digest(menu)
+            self._write(state)
+
+    @staticmethod
+    def scoped_key(appid: str, scene: str) -> str:
+        return f"{scene}:{appid}"
+
+    def digest_for_scene(self, appid: str, scene: str) -> str | None:
+        """读取场景摘要；私聊兼容旧版仅有 appid 的摘要键。"""
+        state = self.load()
+        digest = state.get(self.scoped_key(appid, scene))
+        if digest is None and scene == "c2c":
+            return state.get(appid)
+        return digest
+
+    def mark_scene_synced(
+        self,
+        appid: str,
+        scene: str,
+        payload: dict[str, Any],
+    ) -> None:
+        """记录某个场景成功同步后的内容摘要。"""
+        with self._locked():
+            state = self.load()
+            state[self.scoped_key(appid, scene)] = menu_digest(payload)
+            if scene == "c2c":
+                state[appid] = menu_digest(payload)
             self._write(state)
 
     @contextmanager

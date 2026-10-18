@@ -15,6 +15,7 @@ stub 只伪造代码里实际用到的最小接口面:
 
 from __future__ import annotations
 
+import importlib
 import logging
 import sys
 import types
@@ -79,4 +80,29 @@ def _install_astrbot_stub() -> None:
     _mod("astrbot", api=api, core=sys.modules["astrbot.core"])
 
 
+def _install_aiohttp_stub() -> None:
+    """宿主 AstrBot 自带 aiohttp；离线测试缺少时注入最小 stub。
+
+    插件运行期依赖 AstrBot 提供的 aiohttp，不在 requirements.txt 中声明版本，
+    避免与宿主自身使用的 aiohttp 版本冲突。
+    """
+    try:
+        importlib.import_module("aiohttp")
+    except ModuleNotFoundError:
+
+        class ClientTimeout:
+            def __init__(self, *, total: float | None = None, **kwargs: object) -> None:
+                self.total = total
+
+        class ClientSession:
+            def __init__(self, **kwargs: object) -> None:
+                self.kwargs = kwargs
+
+            async def close(self) -> None:
+                pass
+
+        _mod("aiohttp", ClientSession=ClientSession, ClientTimeout=ClientTimeout)
+
+
 _install_astrbot_stub()
+_install_aiohttp_stub()

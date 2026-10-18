@@ -36,8 +36,8 @@ const platformTypeItems = computed(() =>
   PLATFORM_TYPES.map((value) => ({
     title:
       value === 'qq_official'
-        ? t('views.dashboard.platforms.type.qq_official', 'QQ 官方机器人')
-        : t('views.dashboard.platforms.type.qq_official_webhook', 'QQ 官方机器人 Webhook'),
+        ? t('pages.dashboard.platforms.type.qq_official', 'QQ 官方机器人')
+        : t('pages.dashboard.platforms.type.qq_official_webhook', 'QQ 官方机器人 Webhook'),
     value,
   })),
 )
@@ -94,7 +94,7 @@ async function save(): Promise<void> {
     const next = await saveConfig({ qq_platforms: buildPlatformPayload(rows.value) })
     config.value = next
     rows.value = toPlatformForm(next.qq_platforms)
-    notice.value = t('views.dashboard.platforms.saved', '机器人凭证已保存并生效。')
+    notice.value = t('pages.dashboard.platforms.saved', '机器人凭证已保存并生效。')
   } catch (err) {
     error.value = err instanceof Error ? err.message : String(err)
   } finally {
@@ -107,12 +107,12 @@ async function save(): Promise<void> {
   <v-container fluid class="qc-page pa-4 pa-md-6">
     <div class="qc-header">
       <div class="qc-header-main">
-        <h1 class="qc-title">{{ t('views.dashboard.platforms.title', '机器人') }}</h1>
+        <h1 class="qc-title">{{ t('pages.dashboard.platforms.title', '机器人') }}</h1>
         <p class="qc-subtitle">
           {{
             t(
-              'views.dashboard.platforms.subtitle',
-              '每台 QQ 官方机器人独立维护 AppID 与 ClientSecret；插件配置优先于 AstrBot 平台配置。',
+              'pages.dashboard.platforms.subtitle',
+              '每台 QQ 官方机器人独立维护 AppID 与 ClientSecret。',
             )
           }}
         </p>
@@ -126,7 +126,7 @@ async function save(): Promise<void> {
           :disabled="!hasBackend"
           @click="load"
         >
-          {{ t('views.dashboard.common.reload', '重新载入') }}
+          {{ t('pages.dashboard.common.reload', '重新载入') }}
         </v-btn>
         <v-btn
           variant="tonal"
@@ -136,7 +136,7 @@ async function save(): Promise<void> {
           :prepend-icon="mdiContentSave"
           @click="save"
         >
-          {{ t('views.dashboard.common.save', '保存') }}
+          {{ t('pages.dashboard.common.save', '保存') }}
         </v-btn>
       </div>
     </div>
@@ -151,24 +151,8 @@ async function save(): Promise<void> {
     >
       {{
         t(
-          'views.dashboard.platforms.mockHint',
+          'pages.dashboard.platforms.mockHint',
           '本地开发环境：展示的是 mock 数据，不能保存配置。',
-        )
-      }}
-    </v-alert>
-
-    <v-alert
-      v-if="config?.using_fallback"
-      type="info"
-      variant="tonal"
-      density="compact"
-      class="mb-4"
-      :prepend-icon="mdiInformationOutline"
-    >
-      {{
-        t(
-          'views.dashboard.platforms.fallbackHint',
-          '插件尚未配置凭证，当前使用 AstrBot 平台配置中的 QQ 官方机器人；在下方添加条目后会优先使用插件凭证。',
         )
       }}
     </v-alert>
@@ -201,12 +185,12 @@ async function save(): Promise<void> {
       <div v-if="rows.length === 0" class="qc-empty-panel mb-4">
         <v-icon :icon="mdiInformationOutline" size="40" class="mb-2" />
         <div class="text-body-1 font-weight-medium">
-          {{ t('views.dashboard.platforms.empty', '还没有插件配置的机器人') }}
+          {{ t('pages.dashboard.platforms.empty', '还没有插件配置的机器人') }}
         </div>
         <p class="qc-metric-note">
           {{
             t(
-              'views.dashboard.platforms.emptyHint',
+              'pages.dashboard.platforms.emptyHint',
               '添加 AppID 与 ClientSecret 后，插件启动时会同步这些机器人的菜单。',
             )
           }}
@@ -221,14 +205,14 @@ async function save(): Promise<void> {
                 {{
                   row.appid
                     ? row.appid
-                    : t('views.dashboard.platforms.newTitle', '新机器人')
+                    : t('pages.dashboard.platforms.newTitle', '新机器人')
                 }}
               </v-card-title>
               <v-card-subtitle>
                 {{
                   row.isNew
-                    ? t('views.dashboard.platforms.newSubtitle', '填写凭证后保存')
-                    : t('views.dashboard.platforms.savedSubtitle', '已保存的凭证')
+                    ? t('pages.dashboard.platforms.newSubtitle', '填写凭证后保存')
+                    : t('pages.dashboard.platforms.savedSubtitle', '已保存的凭证')
                 }}
               </v-card-subtitle>
               <template #append>
@@ -237,7 +221,7 @@ async function save(): Promise<void> {
                   variant="text"
                   color="error"
                   :disabled="!editable"
-                  :aria-label="t('views.dashboard.common.delete', '删除')"
+                  :aria-label="t('pages.dashboard.common.delete', '删除')"
                   @click="removeRow(index)"
                 >
                   <v-icon :icon="mdiTrashCanOutline" size="18" />
@@ -249,7 +233,7 @@ async function save(): Promise<void> {
               <v-text-field
                 v-model="row.appid"
                 data-field="platform-appid"
-                :label="t('views.dashboard.platforms.appid', 'AppID')"
+                :label="t('pages.dashboard.platforms.appid', 'AppID')"
                 variant="outlined"
                 density="compact"
                 class="mb-3"
@@ -259,11 +243,11 @@ async function save(): Promise<void> {
               <v-text-field
                 v-model="row.secret"
                 data-field="platform-secret"
-                :label="t('views.dashboard.platforms.secret', 'ClientSecret')"
+                :label="t('pages.dashboard.platforms.secret', 'ClientSecret')"
                 :placeholder="
                   row.secret_set
                     ? t(
-                        'views.dashboard.platforms.secretPlaceholder',
+                        'pages.dashboard.platforms.secretPlaceholder',
                         '{masked}（留空表示沿用）',
                       ).replace('{masked}', row.secret_masked)
                     : ''
@@ -278,7 +262,7 @@ async function save(): Promise<void> {
               <v-select
                 v-model="row.platform"
                 :items="platformTypeItems"
-                :label="t('views.dashboard.platforms.platform', '平台类型')"
+                :label="t('pages.dashboard.platforms.platform', '平台类型')"
                 variant="outlined"
                 density="compact"
                 hide-details
@@ -298,7 +282,7 @@ async function save(): Promise<void> {
         class="mt-4"
         @click="addRow"
       >
-        {{ t('views.dashboard.platforms.add', '添加机器人') }}
+        {{ t('pages.dashboard.platforms.add', '添加机器人') }}
       </v-btn>
 
       <v-card
@@ -308,12 +292,12 @@ async function save(): Promise<void> {
       >
         <v-card-item class="px-5 pt-5">
           <v-card-title class="text-body-large">
-            {{ t('views.dashboard.platforms.runtimeTitle', '当前生效的平台') }}
+            {{ t('pages.dashboard.platforms.runtimeTitle', '当前生效的平台') }}
           </v-card-title>
           <v-card-subtitle>
             {{
               t(
-                'views.dashboard.platforms.runtimeSubtitle',
+                'pages.dashboard.platforms.runtimeSubtitle',
                 '启动同步与状态页使用这份列表。',
               )
             }}
@@ -329,11 +313,7 @@ async function save(): Promise<void> {
               <div class="qc-list-label">{{ platform.pf_id }}</div>
               <div class="qc-metric-note">
                 {{ platform.platform }} ·
-                {{
-                  platform.source === 'plugin'
-                    ? t('views.dashboard.platforms.sourcePlugin', '插件配置')
-                    : t('views.dashboard.platforms.sourceAstrbot', 'AstrBot 平台配置')
-                }}
+                {{ t('pages.dashboard.platforms.sourcePlugin', '插件配置') }}
               </div>
             </div>
             <v-chip
@@ -343,8 +323,8 @@ async function save(): Promise<void> {
             >
               {{
                 platform.secret_set
-                  ? t('views.dashboard.status.secretSet', '已配置')
-                  : t('views.dashboard.status.secretMissing', '未配置')
+                  ? t('pages.dashboard.status.secretSet', '已配置')
+                  : t('pages.dashboard.status.secretMissing', '未配置')
               }}
             </v-chip>
           </div>

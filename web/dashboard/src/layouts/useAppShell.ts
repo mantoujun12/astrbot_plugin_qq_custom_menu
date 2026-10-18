@@ -10,6 +10,27 @@ import { mdiClose, mdiMenuClose, mdiMenuOpen } from '@mdi/js'
 import { useDisplay } from 'vuetify'
 import { useBridge } from '../composables/useBridge'
 
+/**
+ * 宿主在某些 AstrBot 版本会把视图名直接当成 pageTitle 传入（常见值是
+ * `dashboard`）。它不是本地化标题，不能覆盖插件自己的 i18n。
+ */
+export function resolvePageTitle(
+  pageTitle: string | undefined,
+  displayName: string | undefined,
+  fallback: string,
+): string {
+  const candidates = [pageTitle, displayName]
+    .map((value) => value?.trim() ?? '')
+    .filter(Boolean)
+  const meaningful = candidates.find(
+    (value) =>
+      !['dashboard', 'pages.dashboard', 'views.dashboard'].includes(
+        value.toLowerCase(),
+      ),
+  )
+  return meaningful ?? fallback
+}
+
 export function useAppShell() {
   const { mobile } = useDisplay()
   const { context, isDark, t } = useBridge()
@@ -47,18 +68,22 @@ export function useAppShell() {
 
   const toggleLabel = computed(() => {
     if (mobile.value) {
-      return t('views.dashboard.nav.closeDrawer', '关闭侧边栏')
+      return t('pages.dashboard.nav.closeDrawer', '关闭侧边栏')
     }
     return railActive.value
-      ? t('views.dashboard.nav.expand', '展开侧边栏')
-      : t('views.dashboard.nav.collapse', '收起侧边栏')
+      ? t('pages.dashboard.nav.expand', '展开侧边栏')
+      : t('pages.dashboard.nav.collapse', '收起侧边栏')
   })
 
   const title = computed(
-    () =>
-      context.value?.pageTitle ??
-      context.value?.displayName ??
-      t('views.dashboard.title', 'QQ 自定义菜单'),
+    () => {
+      const fallback = t('pages.dashboard.title', '自定义菜单')
+      return resolvePageTitle(
+        context.value?.pageTitle,
+        context.value?.displayName,
+        fallback,
+      )
+    },
   )
 
   return {

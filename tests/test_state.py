@@ -111,6 +111,17 @@ def test_mark_synced_does_not_clobber_other_appids() -> None:
     assert set(state) == {"app1", "app2"}
 
 
+def test_scene_digest_keeps_c2c_compatibility_alias() -> None:
+    tmp_path = make_test_dir("scenes")
+    store = MenuStateStore(tmp_path)
+    c2c = {"items": [{"type": "send_message", "name": "帮助", "send_message": "/help"}]}
+
+    store.mark_scene_synced("app1", "c2c", c2c)
+
+    assert store.digest_for_scene("app1", "c2c") == menu_digest(c2c)
+    assert store.load()["app1"] == menu_digest(c2c)
+
+
 def test_write_uses_unique_tmp_files(monkeypatch: Any) -> None:
     tmp_path = make_test_dir("unique-tmp")
     store = MenuStateStore(tmp_path)

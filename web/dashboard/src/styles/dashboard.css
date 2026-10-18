@@ -385,6 +385,123 @@
   border-top: 1px solid var(--qc-border);
 }
 
+/* 机器人页固定在可视高度内，标题和操作区不随内容滚动。 */
+.qc-robots-page {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--v-layout-top, 0px) - var(--v-layout-bottom, 0px));
+  height: calc(100dvh - var(--v-layout-top, 0px) - var(--v-layout-bottom, 0px));
+  min-height: 0;
+  overflow: hidden;
+}
+
+.qc-robots-page > .qc-header,
+.qc-robots-page > .v-progress-linear,
+.qc-robots-page > .v-alert {
+  flex: 0 0 auto;
+}
+
+/* 列表与配置共用一个外框；桌面端用竖线分隔。 */
+.qc-robots-shell {
+  display: flex;
+  flex: 1 1 0;
+  align-items: stretch;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.qc-robots-pane {
+  min-width: 0;
+  min-height: 0;
+}
+
+.qc-robot-list {
+  --qc-robot-list-bg: color-mix(
+    in srgb,
+    rgb(var(--v-theme-surface)) 98%,
+    rgb(var(--v-theme-on-surface))
+  );
+  flex: 0 0 clamp(260px, 27%, 320px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--qc-robot-list-bg);
+}
+
+.qc-robot-list > .v-card-item {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--qc-robot-list-bg);
+}
+
+.qc-robot-editor {
+  flex: 1 1 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 24px;
+}
+
+.qc-robots-divider {
+  flex: 0 0 auto;
+  border-color: var(--qc-border);
+  opacity: 1;
+}
+
+.qc-robots-divider--desktop {
+  align-self: stretch;
+  height: auto;
+  margin: 0;
+}
+
+.qc-robots-divider--mobile {
+  display: none;
+}
+
+.qc-config-item {
+  padding: 14px;
+  border: 1px solid var(--qc-border);
+  border-radius: 12px;
+}
+
+.qc-robot-item--active {
+  border-color: rgba(var(--v-theme-primary), 0.42);
+}
+
+@media (max-width: 959.98px) {
+  .qc-robots-shell {
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .qc-robot-list {
+    flex: 0 0 clamp(180px, 30vh, 260px);
+    width: 100%;
+    overflow-y: auto;
+  }
+
+  .qc-robot-list > .v-card-item {
+    position: sticky;
+  }
+
+  .qc-robot-editor {
+    flex: 1 1 auto;
+    width: 100%;
+    overflow-y: auto;
+    padding: 16px;
+  }
+
+  .qc-robots-divider--desktop {
+    display: none;
+  }
+
+  .qc-robots-divider--mobile {
+    display: flex;
+    width: auto;
+    height: 0;
+    margin: 0 20px;
+  }
+}
+
 /* 浮层里的卡片一律给实底，避免 outlined 变体透出遮罩。 */
 .v-overlay__content > .v-card {
   background-color: rgb(var(--v-theme-surface));

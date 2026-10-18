@@ -2,10 +2,17 @@ import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vite'
 import vuetify from 'vite-plugin-vuetify'
 
+const normalizeHtmlLineEndings = {
+  name: 'normalize-html-line-endings',
+  transformIndexHtml(html: string): string {
+    return html.replace(/\r\n/g, '\n')
+  },
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   // vuetify() 必须排在 vue() 之后，否则按需自动导入 Vuetify 组件/指令会失效。
-  plugins: [vue(), vuetify({ autoImport: true })],
+  plugins: [vue(), vuetify({ autoImport: true }), normalizeHtmlLineEndings],
   // AstrBot 以受限 iframe 加载插件视图，静态资源挂在
   // /api/v1/plugins/<plugin>/views/<view>/_t/<token>/ 前缀下，
   // 只有相对路径能沿该前缀解析，绝对路径 /assets/... 会 404。

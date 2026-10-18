@@ -31,6 +31,8 @@ export function newEntry(type: MenuType = 'send_message', parent = ''): MenuEntr
     name: '',
     message: type === 'send_message' ? '' : undefined,
     link: type === 'link' ? '' : undefined,
+    switch_id: type === 'switch' ? '' : undefined,
+    default: type === 'switch' ? false : undefined,
     parent,
   }
 }
@@ -91,12 +93,13 @@ export function validateMenu(
   const menuNames = new Set(
     entries.filter((entry) => entry.type === 'menu' && !entry.parent).map((entry) => entry.name),
   )
+  const switchIds = new Set<string>()
 
   if (topLevel.length > limits.top_level_max) {
     return {
       ok: false,
       reason: t(
-        'views.dashboard.menu.validation.topLimit',
+        'pages.dashboard.menu.validation.topLimit',
         '一级菜单最多 {max} 个',
       ).replace('{max}', String(limits.top_level_max)),
     }
@@ -106,7 +109,7 @@ export function validateMenu(
   if (new Set(names).size !== names.length) {
     return {
       ok: false,
-      reason: t('views.dashboard.menu.validation.duplicate', '一级菜单名称不能重复'),
+      reason: t('pages.dashboard.menu.validation.duplicate', '一级菜单名称不能重复'),
     }
   }
 
@@ -115,15 +118,24 @@ export function validateMenu(
     if (!name) {
       return {
         ok: false,
-        reason: t('views.dashboard.menu.validation.nameEmpty', '菜单名称不能为空'),
+        reason: t('pages.dashboard.menu.validation.nameEmpty', '菜单名称不能为空'),
       }
     }
     if (entry.type === 'menu' && entry.parent) {
       return {
         ok: false,
         reason: t(
-          'views.dashboard.menu.validation.menuParent',
+          'pages.dashboard.menu.validation.menuParent',
           '子菜单不能设置父菜单',
+        ),
+      }
+    }
+    if (entry.type === 'switch' && entry.parent) {
+      return {
+        ok: false,
+        reason: t(
+          'pages.dashboard.menu.validation.switchParent',
+          '开关不能作为子菜单项',
         ),
       }
     }
@@ -131,7 +143,7 @@ export function validateMenu(
       return {
         ok: false,
         reason: t(
-          'views.dashboard.menu.validation.parentMissing',
+          'pages.dashboard.menu.validation.parentMissing',
           '父菜单「{parent}」不存在',
         ).replace('{parent}', entry.parent),
       }
@@ -140,7 +152,7 @@ export function validateMenu(
       return {
         ok: false,
         reason: t(
-          'views.dashboard.menu.validation.messageEmpty',
+          'pages.dashboard.menu.validation.messageEmpty',
           '菜单「{name}」缺少消息内容',
         ).replace('{name}', name),
       }
@@ -149,10 +161,32 @@ export function validateMenu(
       return {
         ok: false,
         reason: t(
-          'views.dashboard.menu.validation.linkEmpty',
+          'pages.dashboard.menu.validation.linkEmpty',
           '菜单「{name}」缺少链接',
         ).replace('{name}', name),
       }
+    }
+    if (entry.type === 'switch') {
+      const switchId = (entry.switch_id ?? '').trim()
+      if (!switchId) {
+        return {
+          ok: false,
+          reason: t(
+            'pages.dashboard.menu.validation.switchIdEmpty',
+            '菜单「{name}」缺少开关 ID',
+          ).replace('{name}', name),
+        }
+      }
+      if (switchIds.has(switchId)) {
+        return {
+          ok: false,
+          reason: t(
+            'pages.dashboard.menu.validation.switchIdDuplicate',
+            '开关 ID 不能重复：{switchId}',
+          ).replace('{switchId}', switchId),
+        }
+      }
+      switchIds.add(switchId)
     }
   }
 
@@ -162,7 +196,7 @@ export function validateMenu(
       return {
         ok: false,
         reason: t(
-          'views.dashboard.menu.validation.subLimit',
+          'pages.dashboard.menu.validation.subLimit',
           '子菜单「{name}」最多 {max} 个子项',
         )
           .replace('{name}', menuName)
@@ -186,6 +220,9 @@ export function qqItemsToEntries(items: QqMenuItem[], parent = ''): MenuEntry[] 
       entry.message = item.send_message ?? ''
     } else if (type === 'link') {
       entry.link = item.link ?? ''
+    } else if (type === 'switch') {
+      entry.switch_id = item.switch?.switch_id ?? ''
+      entry.default = item.switch?.default ?? false
     }
     entries.push(entry)
     if (type === 'menu') {
@@ -207,6 +244,9 @@ export function buildMenuPayload(entries: MenuEntry[]): MenuEntry[] {
       payload.message = (entry.message ?? '').trim()
     } else if (entry.type === 'link') {
       payload.link = normalizeLink(entry.link ?? '')
+    } else if (entry.type === 'switch') {
+      payload.switch_id = (entry.switch_id ?? '').trim()
+      payload.default = entry.default === true
     }
     return payload
   })

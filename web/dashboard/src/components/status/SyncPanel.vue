@@ -23,14 +23,14 @@ const percent = computed(() =>
 )
 
 const progressText = computed(() =>
-  t('views.dashboard.status.sync.progress', '进度 {completed}/{total}')
+  t('pages.dashboard.status.sync.progress', '进度 {completed}/{total}')
     .replace('{completed}', String(state.value.completed))
     .replace('{total}', String(state.value.platforms)),
 )
 
 const summaryText = computed(() =>
   t(
-    'views.dashboard.status.sync.done',
+    'pages.dashboard.status.sync.done',
     '同步完成：成功 {succeeded} 个平台，失败 {failed} 个',
   )
     .replace('{succeeded}', String(state.value.succeeded))
@@ -68,13 +68,13 @@ onBeforeUnmount(() => {
   <v-card class="qc-card mb-4" variant="outlined">
     <v-card-item class="px-5 pt-5">
       <v-card-title class="text-body-large">
-        {{ t('views.dashboard.status.sync.title', '同步菜单') }}
+        {{ t('pages.dashboard.status.sync.title', '同步私聊菜单') }}
       </v-card-title>
       <v-card-subtitle>
         {{
           t(
-            'views.dashboard.status.sync.subtitle',
-            '把当前配置写入 QQ 官方机器人菜单，进度实时推送。',
+            'pages.dashboard.status.sync.subtitle',
+            '把当前配置写入 QQ 私聊菜单，进度实时推送。',
           )
         }}
       </v-card-subtitle>
@@ -86,7 +86,7 @@ onBeforeUnmount(() => {
             color="primary"
             @click="onRetry"
           >
-            {{ t('views.dashboard.status.sync.retry', '重试') }}
+            {{ t('pages.dashboard.status.sync.retry', '重试') }}
           </v-btn>
           <v-btn
             variant="tonal"
@@ -96,7 +96,7 @@ onBeforeUnmount(() => {
             :prepend-icon="mdiSync"
             @click="onStart"
           >
-            {{ t('views.dashboard.status.sync.action', '同步菜单') }}
+            {{ t('pages.dashboard.status.sync.action', '开始同步') }}
           </v-btn>
         </div>
       </template>
@@ -113,7 +113,7 @@ onBeforeUnmount(() => {
       >
         {{
           t(
-            'views.dashboard.status.sync.disabledMock',
+            'pages.dashboard.status.sync.disabledMock',
             '本地开发环境没有 AstrBot 后端，同步入口不可用。',
           )
         }}
@@ -125,7 +125,7 @@ onBeforeUnmount(() => {
             <span class="qc-metric-note">
               {{
                 running
-                  ? t('views.dashboard.status.sync.running', '正在同步…')
+                  ? t('pages.dashboard.status.sync.running', '正在同步…')
                   : progressText
               }}
             </span>
@@ -197,7 +197,7 @@ onBeforeUnmount(() => {
         </div>
 
         <div v-else-if="!hasRun" class="qc-metric-note">
-          {{ t('views.dashboard.status.sync.empty', '还没有同步记录。') }}
+          {{ t('pages.dashboard.status.sync.empty', '还没有同步记录。') }}
         </div>
       </template>
     </v-card-text>

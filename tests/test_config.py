@@ -18,22 +18,19 @@ from core.config import (
     migrate_menu_config,
     normalize_config_payload,
 )
-from tests.fakes import FakeContext
 
 # ---------------------------------------------------------------------------
-# get_platforms: 插件配置优先 / 回退 AstrBot 全局配置
+# get_platforms: 只读取插件配置
 # ---------------------------------------------------------------------------
 
 
-def test_get_platforms_prefers_plugin_config() -> None:
+def test_get_platforms_reads_plugin_config() -> None:
     config: dict[str, Any] = {
         "qq_platforms": [
             {"appid": "111", "secret": "s1", "platform": "qq_official"},
         ]
     }
-    # 即使 context 里也有平台, 也应优先用插件配置
-    context = FakeContext({"platform": [{"type": "qq_official", "appid": "ctx", "secret": "x"}]})
-    assert get_platforms(config, context) == [
+    assert get_platforms(config) == [
         {"appid": "111", "secret": "s1", "platform": "qq_official"},
     ]
 
@@ -46,7 +43,7 @@ def test_get_platforms_defaults_and_type_alias() -> None:
             {"appid": "2", "secret": "s"},
         ]
     }
-    assert get_platforms(config, FakeContext()) == [
+    assert get_platforms(config) == [
         {"appid": "1", "secret": "s", "platform": "qq_official_webhook"},
         {"appid": "2", "secret": "s", "platform": "qq_official"},
     ]
@@ -62,36 +59,17 @@ def test_get_platforms_skips_disabled_and_incomplete() -> None:
             {"appid": "3", "secret": "s"},  # 有效
         ]
     }
-    assert get_platforms(config, FakeContext()) == [
+    assert get_platforms(config) == [
         {"appid": "3", "secret": "s", "platform": "qq_official"},
     ]
 
 
-def test_get_platforms_falls_back_to_context() -> None:
-    context = FakeContext(
-        {
-            "platform": [
-                {"type": "qq_official", "appid": "a", "secret": "b"},
-                {"type": "aiocqhttp", "appid": "c", "secret": "d"},  # 非 QQ 官方, 应过滤
-                {"type": "qq_official_webhook", "appid": "e", "secret": "f"},
-            ]
-        }
-    )
-    assert get_platforms({}, context) == [
-        {"appid": "a", "secret": "b", "platform": "qq_official"},
-        {"appid": "e", "secret": "f", "platform": "qq_official_webhook"},
-    ]
+def test_get_platforms_invalid_config_is_empty() -> None:
+    assert get_platforms({"qq_platforms": "oops"}) == []
 
 
-def test_get_platforms_non_list_config_falls_back() -> None:
-    context = FakeContext({"platform": [{"type": "qq_official", "appid": "a", "secret": "b"}]})
-    assert get_platforms({"qq_platforms": "oops"}, context) == [
-        {"appid": "a", "secret": "b", "platform": "qq_official"},
-    ]
-
-
-def test_get_platforms_empty_everywhere() -> None:
-    assert get_platforms({}, FakeContext()) == []
+def test_get_platforms_empty_config_is_empty() -> None:
+    assert get_platforms({}) == []
 
 
 # ---------------------------------------------------------------------------
@@ -130,6 +108,28 @@ def test_get_menu_link_normalization() -> None:
         "https://c.com",
         "https://spaced.com",
     ]
+
+
+def test_get_menu_switch_item() -> None:
+    config: dict[str, Any] = {
+        "menu": [
+            {
+                "type": "switch",
+                "name": "联网",
+                "switch_id": "search",
+                "default": True,
+            }
+        ]
+    }
+    assert get_menu(config) == {
+        "items": [
+            {
+                "type": "switch",
+                "name": "联网",
+                "switch": {"switch_id": "search", "default": True},
+            }
+        ]
+    }
 
 
 def test_get_menu_builds_children_from_parent() -> None:
@@ -454,7 +454,6 @@ def test_export_config_masks_secrets_and_expands_menu() -> None:
 
     assert payload["language"] == "en-US"
     assert payload["sync_menu"] is False
-    assert payload["using_fallback"] is False
     assert payload["qq_platforms"] == [
         {
             "appid": "123456789",
@@ -474,21 +473,20 @@ def test_export_config_masks_secrets_and_expands_menu() -> None:
     }
 
 
-def test_export_config_uses_fallback_platforms() -> None:
+def test_export_config_masks_runtime_platforms() -> None:
     runtime = [{"appid": "abc", "secret": "secret", "platform": "qq_official"}]
     payload = export_config({}, runtime)
 
     assert payload["language"] == "zh-CN"
     assert payload["sync_menu"] is True
     assert payload["qq_platforms"] == []
-    assert payload["using_fallback"] is True
     assert payload["runtime_platforms"] == [
         {
             "pf_id": "***",
             "appid": "***",
             "platform": "qq_official",
             "secret_set": True,
-            "source": "astrbot",
+            "source": "plugin",
         }
     ]
 
@@ -622,4 +620,25 @@ def test_normalize_config_payload_rejects_top_level_limit_and_duplicates() -> No
     ]
     values, errors = normalize_config_payload({}, {"menu": duplicated})
     assert errors
+    assert "menu" not in values
+
+
+def test_normalize_config_payload_validates_switch_ids() -> None:
+    values, missing = normalize_config_payload(
+        {},
+        {"menu": [{"type": "switch", "name": "联网", "switch_id": "", "parent": ""}]},
+    )
+    assert missing
+    assert "menu" not in values
+
+    values, duplicate = normalize_config_payload(
+        {},
+        {
+            "menu": [
+                {"type": "switch", "name": "联网", "switch_id": "same", "parent": ""},
+                {"type": "switch", "name": "搜索", "switch_id": "same", "parent": ""},
+            ]
+        },
+    )
+    assert duplicate
     assert "menu" not in values

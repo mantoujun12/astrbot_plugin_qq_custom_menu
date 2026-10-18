@@ -9,20 +9,22 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../views/StatusOverviewView.vue'),
   },
   {
-    path: '/menu',
-    name: 'menu',
-    component: () => import('../views/MenuView.vue'),
+    path: '/robots',
+    name: 'robots',
+    component: () => import('../views/RobotsView.vue'),
   },
   {
-    path: '/platforms',
-    name: 'platforms',
-    component: () => import('../views/PlatformsView.vue'),
+    path: '/compatibility',
+    name: 'compatibility',
+    component: () => import('../views/CompatibilityView.vue'),
   },
   {
     path: '/settings',
     name: 'settings',
     component: () => import('../views/SettingsView.vue'),
   },
+  { path: '/menu', redirect: { name: 'compatibility' } },
+  { path: '/platforms', redirect: { name: 'robots' } },
   { path: '/:pathMatch(.*)*', redirect: { name: 'status' } },
 ]
 

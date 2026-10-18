@@ -9,6 +9,10 @@
 
 ### 新增
 
+- Dashboard 新增「机器人」页：按机器人独立维护私聊自定义菜单，支持从兼容配置按 AppID 导入
+- 新增 `core/robot_config.py` 与运行时数据文件 `menu_config.json`，包含机器人 ID、凭证、平台类型、场景启停与版本并发校验
+- 私聊菜单新增 QQ「开关」类型
+- 新增「兼容性」页，集中维护旧版全局 `qq_platforms` 与私聊 `menu`
 - 新增 `codecov.yml`，按 `unittests`（Python）与 `dashboard`（前端）两个 flag 分别设置覆盖率门禁与评论
 - 新增 `.gitattributes`，把前端构建产物标记为生成文件并使用 `merge=binary`，同时统一文本文件的 LF 换行
 - CI 拆分为 lint / Pytest 矩阵（`ci.yml`）与覆盖率上传（`codecov-core.yml`），覆盖率任务同时上传 XML 与 JUnit 测试报告
@@ -22,18 +26,27 @@
 
 ### 变更
 
+- 新旧配置按 AppID 合并，新版配置优先接管；兼容配置继续覆盖未被接管的历史机器人
+- 同步状态与进度细化到机器人
+- 子菜单上限按 QQ 当前接口调整为 5 项
 - `core/menu.py` 增加结构化同步事件与逐平台失败隔离，Dashboard 可展示每个平台的同步结果
 - `main.py` 注册视图 Web API、暴露配置保存回调，并使用 `core/paths.py` 的 `PLUGIN_VERSION` 作为唯一版本来源
 - `core/config.py` 增加 Dashboard 配置导出、菜单统计、脱敏与提交校验 helper
 - `release.yml` 改用 `scripts/bump_version.py --check` 校验版本、`scripts/package_plugin.py` 打包，并把发布流程改为幂等（tag / release 已存在时跳过）
 
+### 修复
+
+- 兼容性配置为空时不再回退读取并同步 AstrBot 平台配置中的 QQ 官方机器人
+
 ### 文档
 
+- 更新 README / metadata：插件仅处理私聊自定义菜单，群聊功能由其他插件负责
 - 重写 README：补充 Dashboard、配置说明、同步行为、开发测试、打包发布、CI / Codecov 与目录结构
 - 扩充 AGENTS.md：补齐 Dashboard 架构约定、数据契约、测试覆盖率、版本与发布流程
 
 ### 测试
 
+- 新增机器人配置、兼容导入、版本冲突、Dashboard 新页面与 i18n 根键对账测试
 - 新增 `tests/test_main.py`，覆盖插件装配、初始化同步、异常兜底与资源释放
 - 补充 `core/config.py`、`core/i18n.py`、`core/paths.py`、`core/state.py` 的边界分支测试，Python 行覆盖率提升到 99%
 - 新增 `tests/test_web_api.py`、`tests/test_sync_runner.py` 与菜单同步事件测试，Python 行覆盖率保持 99%

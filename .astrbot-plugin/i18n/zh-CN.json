@@ -15,11 +15,11 @@
     },
     "sync_menu": {
       "description": "启动时同步自定义菜单",
-      "hint": "关闭后仅读取 QQ 当前菜单，不会覆盖 QQ 机器人菜单。"
+      "hint": "关闭后仅读取 QQ 当前私聊菜单，不会覆盖线上内容。"
     },
     "qq_platforms": {
-      "description": "QQ 官方机器人平台凭证",
-      "hint": "填写 AppID 和 ClientSecret；留空时尝试从 AstrBot 平台配置读取。",
+      "description": "兼容性平台凭证",
+      "hint": "本页保留旧版全局配置；新版请到插件视图的「机器人」逐台配置。未被新版按 AppID 接管的平台仍可使用这里的凭证。",
       "templates": {
         "qq_platform": {
           "name": "QQ 机器人",
@@ -42,8 +42,8 @@
       }
     },
     "menu": {
-      "description": "QQ 私聊自定义菜单",
-      "hint": "点击「添加条目」选择菜单类型并填写内容。一级菜单最多 10 个；需要子菜单时先添加一条「子菜单」，再添加「发送消息」或「跳转链接」条目，并把「父菜单名称」填写为该子菜单的名称。",
+      "description": "兼容性私聊自定义菜单",
+      "hint": "旧版全局私聊菜单仍可在这里维护；已被「机器人」接管的 AppID 不再使用本菜单。一级菜单最多 10 个，每个子菜单最多 5 项。",
       "templates": {
         "send_message": {
           "name": "发送消息",
@@ -76,6 +76,21 @@
             }
           }
         },
+        "switch": {
+          "name": "开关",
+          "items": {
+            "name": {
+              "description": "开关名称"
+            },
+            "switch_id": {
+              "description": "开关 ID",
+              "hint": "用户切换后，消息 ext 中会携带这个标识。"
+            },
+            "default": {
+              "description": "默认开启"
+            }
+          }
+        },
         "menu": {
           "name": "子菜单",
           "items": {
@@ -87,14 +102,14 @@
       }
     }
   },
-  "views": {
+  "pages": {
     "dashboard": {
-      "title": "QQ 自定义菜单",
+      "title": "自定义菜单",
       "description": "在 AstrBot WebUI 维护 QQ 官方机器人私聊菜单，查看同步状态并一键同步。",
       "nav": {
         "status": "状态概览",
-        "menu": "菜单配置",
-        "platforms": "机器人",
+        "robots": "机器人",
+        "compatibility": "兼容性",
         "settings": "设置",
         "collapse": "收起侧边栏",
         "expand": "展开侧边栏",
@@ -126,31 +141,28 @@
           "disabled": "同步已关闭"
         },
         "source": {
-          "plugin": "插件配置",
-          "astrbot": "AstrBot 平台配置"
+          "robot": "机器人",
+          "compatibility": "兼容性配置"
         },
         "secret": "ClientSecret",
+        "itemUnit": "项",
         "secretSet": "已配置",
         "secretMissing": "未配置",
-        "syncDisabled": "「启动时同步自定义菜单」已关闭：插件只会读取 QQ 菜单，不会覆盖线上内容。",
-        "fallbackHint": "当前平台凭证来自 AstrBot 平台配置，只能查看；在「机器人」页添加插件配置后会优先使用插件凭证。",
+        "syncDisabled": "「启动时同步」已关闭：插件只读取 QQ 私聊菜单，不会覆盖线上内容。",
         "empty": {
           "platforms": {
             "title": "还没有可用的 QQ 平台",
-            "description": "到「机器人」页填写 AppID 与 ClientSecret，或在 AstrBot 平台配置里启用 QQ 官方机器人。",
+            "description": "到「机器人」页新增机器人，或在「兼容性」页填写旧版平台凭证。",
             "action": "去配置机器人"
           },
           "menu": {
-            "description": "尚未配置菜单条目；同步会清空 QQ 上已有的自定义菜单。"
+            "description": "尚未配置菜单条目；同步会清理已启用场景中的旧内容。"
           }
         },
-        "previewTitle": "菜单预览",
-        "previewSubtitle": "这是插件将写入 QQ 的菜单结构。",
-        "editMenu": "编辑菜单",
         "sync": {
-          "title": "同步菜单",
-          "subtitle": "把当前配置写入 QQ 官方机器人菜单，进度实时推送。",
-          "action": "同步菜单",
+          "title": "同步私聊菜单",
+          "subtitle": "把当前配置写入 QQ 私聊菜单，进度实时推送。",
+          "action": "开始同步",
           "running": "正在同步…",
           "progress": "进度 {completed}/{total}",
           "done": "同步完成：成功 {succeeded} 个平台，失败 {failed} 个",
@@ -166,6 +178,7 @@
         "type": {
           "send_message": "发送消息",
           "link": "跳转链接",
+          "switch": "开关",
           "menu": "子菜单"
         },
         "childCount": "{count} 个子项",
@@ -181,6 +194,9 @@
         "fieldMessage": "点击后发送的消息",
         "messageHint": "例如 /help",
         "fieldLink": "点击后打开的链接",
+        "fieldSwitchId": "开关 ID",
+        "switchHint": "用户切换后，消息 ext 中会携带该 ID。",
+        "switchDefault": "默认开启",
         "linkHint": "QQ 要求 https://；未填写协议时会自动补全。",
         "menuHint": "子菜单本身不发送内容；保存后可继续为它添加发送消息或跳转链接子项。",
         "mockHint": "本地开发环境：展示的是 mock 数据，不能保存配置。",
@@ -197,14 +213,16 @@
           "parentMissing": "父菜单「{parent}」不存在",
           "messageEmpty": "菜单「{name}」缺少消息内容",
           "linkEmpty": "菜单「{name}」缺少链接",
+          "switchParent": "开关不能作为子菜单项",
+          "switchIdEmpty": "菜单「{name}」缺少开关 ID",
+          "switchIdDuplicate": "开关 ID 不能重复：{switchId}",
           "subLimit": "子菜单「{name}」最多 {max} 个子项"
         }
       },
       "platforms": {
         "title": "机器人",
-        "subtitle": "每台 QQ 官方机器人独立维护 AppID 与 ClientSecret；插件配置优先于 AstrBot 平台配置。",
+        "subtitle": "每台 QQ 官方机器人独立维护 AppID 与 ClientSecret。",
         "mockHint": "本地开发环境：展示的是 mock 数据，不能保存配置。",
-        "fallbackHint": "插件尚未配置凭证，当前使用 AstrBot 平台配置中的 QQ 官方机器人；在下方添加条目后会优先使用插件凭证。",
         "empty": "还没有插件配置的机器人",
         "emptyHint": "添加 AppID 与 ClientSecret 后，插件启动时会同步这些机器人的菜单。",
         "newTitle": "新机器人",
@@ -218,7 +236,6 @@
         "runtimeTitle": "当前生效的平台",
         "runtimeSubtitle": "启动同步与状态页使用这份列表。",
         "sourcePlugin": "插件配置",
-        "sourceAstrbot": "AstrBot 平台配置",
         "saved": "机器人凭证已保存并生效。",
         "type": {
           "qq_official": "QQ 官方机器人",
@@ -231,6 +248,85 @@
           "secretEmpty": "平台 {appid} 缺少 ClientSecret"
         }
       },
+      "robots": {
+        "title": "机器人",
+        "subtitle": "每台机器人独立维护自己的私聊菜单，互不覆盖。",
+        "saveAndSync": "保存并同步",
+        "importLegacy": "从兼容配置导入",
+        "addRobot": "新增机器人",
+        "createSubtitle": "先填写基础凭证，创建后再配置私聊菜单。",
+        "createConfirm": "创建",
+        "created": "机器人已加入草稿，保存后才会写入配置。",
+        "saved": "机器人配置已保存。",
+        "mockHint": "本地开发环境：展示 mock 数据，不能保存配置。",
+        "name": "机器人名称",
+        "platformType": "平台类型",
+        "secretKeep": "留空表示沿用原值",
+        "secretSetHint": "已保存 ClientSecret，留空表示沿用原值。",
+        "secretSaved": "当前密钥：{masked}",
+        "listTitle": "机器人",
+        "listSubtitle": "选择一台机器人编辑它的场景。",
+        "emptyRobots": "还没有机器人，先新增一台。",
+        "editorEmpty": "请选择或新增一台机器人。",
+        "robotSummary": "启用场景 {scenes} 个，菜单条目 {items} 条。",
+        "untitledRobot": "未命名机器人",
+        "removedLocal": "已从本地列表移除，保存后才会写入配置。",
+        "basicTitle": "基础信息",
+        "basicSubtitle": "名称、AppID 与 ClientSecret 只用于这台机器人。",
+        "platformTypeName": {
+          "qq_official": "QQ 官方机器人",
+          "qq_official_webhook": "QQ 官方机器人 Webhook"
+        },
+        "scene": {
+          "c2c": "私聊"
+        },
+        "c2c": {
+          "subtitle": "写入 QQ 全局自定义菜单，支持发送消息、链接、子菜单和开关。",
+          "limits": "一级菜单 {top}/{maxTop}，每个子菜单最多 {maxSub} 项。",
+          "add": "添加一级菜单",
+          "disabled": "私聊场景未启用，插件不会修改 QQ 自定义菜单。"
+        },
+        "validation": {
+          "nameEmpty": "机器人名称不能为空",
+          "nameTooLong": "机器人名称最多 {max} 个字符",
+          "appidEmpty": "AppID 不能为空",
+          "appidDuplicate": "AppID 不能重复：{appid}",
+          "secretEmpty": "新增机器人必须填写 ClientSecret"
+        },
+        "deleteRobot": "删除机器人配置",
+        "deleteConfirmTitle": "删除机器人配置？",
+        "deleteConfirmText": "删除只移除本地配置，不会清理 QQ 线上已有菜单。保存后才会生效。",
+        "deleteConfirm": "确认删除",
+        "dangerTitle": "删除机器人配置",
+        "dangerText": "删除只移除本地配置，不会自动清理 QQ 线上菜单。",
+        "importTitle": "从兼容配置导入",
+        "importSubtitle": "填写要导入的旧版 AppID，每行一个或使用逗号分隔。",
+        "importAppids": "AppID 列表",
+        "importEmpty": "兼容配置里没有可导入的 AppID，请手动填写。",
+        "importNoAppids": "至少填写一个 AppID。",
+        "importConfirm": "导入",
+        "imported": "已从兼容配置导入机器人，请检查后再同步。"
+      },
+      "compatibility": {
+        "title": "兼容性配置",
+        "subtitle": "保留旧版全局私聊菜单与凭证。已被「机器人」按 AppID 接管的机器人不会读取这里的菜单。",
+        "saveAndSync": "保存并同步",
+        "saved": "兼容性配置已保存。",
+        "mockHint": "本地开发环境：展示 mock 数据，不能保存配置。",
+        "platformsTitle": "兼容平台凭证",
+        "platformsSubtitle": "ClientSecret 留空表示沿用已保存的密钥。",
+        "addPlatform": "添加平台",
+        "noPlatforms": "还没有兼容平台凭证。",
+        "platformType": "平台类型",
+        "platformTypeName": {
+          "qq_official": "QQ 官方机器人",
+          "qq_official_webhook": "QQ 官方机器人 Webhook"
+        },
+        "menuTitle": "兼容私聊菜单",
+        "menuSubtitle": "一级菜单 {top}/{maxTop}；每个子菜单最多 {maxSub} 项。",
+        "addMenu": "添加一级菜单",
+        "emptyWarning": "兼容菜单为空；同步开启时会清空未被新版机器人接管的 QQ 自定义菜单。"
+      },
       "settings": {
         "title": "设置",
         "subtitle": "插件级通用设置：日志语言与启动同步开关。",
@@ -241,14 +337,14 @@
           "zh-CN": "简体中文",
           "en-US": "English"
         },
-        "syncMenu": "启动时同步自定义菜单",
-        "syncMenuHint": "关闭后插件只读取 QQ 当前菜单，不会覆盖线上内容。",
+        "syncMenu": "启动时同步私聊菜单",
+        "syncMenuHint": "关闭后插件只读取私聊菜单，不会覆盖线上内容。",
         "mockHint": "本地开发环境：可编辑预览，但不能保存配置。",
         "saved": "设置已保存并生效。",
         "aboutTitle": "关于插件",
         "aboutSubtitle": "插件简介与仓库入口。",
-        "aboutName": "QQ 自定义菜单",
-        "aboutDescription": "在 AstrBot WebUI 维护菜单条目，并同步到 QQ 官方机器人私聊菜单。",
+        "aboutName": "自定义菜单",
+        "aboutDescription": "按机器人维护私聊自定义菜单，并同步到 QQ 官方接口。",
         "githubTitle": "GitHub 仓库",
         "githubDescription": "查看项目源码、更新日志与问题反馈。",
         "githubAction": "访问 GitHub"

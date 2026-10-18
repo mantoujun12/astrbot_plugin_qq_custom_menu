@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useTheme } from 'vuetify'
 import {
   mdiAlertCircleOutline,
   mdiCheckCircleOutline,
@@ -8,11 +9,19 @@ import {
   mdiInformationOutline,
 } from '@mdi/js'
 import { fetchConfig, saveConfig } from '../api/dashboard'
+import ThemeColorField from '../components/settings/ThemeColorField.vue'
 import { useBridge } from '../composables/useBridge'
+import {
+  DEFAULT_THEME_COLORS,
+  applyThemeColors,
+  isHexColor,
+  resolveThemeColors,
+} from '../theme'
 import { PLUGIN_VERSION } from '../version'
 import type { PluginConfigResponse } from '../types/dashboard'
 
 const { t, ready, hasBackend } = useBridge()
+const theme = useTheme()
 
 const GITHUB_REPOSITORY_URL =
   'https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu'
@@ -25,13 +34,19 @@ const LANGUAGE_OPTIONS = computed(() => [
 const config = ref<PluginConfigResponse | null>(null)
 const language = ref('zh-CN')
 const syncMenu = ref(true)
+const primaryColor = ref(DEFAULT_THEME_COLORS.primary)
+const secondaryColor = ref(DEFAULT_THEME_COLORS.secondary)
 const loading = ref(false)
 const saving = ref(false)
 const error = ref('')
 const notice = ref('')
 
 const mockMode = computed(() => ready.value && !hasBackend.value)
-const editable = computed(() => config.value !== null && hasBackend.value && !saving.value)
+const colorsValid = computed(
+  () => isHexColor(primaryColor.value.trim()) && isHexColor(secondaryColor.value.trim()),
+)
+const editable = computed(() => config.value !== null && !saving.value)
+const canSave = computed(() => editable.value && hasBackend.value && colorsValid.value)
 
 async function load(): Promise<void> {
   loading.value = true
@@ -41,6 +56,10 @@ async function load(): Promise<void> {
     config.value = next
     language.value = next.language
     syncMenu.value = next.sync_menu
+    const colors = resolveThemeColors(next)
+    primaryColor.value = colors.primary
+    secondaryColor.value = colors.secondary
+    applyThemeColors(theme, colors)
   } catch (err) {
     config.value = null
     error.value = err instanceof Error ? err.message : String(err)
@@ -59,8 +78,19 @@ watch(
   { immediate: true },
 )
 
+// mock 模式允许直接预览配色变化，但不显示保存成功，也不写回任何配置。
+watch([primaryColor, secondaryColor], ([primary, secondary]) => {
+  if (!mockMode.value || !isHexColor(primary.trim()) || !isHexColor(secondary.trim())) {
+    return
+  }
+  applyThemeColors(theme, {
+    primary: primary.trim().toLowerCase(),
+    secondary: secondary.trim().toLowerCase(),
+  })
+})
+
 async function save(): Promise<void> {
-  if (!hasBackend.value) {
+  if (!hasBackend.value || !config.value || !colorsValid.value) {
     return
   }
   saving.value = true
@@ -70,10 +100,16 @@ async function save(): Promise<void> {
     const next = await saveConfig({
       language: language.value,
       sync_menu: syncMenu.value,
+      primary_color: primaryColor.value.trim().toLowerCase(),
+      secondary_color: secondaryColor.value.trim().toLowerCase(),
     })
     config.value = next
     language.value = next.language
     syncMenu.value = next.sync_menu
+    const colors = resolveThemeColors(next)
+    primaryColor.value = colors.primary
+    secondaryColor.value = colors.secondary
+    applyThemeColors(theme, colors)
     notice.value = t('pages.dashboard.settings.saved', '设置已保存并生效。')
   } catch (err) {
     error.value = err instanceof Error ? err.message : String(err)
@@ -92,7 +128,7 @@ async function save(): Promise<void> {
           {{
             t(
               'pages.dashboard.settings.subtitle',
-              '插件级通用设置：日志语言与启动同步开关。',
+              '插件级通用设置：日志语言、启动同步与主题配色。',
             )
           }}
         </p>
@@ -112,7 +148,7 @@ async function save(): Promise<void> {
           variant="tonal"
           color="primary"
           :loading="saving"
-          :disabled="!editable"
+          :disabled="!canSave"
           :prepend-icon="mdiContentSave"
           @click="save"
         >
@@ -199,6 +235,51 @@ async function save(): Promise<void> {
           inset
           hide-details="auto"
         />
+      </v-card-text>
+    </v-card>
+
+    <v-card v-if="config" class="qc-card mb-4" variant="outlined">
+      <v-card-item class="px-5 pt-5">
+        <v-card-title class="text-body-large">
+          {{ t('pages.dashboard.settings.themeTitle', '主题配色') }}
+        </v-card-title>
+        <v-card-subtitle>
+          {{
+            t(
+              'pages.dashboard.settings.themeSubtitle',
+              '调整插件视图的主色和辅助色，保存后立即应用到浅色与深色主题。',
+            )
+          }}
+        </v-card-subtitle>
+      </v-card-item>
+
+      <v-card-text class="px-5 pb-5 pt-3">
+        <v-row>
+          <v-col cols="12" md="6">
+            <ThemeColorField
+              v-model="primaryColor"
+              data-field="settings-primary-color"
+              :label="t('pages.dashboard.settings.primaryColor', '主色')"
+              :hint="t('pages.dashboard.settings.colorHint', '使用 #RRGGBB 格式。')"
+              :invalid-message="
+                t('pages.dashboard.settings.colorInvalid', '请输入 #RRGGBB 格式的颜色。')
+              "
+              :disabled="!editable"
+            />
+          </v-col>
+          <v-col cols="12" md="6">
+            <ThemeColorField
+              v-model="secondaryColor"
+              data-field="settings-secondary-color"
+              :label="t('pages.dashboard.settings.secondaryColor', '辅助色')"
+              :hint="t('pages.dashboard.settings.colorHint', '使用 #RRGGBB 格式。')"
+              :invalid-message="
+                t('pages.dashboard.settings.colorInvalid', '请输入 #RRGGBB 格式的颜色。')
+              "
+              :disabled="!editable"
+            />
+          </v-col>
+        </v-row>
       </v-card-text>
     </v-card>
 

@@ -104,6 +104,8 @@ export interface PluginConfigResponse {
   plugin: { name: string; version: string }
   language: string
   sync_menu: boolean
+  primary_color: string
+  secondary_color: string
   qq_platforms: ConfigPlatform[]
   runtime_platforms: RuntimePlatform[]
   menu: MenuEntry[]
@@ -121,6 +123,8 @@ export interface ConfigPlatformPayload {
 export interface PluginConfigPayload {
   language?: string
   sync_menu?: boolean
+  primary_color?: string
+  secondary_color?: string
   qq_platforms?: ConfigPlatformPayload[]
   menu?: MenuEntry[]
 }

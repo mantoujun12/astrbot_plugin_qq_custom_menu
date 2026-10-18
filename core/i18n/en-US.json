@@ -22,6 +22,7 @@
   "web.config_save_failed": "failed to save config: {exc}",
   "web.config_language_invalid": "log language must be one of {languages}.",
   "web.config_sync_menu_invalid": "sync_menu must be a boolean.",
+  "web.config_theme_color_invalid": "theme color {field} must use #RRGGBB format.",
   "web.config_platforms_invalid": "qq_platforms must be a list.",
   "web.config_platform_invalid": "platform entry #{index} must be an object.",
   "web.config_appid_empty": "platform entry #{index} is missing AppID.",

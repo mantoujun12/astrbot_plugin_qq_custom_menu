@@ -9,6 +9,18 @@
     "default": "zh-CN",
     "hint": "仅影响插件日志，不影响用户自定义的菜单内容。"
   },
+  "primary_color": {
+    "description": "插件视图主色",
+    "type": "string",
+    "default": "#3c96ca",
+    "hint": "插件视图的主强调色，使用 #RRGGBB 格式；也可以到插件视图的「设置」页调整。"
+  },
+  "secondary_color": {
+    "description": "插件视图辅助色",
+    "type": "string",
+    "default": "#2f86bd",
+    "hint": "插件视图的辅助强调色，使用 #RRGGBB 格式；也可以到插件视图的「设置」页调整。"
+  },
   "sync_menu": {
     "description": "启动时同步私聊菜单",
     "type": "bool",

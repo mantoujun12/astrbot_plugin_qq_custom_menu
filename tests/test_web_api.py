@@ -283,6 +283,8 @@ async def test_page_status_and_config_get(monkeypatch: Any, tmp_path: Path) -> N
     config = await bundle.page_config_get()
     assert config.status_code == 200
     assert config.data["plugin"]["version"] == "v9.9.9"
+    assert config.data["primary_color"] == "#3c96ca"
+    assert config.data["secondary_color"] == "#2f86bd"
     assert config.data["menu"] == [
         {"type": "menu", "name": "更多", "parent": ""},
         {"type": "send_message", "name": "关于", "parent": "更多", "message": "/about"},
@@ -293,7 +295,12 @@ async def test_page_status_and_config_get(monkeypatch: Any, tmp_path: Path) -> N
 async def test_page_config_save_success(monkeypatch: Any) -> None:
     install_web(
         monkeypatch,
-        payload={"language": "en-US", "menu": MENU},
+        payload={
+            "language": "en-US",
+            "primary_color": "#AABBCC",
+            "secondary_color": "#112233",
+            "menu": MENU,
+        },
     )
     saved: list[dict[str, Any]] = []
     config: dict[str, Any] = {"menu": MENU}
@@ -315,6 +322,8 @@ async def test_page_config_save_success(monkeypatch: Any) -> None:
     assert saved == [
         {
             "language": "en-US",
+            "primary_color": "#aabbcc",
+            "secondary_color": "#112233",
             "menu": [
                 {"__template_key": "menu", "name": "更多"},
                 {
@@ -328,6 +337,8 @@ async def test_page_config_save_success(monkeypatch: Any) -> None:
     ]
     assert syncer.configs
     assert response.data["language"] == "en-US"
+    assert response.data["primary_color"] == "#aabbcc"
+    assert response.data["secondary_color"] == "#112233"
 
 
 @pytest.mark.asyncio

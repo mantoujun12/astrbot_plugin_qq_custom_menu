@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 from core.config import (
+    DEFAULT_PRIMARY_COLOR,
+    DEFAULT_SECONDARY_COLOR,
     MENU_SUB_ITEM_MAX,
     MENU_TOP_LEVEL_MAX,
     export_config,
@@ -12,6 +14,7 @@ from core.config import (
     get_menu_entries,
     get_platforms,
     get_plugin_platforms,
+    get_theme_colors,
     mask_appid,
     mask_secret,
     menu_stats,
@@ -368,6 +371,17 @@ def test_mask_helpers() -> None:
     assert mask_secret(None) == ""
 
 
+def test_get_theme_colors_normalizes_and_falls_back() -> None:
+    assert get_theme_colors({"primary_color": " #AABBCC ", "secondary_color": "#112233"}) == {
+        "primary_color": "#aabbcc",
+        "secondary_color": "#112233",
+    }
+    assert get_theme_colors({"primary_color": "red", "secondary_color": 123}) == {
+        "primary_color": DEFAULT_PRIMARY_COLOR,
+        "secondary_color": DEFAULT_SECONDARY_COLOR,
+    }
+
+
 def test_get_plugin_platforms_does_not_fall_back() -> None:
     config: dict[str, Any] = {
         "qq_platforms": [
@@ -436,6 +450,8 @@ def test_export_config_masks_secrets_and_expands_menu() -> None:
     config: dict[str, Any] = {
         "language": "en-US",
         "sync_menu": False,
+        "primary_color": "#112233",
+        "secondary_color": "#445566",
         "qq_platforms": [
             {"appid": "123456789", "secret": "abcdef123456", "platform": "qq_official"},
         ],
@@ -454,6 +470,8 @@ def test_export_config_masks_secrets_and_expands_menu() -> None:
 
     assert payload["language"] == "en-US"
     assert payload["sync_menu"] is False
+    assert payload["primary_color"] == "#112233"
+    assert payload["secondary_color"] == "#445566"
     assert payload["qq_platforms"] == [
         {
             "appid": "123456789",
@@ -479,6 +497,8 @@ def test_export_config_masks_runtime_platforms() -> None:
 
     assert payload["language"] == "zh-CN"
     assert payload["sync_menu"] is True
+    assert payload["primary_color"] == DEFAULT_PRIMARY_COLOR
+    assert payload["secondary_color"] == DEFAULT_SECONDARY_COLOR
     assert payload["qq_platforms"] == []
     assert payload["runtime_platforms"] == [
         {
@@ -513,6 +533,8 @@ def test_normalize_config_payload_keeps_partial_fields() -> None:
     payload: dict[str, Any] = {
         "language": "en-US",
         "sync_menu": False,
+        "primary_color": " #AABBCC ",
+        "secondary_color": "#DDEEFF",
         "qq_platforms": [
             {"appid": "a", "secret": "", "platform": "qq_official"},
             {"appid": "b", "secret": "new-secret", "platform": "qq_official_webhook"},
@@ -530,6 +552,8 @@ def test_normalize_config_payload_keeps_partial_fields() -> None:
     assert errors == []
     assert values["language"] == "en-US"
     assert values["sync_menu"] is False
+    assert values["primary_color"] == "#aabbcc"
+    assert values["secondary_color"] == "#ddeeff"
     assert values["qq_platforms"] == [
         {
             "__template_key": "qq_platform",
@@ -557,6 +581,16 @@ def test_normalize_config_payload_rejects_invalid_language_and_sync_menu() -> No
     assert len(errors) == 2
     assert "language" not in values
     assert "sync_menu" not in values
+
+
+def test_normalize_config_payload_rejects_invalid_theme_colors() -> None:
+    values, errors = normalize_config_payload(
+        {},
+        {"primary_color": "red", "secondary_color": "#12345"},
+    )
+    assert len(errors) == 2
+    assert "primary_color" not in values
+    assert "secondary_color" not in values
 
 
 def test_normalize_config_payload_rejects_invalid_platforms() -> None:

@@ -112,7 +112,7 @@ python scripts/package_plugin.py         # 生成 dist/<插件名>-<版本>.zip
 #### Dashboard 数据契约
 
 - `GET /status` 返回 `plugin` / `ready` / `sync_menu` / `platforms`（含 `c2c` 私聊状态）/ `menu` / `robots` / `state`，与 `web/dashboard/src/types/dashboard.ts` 的 `StatusResponse` 对应。
-- `GET /config` 返回 `language` / `sync_menu` / `qq_platforms`（掩码）/ `runtime_platforms` / `menu` / `limits`，与 `PluginConfigResponse` 对应。
+- `GET /config` 返回 `language` / `sync_menu` / `primary_color` / `secondary_color` / `qq_platforms`（掩码）/ `runtime_platforms` / `menu` / `limits`，与 `PluginConfigResponse` 对应。
 - `GET /robots` 返回 `version` / `robots` / `available_scenes` / `menu_limits`；`POST /robots` 必须携带当前 `version`，冲突返回 HTTP 409。
 - `POST /config` 接受部分字段，后端按字段合并；任一字段校验失败时整次保存被拒绝。
 - 状态值：`synced`（摘要与当前菜单一致）、`pending`（摘要不一致）、`unknown`（尚未同步）、`disabled`（`sync_menu` 关闭）。

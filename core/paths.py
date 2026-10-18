@@ -10,7 +10,8 @@ from typing import Any
 
 from astrbot.api import logger
 
-LOG_TAG = "[qq-custom-menu]"
+from .i18n import LOG_TAG, t
+
 PLUGIN_NAME = "astrbot_plugin_qq_custom_menu"
 # 插件版本，与 metadata.yaml 的 version 保持一致；供 @register 与视图状态接口共用。
 PLUGIN_VERSION = "v0.2.3"
@@ -21,7 +22,7 @@ def _call_or_none(func: Any, *args: Any) -> Path | None:
         value = func(*args) if callable(func) else func
         return Path(value) if value else None
     except Exception as exc:
-        logger.debug("%s resolve plugin data dir candidate failed: %s", LOG_TAG, exc)
+        logger.debug("%s %s", LOG_TAG, t("log.data_dir_candidate_failed", exc=exc))
         return None
 
 
@@ -30,7 +31,11 @@ def _star_tools_data_dir(plugin_name: str) -> Path | None:
         try:
             module = import_module(module_name)
         except Exception as exc:
-            logger.debug("%s import optional module %s failed: %s", LOG_TAG, module_name, exc)
+            logger.debug(
+                "%s %s",
+                LOG_TAG,
+                t("log.optional_module_import_failed", module=module_name, exc=exc),
+            )
             continue
         star_tools = getattr(module, "StarTools", None)
         get_data_dir = getattr(star_tools, "get_data_dir", None)
@@ -68,7 +73,7 @@ def _iter_candidates(context: Any, plugin_name: str) -> Iterator[Path]:
     try:
         home_root = _home_data_root()
     except Exception as exc:
-        logger.debug("%s resolve home data root failed: %s", LOG_TAG, exc)
+        logger.debug("%s %s", LOG_TAG, t("log.home_data_root_failed", exc=exc))
         return
     yield home_root / "data" / "plugin_data" / plugin_name
 
@@ -83,11 +88,11 @@ def resolve_plugin_data_dir(context: Any, plugin_name: str = PLUGIN_NAME) -> Pat
         try:
             candidate.mkdir(parents=True, exist_ok=True)
         except Exception as exc:
-            logger.debug("%s create plugin data dir candidate failed: %s", LOG_TAG, exc)
+            logger.debug("%s %s", LOG_TAG, t("log.data_dir_create_failed", exc=exc))
             continue
         return candidate
 
-    raise RuntimeError(f"{LOG_TAG} unable to resolve a writable AstrBot plugin data directory")
+    raise RuntimeError(f"{LOG_TAG} {t('error.data_dir_unresolved')}")
 
 
 __all__ = ["PLUGIN_NAME", "PLUGIN_VERSION", "resolve_plugin_data_dir"]

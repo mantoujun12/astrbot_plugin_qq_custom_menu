@@ -29,6 +29,8 @@ const GITHUB_REPOSITORY_URL =
 const LANGUAGE_OPTIONS = computed(() => [
   { title: t('pages.dashboard.settings.languageName.zh-CN', '简体中文'), value: 'zh-CN' },
   { title: t('pages.dashboard.settings.languageName.en-US', 'English'), value: 'en-US' },
+  { title: t('pages.dashboard.settings.languageName.ru-RU', 'Русский'), value: 'ru-RU' },
+  { title: t('pages.dashboard.settings.languageName.ja-JP', '日本語'), value: 'ja-JP' },
 ])
 
 const config = ref<PluginConfigResponse | null>(null)

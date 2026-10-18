@@ -7,10 +7,12 @@
   "config": {
     "language": {
       "description": "Plugin log language",
-      "hint": "Only affects plugin logs; user-authored menu entries are not translated.",
+      "hint": "Supports zh-CN, en-US, ru-RU and ja-JP; only affects plugin logs, user-authored menu entries are not translated.",
       "labels": [
         "简体中文",
-        "English"
+        "English",
+        "Русский",
+        "日本語"
       ]
     },
     "primary_color": {
@@ -344,7 +346,9 @@
         "language": "Log language",
         "languageName": {
           "zh-CN": "简体中文",
-          "en-US": "English"
+          "en-US": "English",
+          "ru-RU": "Русский",
+          "ja-JP": "日本語"
         },
         "themeTitle": "Theme colors",
         "themeSubtitle": "Adjust primary and secondary colors; saved values apply to light and dark themes immediately.",

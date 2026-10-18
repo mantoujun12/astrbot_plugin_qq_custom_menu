@@ -75,7 +75,7 @@ Dashboard 构建产物提交在 `pages/dashboard/`，AstrBot 会把它作为插�
 ### `language`
 
 - 类型：`string`
-- 可选：`zh-CN`、`en-US`
+- 可选：`zh-CN`、`en-US`、`ru-RU`、`ja-JP`
 - 默认值：`zh-CN`
 - 含义：插件运行期日志语言，不影响用户填写的菜单内容。
 
@@ -259,7 +259,7 @@ scripts/                  bump_version.py、package_plugin.py
 
 ## 下一步计划
 
-- [x] i18n 国际化（简体中文 / English）
+- [x] i18n 国际化（简体中文 / English / Русский / 日本語）
 - [x] 同步状态可视化 Dashboard
 - [x] 同步结果的状态持久化与变更检测
 - [x] 菜单编辑、机器人凭证维护与实时同步进度

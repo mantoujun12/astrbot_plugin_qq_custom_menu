@@ -4,10 +4,12 @@
     "type": "string",
     "options": [
       "zh-CN",
-      "en-US"
+      "en-US",
+      "ru-RU",
+      "ja-JP"
     ],
     "default": "zh-CN",
-    "hint": "仅影响插件日志，不影响用户自定义的菜单内容。"
+    "hint": "支持 zh-CN、en-US、ru-RU、ja-JP；仅影响插件日志，不影响用户自定义的菜单内容。"
   },
   "primary_color": {
     "description": "插件视图主色",

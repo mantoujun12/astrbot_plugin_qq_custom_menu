@@ -2,6 +2,9 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
+const LOCALES = ['zh-CN', 'en-US', 'ru-RU', 'ja-JP']
+const DEFAULT_LOCALE = 'zh-CN'
+
 function loadLocale(locale: string): Record<string, unknown> {
   // Vitest 的 cwd 是 web/dashboard，仓库根在两级之上。
   const path = resolve(
@@ -28,6 +31,22 @@ function lookup(value: unknown, path: string): unknown {
   }, value)
 }
 
+function leafStrings(value: unknown, prefix = ''): Array<[string, string]> {
+  if (typeof value === 'string') {
+    return [[prefix, value]]
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return []
+  }
+  return Object.entries(value as Record<string, unknown>).flatMap(([key, child]) =>
+    leafStrings(child, prefix ? `${prefix}.${key}` : key),
+  )
+}
+
+function placeholders(template: string): string[] {
+  return [...new Set(template.match(/\{[^{}]+\}/g) ?? [])].sort()
+}
+
 function sourceFiles(): string[] {
   const root = resolve(process.cwd(), 'src')
   return readdirSync(root, { recursive: true, withFileTypes: true })
@@ -40,30 +59,73 @@ function sourceFiles(): string[] {
     .map((entry) => join(entry.parentPath, entry.name))
 }
 
+const dictionaries = Object.fromEntries(
+  LOCALES.map((locale) => [locale, loadLocale(locale)]),
+) as Record<string, Record<string, unknown>>
+
 describe('dashboard i18n resources', () => {
+  it('ships every supported locale', () => {
+    const files = readdirSync(
+      resolve(process.cwd(), '../../.astrbot-plugin/i18n'),
+    )
+      .filter((name) => name.endsWith('.json'))
+      .map((name) => name.slice(0, -'.json'.length))
+      .sort()
+    expect(files).toEqual([...LOCALES].sort())
+  })
+
   it('defines the view metadata used by the host', () => {
-    for (const locale of ['zh-CN', 'en-US']) {
-      const data = loadLocale(locale)
+    for (const locale of LOCALES) {
+      const data = dictionaries[locale]
       const view = (data.pages as Record<string, Record<string, unknown>>).dashboard
-      expect(view.title).toBeTruthy()
-      expect(view.description).toBeTruthy()
+      expect(view.title, locale).toBeTruthy()
+      expect(view.description, locale).toBeTruthy()
     }
   })
 
-  it('keeps zh-CN and en-US key sets in sync', () => {
-    const zh = loadLocale('zh-CN').pages as Record<string, unknown>
-    const en = loadLocale('en-US').pages as Record<string, unknown>
+  it('keeps every locale key set in sync with zh-CN', () => {
+    const expected = keyPaths(dictionaries[DEFAULT_LOCALE])
+    for (const locale of LOCALES) {
+      expect(keyPaths(dictionaries[locale]), locale).toEqual(expected)
+    }
+  })
 
-    expect(keyPaths(en.dashboard)).toEqual(keyPaths(zh.dashboard))
+  it('keeps every placeholder in sync with zh-CN', () => {
+    const expected = new Map(leafStrings(dictionaries[DEFAULT_LOCALE]))
+    for (const locale of LOCALES) {
+      const drifted = leafStrings(dictionaries[locale])
+        .filter(([key, value]) => {
+          const source = expected.get(key)
+          return source !== undefined &&
+            placeholders(source).join() !== placeholders(value).join()
+        })
+        .map(([key]) => key)
+      expect(drifted, locale).toEqual([])
+    }
   })
 
   it('uses the pages.dashboard root expected by plugin views', () => {
-    for (const locale of ['zh-CN', 'en-US']) {
-      const data = loadLocale(locale)
-      expect(data.views).toBeUndefined()
+    for (const locale of LOCALES) {
+      const data = dictionaries[locale]
+      expect(data.views, locale).toBeUndefined()
       expect(
         (data.pages as Record<string, Record<string, unknown>>).dashboard.title,
+        locale,
       ).toBeTruthy()
+    }
+  })
+
+  it('exposes all four log languages to the settings page', () => {
+    for (const locale of LOCALES) {
+      const data = dictionaries[locale]
+      const labels = lookup(data, 'config.language.labels')
+      expect(labels, locale).toHaveLength(LOCALES.length)
+      for (const language of LOCALES) {
+        expect(
+          lookup(data, `pages.dashboard.settings.languageName.${language}`),
+          `${locale}: ${language}`,
+        ).toBeTruthy()
+      }
     }
   })
 
@@ -82,14 +144,14 @@ describe('dashboard i18n resources', () => {
       }
     }
     expect(keys.size).toBeGreaterThan(50)
-    for (const locale of ['zh-CN', 'en-US']) {
-      const data = loadLocale(locale)
+    for (const locale of LOCALES) {
+      const data = dictionaries[locale]
       const missing = [...keys].filter((key) => typeof lookup(data, key) !== 'string')
       expect(missing, locale).toEqual([])
     }
 
     const drifted = calls
-      .filter((call) => lookup(loadLocale('zh-CN'), call.key) !== call.fallback)
+      .filter((call) => lookup(dictionaries[DEFAULT_LOCALE], call.key) !== call.fallback)
       .map((call) => `${call.file}: ${call.key}`)
     expect(drifted).toEqual([])
   })

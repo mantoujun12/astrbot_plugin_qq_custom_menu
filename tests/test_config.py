@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
+
 from core.config import (
     DEFAULT_PRIMARY_COLOR,
     DEFAULT_SECONDARY_COLOR,
@@ -581,6 +583,14 @@ def test_normalize_config_payload_rejects_invalid_language_and_sync_menu() -> No
     assert len(errors) == 2
     assert "language" not in values
     assert "sync_menu" not in values
+
+
+@pytest.mark.parametrize("language", ["zh-CN", "en-US", "ru-RU", "ja-JP"])
+def test_normalize_config_payload_accepts_supported_languages(language: str) -> None:
+    values, errors = normalize_config_payload({}, {"language": language})
+
+    assert errors == []
+    assert values["language"] == language
 
 
 def test_normalize_config_payload_rejects_invalid_theme_colors() -> None:

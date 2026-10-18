@@ -7,6 +7,8 @@
 
 ## [Unreleased]
 
+## [v0.3.0] - 2026-10-18
+
 ### 新增
 
 - 新增日语（`ja-JP`）与俄语（`ru-RU`）i18n：WebUI metadata / config / Dashboard 文案与运行期日志均支持四种语言
@@ -32,6 +34,7 @@
 - 新旧配置按 AppID 合并，新版配置优先接管；兼容配置继续覆盖未被接管的历史机器人
 - 同步状态与进度细化到机器人
 - 子菜单上限按 QQ 当前接口调整为 5 项
+- 移除对 `aiohttp` 的显式依赖锁定，改用 AstrBot 运行环境提供的兼容版本，避免与宿主依赖冲突
 - `core/menu.py` 增加结构化同步事件与逐平台失败隔离，Dashboard 可展示每个平台的同步结果
 - `main.py` 注册视图 Web API、暴露配置保存回调，并使用 `core/paths.py` 的 `PLUGIN_VERSION` 作为唯一版本来源
 - `core/config.py` 增加 Dashboard 配置导出、菜单统计、脱敏与提交校验 helper
@@ -113,6 +116,7 @@
 
 - 修复菜单配置 schema 类型错误导致插件加载失败的问题 (#3)
 
+[v0.3.0]: https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/compare/v0.2.3...v0.3.0
 [v0.2.3]: https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/compare/v0.2.2...v0.2.3
 [v0.2.2]: https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/compare/v0.2.1...v0.2.2
 [v0.2.1]: https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/compare/v0.2.0...v0.2.1

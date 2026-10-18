@@ -32,7 +32,7 @@ describe('AppSidebar', () => {
     expect(wrapper.text()).toContain('机器人')
     expect(wrapper.text()).toContain('兼容性')
     expect(wrapper.text()).toContain('设置')
-    expect(wrapper.text()).toContain('v0.2.3')
+    expect(wrapper.text()).toContain('v0.3.0')
 
     expect(wrapper.find('[data-nav-section="main"]').text()).not.toContain('兼容性')
     expect(wrapper.find('[data-nav-section="bottom"]').text()).toContain('兼容性')
@@ -77,6 +77,6 @@ describe('AppSidebar', () => {
     })
 
     expect(wrapper.text()).not.toContain('自定义菜单')
-    expect(wrapper.text()).not.toContain('v0.2.3')
+    expect(wrapper.text()).not.toContain('v0.3.0')
   })
 })

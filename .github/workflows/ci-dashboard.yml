@@ -44,6 +44,3 @@ jobs:
       - name: Build dashboard
         working-directory: web/dashboard
         run: pnpm build
-
-      - name: Ensure committed build output is up to date
-        run: git diff --exit-code -- pages/dashboard

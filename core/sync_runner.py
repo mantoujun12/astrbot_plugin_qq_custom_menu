@@ -13,7 +13,7 @@ from typing import Any
 
 from astrbot.api import logger
 
-from .i18n import LOG_TAG
+from .i18n import LOG_TAG, t
 
 EmitCallback = Callable[[dict[str, Any]], Awaitable[None]]
 RunCallback = Callable[[EmitCallback], Awaitable[Any]]
@@ -150,7 +150,7 @@ class SyncRunner:
             await self._emit_finish(ok=False, reason="cancelled", error="cancelled")
             raise
         except Exception as exc:
-            logger.error("%s sync run failed: %s", LOG_TAG, exc, exc_info=True)
+            logger.error("%s %s", LOG_TAG, t("log.sync_run_failed", exc=exc), exc_info=True)
             await self._emit_finish(ok=False, reason="error", error=str(exc))
         finally:
             async with self._lock:

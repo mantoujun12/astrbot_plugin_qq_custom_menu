@@ -1,0 +1,373 @@
+{
+  "metadata": {
+    "display_name": "QQ カスタムメニュー",
+    "short_desc": "QQ ボットにカスタムメニューを表示",
+    "desc": "AstrBot WebUI で設定したカスタムメニューを QQ 公式ボットに表示します。個人チャットのみ対応しています。"
+  },
+  "config": {
+    "language": {
+      "description": "プラグインのログ言語",
+      "hint": "zh-CN、en-US、ru-RU、ja-JP に対応しています。プラグインのログにのみ影響し、ユーザーが設定したメニュー内容は翻訳されません。",
+      "labels": [
+        "简体中文",
+        "English",
+        "Русский",
+        "日本語"
+      ]
+    },
+    "primary_color": {
+      "description": "プラグインビューのメインカラー",
+      "hint": "プラグインビューのメインアクセント色を #RRGGBB 形式で指定します。「設定」ページからも変更できます。"
+    },
+    "secondary_color": {
+      "description": "プラグインビューのサブカラー",
+      "hint": "プラグインビューのサブアクセント色を #RRGGBB 形式で指定します。「設定」ページからも変更できます。"
+    },
+    "sync_menu": {
+      "description": "起動時にカスタムメニューを同期",
+      "hint": "無効にすると、QQ の現在の個人チャットメニューを読み取るだけで、上書きしません。"
+    },
+    "qq_platforms": {
+      "description": "互換プラットフォームの認証情報",
+      "hint": "このページには旧バージョンのグローバル設定が残っています。新しい形式はプラグインビューの「ロボット」で個別に設定してください。新しい形式で AppID が引き継がれていないプラットフォームは、ここの認証情報を引き続き使用できます。",
+      "templates": {
+        "qq_platform": {
+          "name": "QQ ボット",
+          "items": {
+            "appid": {
+              "description": "AppID"
+            },
+            "secret": {
+              "description": "ClientSecret"
+            },
+            "platform": {
+              "description": "プラットフォーム種別",
+              "labels": [
+                "QQ 公式ボット",
+                "QQ 公式ボット Webhook"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "menu": {
+      "description": "互換用の個人チャットカスタムメニュー",
+      "hint": "旧バージョンのグローバル個人チャットメニューはここで引き続き管理できます。「ロボット」で引き継いだ AppID はこのメニューを使用しません。最上位メニューは最大 10 件、各サブメニューは最大 5 件です。",
+      "templates": {
+        "send_message": {
+          "name": "メッセージ送信",
+          "items": {
+            "name": {
+              "description": "メニュー名"
+            },
+            "message": {
+              "description": "クリック時に送信するメッセージ"
+            },
+            "parent": {
+              "description": "親メニュー名",
+              "hint": "空欄の場合は最上位メニューです。「サブメニュー」項目の名前を指定すると、その子項目になります。"
+            }
+          }
+        },
+        "link": {
+          "name": "リンク",
+          "items": {
+            "name": {
+              "description": "メニュー名"
+            },
+            "link": {
+              "description": "クリック時に開くリンク",
+              "hint": "QQ は https:// で始まるリンクを要求します。プロトコルが未指定の場合は https:// を自動補完します。"
+            },
+            "parent": {
+              "description": "親メニュー名",
+              "hint": "空欄の場合は最上位メニューです。「サブメニュー」項目の名前を指定すると、その子項目になります。"
+            }
+          }
+        },
+        "switch": {
+          "name": "スイッチ",
+          "items": {
+            "name": {
+              "description": "スイッチ名"
+            },
+            "switch_id": {
+              "description": "スイッチ ID",
+              "hint": "ユーザーが切り替えると、メッセージの ext にこの識別子が含まれます。"
+            },
+            "default": {
+              "description": "既定で有効"
+            }
+          }
+        },
+        "menu": {
+          "name": "サブメニュー",
+          "items": {
+            "name": {
+              "description": "サブメニュー名"
+            }
+          }
+        }
+      }
+    }
+  },
+  "pages": {
+    "dashboard": {
+      "title": "カスタムメニュー",
+      "description": "AstrBot WebUI で QQ 公式ボットの個人チャットメニューを管理し、同期状態を確認してワンクリックで同期します。",
+      "nav": {
+        "status": "概要",
+        "robots": "ロボット",
+        "compatibility": "互換性",
+        "settings": "設定",
+        "collapse": "サイドバーを折りたたむ",
+        "expand": "サイドバーを展開",
+        "openDrawer": "サイドバーを開く",
+        "closeDrawer": "サイドバーを閉じる"
+      },
+      "common": {
+        "cancel": "キャンセル",
+        "save": "保存",
+        "reload": "再読み込み",
+        "delete": "削除"
+      },
+      "status": {
+        "title": "概要",
+        "subtitle": "メニュー設定、同期状態、各 QQ プラットフォームの認証情報を確認します。",
+        "refresh": "更新",
+        "loadFailed": "状態の取得に失敗しました",
+        "mockHint": "ローカル開発環境です。モックデータを表示しており、AstrBot バックエンドには接続していません。",
+        "cards": {
+          "platforms": "QQ プラットフォーム",
+          "topLevel": "最上位メニュー",
+          "subItems": "子項目",
+          "total": "メニュー項目"
+        },
+        "state": {
+          "synced": "同期済み",
+          "pending": "同期待ち",
+          "unknown": "未同期",
+          "disabled": "同期無効"
+        },
+        "source": {
+          "robot": "ロボット",
+          "compatibility": "互換設定"
+        },
+        "secret": "ClientSecret",
+        "itemUnit": "件",
+        "secretSet": "設定済み",
+        "secretMissing": "未設定",
+        "syncDisabled": "「起動時に同期」が無効です。プラグインは QQ 個人チャットメニューを読み取るだけで、上書きしません。",
+        "empty": {
+          "platforms": {
+            "title": "利用可能な QQ プラットフォームがありません",
+            "description": "「ロボット」ページでロボットを追加するか、「互換性」ページで旧バージョンのプラットフォーム認証情報を入力してください。",
+            "action": "ロボットを設定する"
+          },
+          "menu": {
+            "description": "メニュー項目が設定されていません。同期すると、有効なシーンの古い内容が削除されます。"
+          }
+        },
+        "sync": {
+          "title": "個人チャットメニューを同期",
+          "subtitle": "現在の設定を QQ 個人チャットメニューに書き込み、進捗をリアルタイムで表示します。",
+          "action": "同期を開始",
+          "running": "同期中…",
+          "progress": "進捗 {completed}/{total}",
+          "done": "同期完了：成功 {succeeded} プラットフォーム、失敗 {failed}",
+          "retry": "再試行",
+          "empty": "同期履歴はまだありません。",
+          "disabledMock": "ローカル開発環境には AstrBot バックエンドがないため、同期は利用できません。"
+        }
+      },
+      "menu": {
+        "title": "メニュー設定",
+        "subtitle": "QQ 個人チャットメニューの最上位メニューと子項目を管理します。保存するとプラグイン設定に書き戻されます。",
+        "saveAndSync": "保存して同期",
+        "type": {
+          "send_message": "メッセージ送信",
+          "link": "リンク",
+          "switch": "スイッチ",
+          "menu": "サブメニュー"
+        },
+        "childCount": "子項目 {count} 件",
+        "empty": "メニュー項目はまだありません",
+        "addChild": "子項目を追加",
+        "edit": "編集",
+        "delete": "削除",
+        "dialogEdit": "メニュー項目を編集",
+        "dialogAdd": "メニュー項目を追加",
+        "parentLabel": "親メニュー：{parent}",
+        "fieldType": "種別",
+        "fieldName": "メニュー名",
+        "fieldMessage": "クリック時に送信するメッセージ",
+        "messageHint": "例：/help",
+        "fieldLink": "クリック時に開くリンク",
+        "fieldSwitchId": "スイッチ ID",
+        "switchHint": "ユーザーが切り替えると、メッセージの ext にこの ID が含まれます。",
+        "switchDefault": "既定で有効",
+        "linkHint": "QQ は https:// を要求します。プロトコルが未指定の場合は自動補完されます。",
+        "menuHint": "サブメニュー自体は内容を送信しません。保存後、メッセージ送信やリンクの子項目を追加できます。",
+        "mockHint": "ローカル開発環境です。モックデータを表示しており、設定は保存できません。",
+        "saved": "メニューを保存して反映しました。",
+        "emptyWarning": "メニューが空です。「起動時にカスタムメニューを同期」が有効な場合、同期により QQ 上の既存のカスタムメニューが削除されます。",
+        "listTitle": "メニュー項目",
+        "listSubtitle": "最上位メニュー {top}/{maxTop}。各サブメニューは最大 {maxSub} 件の子項目です。",
+        "addTop": "最上位メニューを追加",
+        "validation": {
+          "topLimit": "最上位メニューは最大 {max} 件です",
+          "duplicate": "最上位メニュー名は重複できません",
+          "nameEmpty": "メニュー名は空にできません",
+          "menuParent": "サブメニューに親メニューを設定できません",
+          "parentMissing": "親メニュー「{parent}」が存在しません",
+          "messageEmpty": "メニュー「{name}」にメッセージ内容がありません",
+          "linkEmpty": "メニュー「{name}」にリンクがありません",
+          "switchParent": "スイッチはサブメニュー項目にできません",
+          "switchIdEmpty": "メニュー「{name}」にスイッチ ID がありません",
+          "switchIdDuplicate": "スイッチ ID は重複できません：{switchId}",
+          "subLimit": "サブメニュー「{name}」は最大 {max} 件の子項目です"
+        }
+      },
+      "platforms": {
+        "title": "ロボット",
+        "subtitle": "各 QQ 公式ボットは AppID と ClientSecret を個別に管理します。",
+        "mockHint": "ローカル開発環境です。モックデータを表示しており、設定は保存できません。",
+        "empty": "プラグイン設定のロボットはまだありません",
+        "emptyHint": "AppID と ClientSecret を追加すると、プラグインの起動時にこれらのロボットのメニューが同期されます。",
+        "newTitle": "新しいロボット",
+        "newSubtitle": "認証情報を入力して保存",
+        "savedSubtitle": "保存済みの認証情報",
+        "appid": "AppID",
+        "secret": "ClientSecret",
+        "secretPlaceholder": "{masked}（空欄の場合は維持）",
+        "platform": "プラットフォーム種別",
+        "add": "ロボットを追加",
+        "runtimeTitle": "現在有効なプラットフォーム",
+        "runtimeSubtitle": "起動時の同期と状態ページはこのリストを使用します。",
+        "sourcePlugin": "プラグイン設定",
+        "saved": "ロボットの認証情報を保存して反映しました。",
+        "type": {
+          "qq_official": "QQ 公式ボット",
+          "qq_official_webhook": "QQ 公式ボット Webhook"
+        },
+        "validation": {
+          "appidEmpty": "{index} 番目のプラットフォームに AppID がありません",
+          "duplicate": "AppID が重複しています：{appid}",
+          "typeInvalid": "プラットフォーム {appid} の種別が不正です",
+          "secretEmpty": "プラットフォーム {appid} に ClientSecret がありません"
+        }
+      },
+      "robots": {
+        "title": "ロボット",
+        "subtitle": "各ロボットが自分の個人チャットメニューを個別に管理し、互いに上書きしません。",
+        "saveAndSync": "保存して同期",
+        "importLegacy": "互換設定からインポート",
+        "addRobot": "ロボットを追加",
+        "createSubtitle": "先に基本認証情報を入力し、作成後に個人チャットメニューを設定してください。",
+        "createConfirm": "作成",
+        "created": "ロボットを下書きに追加しました。保存すると設定に書き込まれます。",
+        "saved": "ロボット設定を保存しました。",
+        "mockHint": "ローカル開発環境です。モックデータを表示しており、設定は保存できません。",
+        "name": "ロボット名",
+        "platformType": "プラットフォーム種別",
+        "secretKeep": "空欄の場合は現在の値を維持します",
+        "secretSetHint": "ClientSecret は保存済みです。空欄の場合は現在の値を維持します。",
+        "secretSaved": "現在のシークレット：{masked}",
+        "listTitle": "ロボット",
+        "listSubtitle": "ロボットを選択してシーンを編集します。",
+        "selectRobot": "ロボットを選択",
+        "emptyRobots": "ロボットがありません。まず 1 台追加してください。",
+        "editorEmpty": "ロボットを選択するか追加してください。",
+        "robotSummary": "有効なシーン {scenes} 件、メニュー項目 {items} 件。",
+        "untitledRobot": "名前なしロボット",
+        "removedLocal": "ローカル一覧から削除しました。保存すると設定に書き込まれます。",
+        "basicTitle": "基本情報",
+        "basicSubtitle": "名前、AppID、ClientSecret はこのロボット専用です。",
+        "platformTypeName": {
+          "qq_official": "QQ 公式ボット",
+          "qq_official_webhook": "QQ 公式ボット Webhook"
+        },
+        "scene": {
+          "c2c": "個人チャット"
+        },
+        "c2c": {
+          "subtitle": "QQ のグローバルカスタムメニューに書き込みます。メッセージ、リンク、サブメニュー、スイッチに対応しています。",
+          "limits": "最上位メニュー {top}/{maxTop}、各サブメニューは最大 {maxSub} 件です。",
+          "add": "最上位メニューを追加",
+          "disabled": "個人チャットシーンが無効なため、プラグインは QQ カスタムメニューを変更しません。"
+        },
+        "validation": {
+          "nameEmpty": "ロボット名は空にできません",
+          "nameTooLong": "ロボット名は最大 {max} 文字です",
+          "appidEmpty": "AppID は空にできません",
+          "appidDuplicate": "AppID は重複できません：{appid}",
+          "secretEmpty": "新しいロボットには ClientSecret が必要です"
+        },
+        "deleteRobot": "ロボット設定を削除",
+        "deleteConfirmTitle": "ロボット設定を削除しますか？",
+        "deleteConfirmText": "削除してもローカル設定が消えるだけで、QQ 上の既存メニューは削除されません。保存後に反映されます。",
+        "deleteConfirm": "削除する",
+        "dangerTitle": "ロボット設定を削除",
+        "dangerText": "削除してもローカル設定が消えるだけで、QQ 上のメニューは自動的に削除されません。",
+        "importTitle": "互換設定からインポート",
+        "importSubtitle": "インポートする旧バージョンの AppID を入力します。1 行に 1 つ、またはカンマ区切りで指定してください。",
+        "importAppids": "AppID 一覧",
+        "importEmpty": "互換設定にインポート可能な AppID がありません。手動で入力してください。",
+        "importNoAppids": "AppID を 1 つ以上入力してください。",
+        "importConfirm": "インポート",
+        "imported": "互換設定からロボットをインポートしました。同期前に内容を確認してください。"
+      },
+      "compatibility": {
+        "title": "互換性設定",
+        "subtitle": "旧バージョンのグローバル個人チャットメニューと認証情報を保持します。「ロボット」ページで AppID を引き継いだロボットは、ここのメニューを使用しません。",
+        "saveAndSync": "保存して同期",
+        "saved": "互換性設定を保存しました。",
+        "mockHint": "ローカル開発環境です。モックデータを表示しており、設定は保存できません。",
+        "platformsTitle": "互換プラットフォームの認証情報",
+        "platformsSubtitle": "ClientSecret を空欄にすると、保存済みの値を維持します。",
+        "addPlatform": "プラットフォームを追加",
+        "noPlatforms": "互換プラットフォームの認証情報はまだありません。",
+        "platformType": "プラットフォーム種別",
+        "platformTypeName": {
+          "qq_official": "QQ 公式ボット",
+          "qq_official_webhook": "QQ 公式ボット Webhook"
+        },
+        "menuTitle": "互換個人チャットメニュー",
+        "menuSubtitle": "最上位メニュー {top}/{maxTop}。各サブメニューは最大 {maxSub} 件です。",
+        "addMenu": "最上位メニューを追加",
+        "emptyWarning": "互換メニューが空です。同期が有効な場合、新しいロボット設定で管理されていない AppID の QQ カスタムメニューが削除されます。"
+      },
+      "settings": {
+        "title": "設定",
+        "subtitle": "プラグイン全体の共通設定：ログ言語、起動時の同期、テーマ配色。",
+        "basicTitle": "基本設定",
+        "basicSubtitle": "ログ言語はプラグインのログにのみ影響します。",
+        "language": "ログ言語",
+        "languageName": {
+          "zh-CN": "简体中文",
+          "en-US": "English",
+          "ru-RU": "Русский",
+          "ja-JP": "日本語"
+        },
+        "themeTitle": "テーマ配色",
+        "themeSubtitle": "プラグインビューのメインカラーとサブカラーを調整します。保存後、ライトテーマとダークテーマの両方にすぐ反映されます。",
+        "primaryColor": "メインカラー",
+        "secondaryColor": "サブカラー",
+        "colorHint": "#RRGGBB 形式で指定してください。",
+        "colorInvalid": "#RRGGBB 形式の色を入力してください。",
+        "syncMenu": "起動時に個人チャットメニューを同期",
+        "syncMenuHint": "無効にすると、プラグインは個人チャットメニューを読み取るだけで、上書きしません。",
+        "mockHint": "ローカル開発環境です。編集はできますが、設定は保存できません。",
+        "saved": "設定を保存して反映しました。",
+        "aboutTitle": "プラグインについて",
+        "aboutSubtitle": "プラグインの概要とリポジトリへのリンクです。",
+        "aboutName": "カスタムメニュー",
+        "aboutDescription": "ロボットごとに個人チャットのカスタムメニューを管理し、QQ 公式 API に同期します。",
+        "githubTitle": "GitHub リポジトリ",
+        "githubDescription": "ソースコード、変更履歴、問題報告を確認できます。",
+        "githubAction": "GitHub を開く"
+      }
+    }
+  }
+}

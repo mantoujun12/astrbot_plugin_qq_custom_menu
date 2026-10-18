@@ -10,6 +10,7 @@ from typing import Any
 
 import pytest
 
+from core.i18n import t
 from core.state import STATE_FILENAME, MenuStateStore, menu_digest
 
 TEST_ROOT = Path(__file__).resolve().parent / "_state_data"
@@ -81,7 +82,7 @@ def test_save_failure_is_logged(monkeypatch: Any, caplog: Any) -> None:
     with caplog.at_level("WARNING", logger="astrbot"):
         store.save({"app1": "digest"})
 
-    assert "save menu state failed" in caplog.text
+    assert t("log.save_state_failed", exc="boom") in caplog.text
     assert "boom" in caplog.text
 
 
@@ -167,7 +168,7 @@ def test_lock_timeout_writes_without_lock(monkeypatch: Any, caplog: Any) -> None
     with caplog.at_level("WARNING", logger="astrbot"):
         store.mark_synced("app1", {"items": []})
 
-    assert "state lock unavailable" in caplog.text
+    assert t("log.lock_unavailable", path=store.lock_file) in caplog.text
     assert store.is_unchanged("app1", {"items": []}) is True
 
 
@@ -198,7 +199,7 @@ def test_lock_acquire_oserror_is_logged(monkeypatch: Any, caplog: Any) -> None:
     with caplog.at_level("WARNING", logger="astrbot"):
         store.mark_synced("app1", {"items": []})
 
-    assert "acquire state lock failed" in caplog.text
+    assert t("log.lock_acquire_failed", exc="cannot open lock") in caplog.text
 
 
 def test_state_save_close_failure_is_tolerated(monkeypatch: Any) -> None:
@@ -261,7 +262,7 @@ def test_stale_lock_unlink_failure_is_logged(monkeypatch: Any, caplog: Any) -> N
     with caplog.at_level("DEBUG", logger="astrbot"):
         store.mark_synced("app1", {"items": []})
 
-    assert "remove stale state lock failed" in caplog.text
+    assert t("log.stale_lock_remove_failed", exc="unlink failed") in caplog.text
     assert store.is_unchanged("app1", {"items": []}) is True
 
 
@@ -294,4 +295,4 @@ def test_cleanup_tmp_failure_is_tolerated(monkeypatch: Any, caplog: Any) -> None
     with caplog.at_level("DEBUG", logger="astrbot"):
         store.save({"app1": "digest"})
 
-    assert "cleanup menu state tmp failed" in caplog.text
+    assert t("log.state_tmp_cleanup_failed", exc="cleanup failed") in caplog.text

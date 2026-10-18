@@ -7,10 +7,12 @@
   "config": {
     "language": {
       "description": "插件日志语言",
-      "hint": "仅影响插件日志，不影响用户自定义的菜单内容。",
+      "hint": "支持 zh-CN、en-US、ru-RU、ja-JP；仅影响插件日志，不影响用户自定义的菜单内容。",
       "labels": [
         "简体中文",
-        "English"
+        "English",
+        "Русский",
+        "日本語"
       ]
     },
     "primary_color": {
@@ -344,7 +346,9 @@
         "language": "日志语言",
         "languageName": {
           "zh-CN": "简体中文",
-          "en-US": "English"
+          "en-US": "English",
+          "ru-RU": "Русский",
+          "ja-JP": "日本語"
         },
         "themeTitle": "主题配色",
         "themeSubtitle": "调整插件视图的主色和辅助色，保存后立即应用到浅色与深色主题。",

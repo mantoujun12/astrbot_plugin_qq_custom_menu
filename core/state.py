@@ -15,7 +15,8 @@ from typing import Any
 import yaml
 from astrbot.api import logger
 
-LOG_TAG = "[qq-custom-menu]"
+from .i18n import LOG_TAG, t
+
 STATE_FILENAME = "menu_state.yaml"
 LOCK_TIMEOUT_SECONDS = 2.0
 LOCK_STALE_SECONDS = 30.0
@@ -37,10 +38,10 @@ class MenuStateStore:
             with self.state_file.open("r", encoding="utf-8") as file:
                 data = yaml.safe_load(file) or {}
         except Exception as exc:
-            logger.warning("%s load menu state failed: %s", LOG_TAG, exc)
+            logger.warning("%s %s", LOG_TAG, t("log.load_state_failed", exc=exc))
             return {}
         if not isinstance(data, dict):
-            logger.warning("%s menu state is not a mapping, ignored", LOG_TAG)
+            logger.warning("%s %s", LOG_TAG, t("log.state_not_mapping"))
             return {}
         return {str(key): str(value) for key, value in data.items() if value}
 
@@ -104,16 +105,18 @@ class MenuStateStore:
                     try:
                         self.lock_file.unlink()
                     except OSError as exc:
-                        logger.debug("%s remove stale state lock failed: %s", LOG_TAG, exc)
+                        logger.debug("%s %s", LOG_TAG, t("log.stale_lock_remove_failed", exc=exc))
                     continue
                 time.sleep(0.05)
             except OSError as exc:
-                logger.warning("%s acquire state lock failed: %s", LOG_TAG, exc)
+                logger.warning("%s %s", LOG_TAG, t("log.lock_acquire_failed", exc=exc))
                 break
 
         if not acquired:
             logger.warning(
-                "%s state lock unavailable, write without lock: %s", LOG_TAG, self.lock_file
+                "%s %s",
+                LOG_TAG,
+                t("log.lock_unavailable", path=self.lock_file),
             )
         try:
             yield
@@ -124,7 +127,7 @@ class MenuStateStore:
                 except FileNotFoundError:
                     pass
                 except OSError as exc:
-                    logger.debug("%s release state lock failed: %s", LOG_TAG, exc)
+                    logger.debug("%s %s", LOG_TAG, t("log.lock_release_failed", exc=exc))
 
     def _write(self, state: dict[str, str]) -> None:
         """原子写入状态，临时文件必须唯一以避免并发覆盖。"""
@@ -143,18 +146,22 @@ class MenuStateStore:
             os.replace(tmp_path, self.state_file)
             tmp_path = None
         except Exception as exc:
-            logger.warning("%s save menu state failed: %s", LOG_TAG, exc)
+            logger.warning("%s %s", LOG_TAG, t("log.save_state_failed", exc=exc))
         finally:
             if fd is not None:
                 try:
                     os.close(fd)
                 except OSError as exc:
-                    logger.debug("%s close state tmp failed: %s", LOG_TAG, exc)
+                    logger.debug("%s %s", LOG_TAG, t("log.state_tmp_close_failed", exc=exc))
             if tmp_path is not None:
                 try:
                     tmp_path.unlink()
                 except OSError as cleanup_exc:
-                    logger.debug("%s cleanup menu state tmp failed: %s", LOG_TAG, cleanup_exc)
+                    logger.debug(
+                        "%s %s",
+                        LOG_TAG,
+                        t("log.state_tmp_cleanup_failed", exc=cleanup_exc),
+                    )
 
 
 def menu_digest(menu: dict[str, Any]) -> str:

@@ -9,6 +9,8 @@
 
 ### 新增
 
+- 新增日语（`ja-JP`）与俄语（`ru-RU`）i18n：WebUI metadata / config / Dashboard 文案与运行期日志均支持四种语言
+- `core/i18n.py` 的加载器诊断日志改走翻译表，`core/paths.py`、`core/state.py`、`core/sync_runner.py` 的硬编码英文日志全部迁移到 `core/i18n/*.json`
 - 设置页新增主题配色卡片，可调整插件视图主色与辅助色，保存后同步应用到浅色与深色主题
 - Dashboard 新增「机器人」页：按机器人独立维护私聊自定义菜单，支持从兼容配置按 AppID 导入
 - 新增 `core/robot_config.py` 与运行时数据文件 `menu_config.json`，包含机器人 ID、凭证、平台类型、场景启停与版本并发校验
@@ -49,6 +51,8 @@
 
 ### 测试
 
+- 新增四语言 locale 的 key 集合、占位符、非空文案与语言切换测试，覆盖 `core/i18n.py` 诊断日志的本地化输出
+- Vitest i18n 对账扩展到 `zh-CN` / `en-US` / `ru-RU` / `ja-JP`，新增 locale 文件齐全、占位符一致与设置页语言选项检查
 - 新增机器人配置、兼容导入、版本冲突、Dashboard 新页面与 i18n 根键对账测试
 - 新增 `tests/test_main.py`，覆盖插件装配、初始化同步、异常兜底与资源释放
 - 补充 `core/config.py`、`core/i18n.py`、`core/paths.py`、`core/state.py` 的边界分支测试，Python 行覆盖率提升到 99%

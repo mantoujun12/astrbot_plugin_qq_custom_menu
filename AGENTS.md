@@ -27,7 +27,7 @@ core/                      插件自身的 Python 包，业务逻辑都在这里
 ├─ sync_runner.py          Dashboard 后台同步任务、SSE 事件缓冲与断线续订
 ├─ web_api.py              Dashboard Web API（status / config / robots / sync / sync/events）
 ├─ paths.py                插件数据目录解析、PLUGIN_NAME / PLUGIN_VERSION
-└─ i18n/                   运行期日志翻译（zh-CN.json / en-US.json）
+└─ i18n/                   运行期日志翻译（zh-CN / en-US / ru-RU / ja-JP）
 _conf_schema.json          WebUI 插件配置 schema
 metadata.yaml              插件元数据（版本号唯一来源）
 .astrbot-plugin/i18n/      WebUI 侧 i18n（metadata / config / pages.dashboard）
@@ -104,7 +104,7 @@ python scripts/package_plugin.py         # 生成 dist/<插件名>-<版本>.zip
 14. 兼容性平台凭证只读取插件配置中的 `qq_platforms`，不得回退读取 AstrBot 平台配置。
 15. `SyncRunner` 负责单飞、事件缓冲与广播：事件带单调递增 `seq`，`stream(since)` 回放后持续推送，收到 `finish` 结束；`start()` 在已有任务运行时返回 `False`。
 16. `MenuSynchronizer.sync_all()` 逐平台隔离异常，并发出 `start` / `message`（由调用方映射）/ `platform` / `finish` 事件；任一平台失败不能中止其余平台。
-17. i18n 分两条管线：`core/i18n/*.json` 供运行期日志使用；`.astrbot-plugin/i18n/*.json` 供 WebUI 读取，Dashboard 文案放在 `pages.dashboard` 下，`zh-CN` 与 `en-US` 的 key 集合必须一致。面板标题不得直接采用宿主传入的原始视图名 `dashboard`。
+17. i18n 分两条管线：`core/i18n/*.json` 供运行期日志使用；`.astrbot-plugin/i18n/*.json` 供 WebUI 读取，Dashboard 文案放在 `pages.dashboard` 下，`zh-CN`、`en-US`、`ru-RU`、`ja-JP` 四份 locale 的 key 集合与占位符必须一致。面板标题不得直接采用宿主传入的原始视图名 `dashboard`。
 18. 版本号只有 `metadata.yaml` 一个来源；`core/paths.py` 的 `PLUGIN_VERSION` 与 `web/dashboard/package.json` 的 `version` 由 `scripts/bump_version.py` 同步，`release.yml` 发布前用 `--check` 校验。
 19. `pages/dashboard/` 是生成文件，由 `pnpm build` 写入，不要手工编辑；冲突时重新构建再 `git add`，不要改成 `merge=ours`。
 20. 测试按模块对应：`core/*.py` → `tests/test_*.py`，Dashboard 源码 → 同目录 `*.test.ts`。公共假件放 `tests/fakes.py` 与 `web/dashboard/src/test/helpers.ts`。

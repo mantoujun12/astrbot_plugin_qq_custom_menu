@@ -28,6 +28,8 @@ const type = ref<MenuType>('send_message')
 const name = ref('')
 const message = ref('')
 const link = ref('')
+const switchId = ref('')
+const switchDefault = ref(false)
 const error = ref('')
 
 const isEditing = computed(() => props.entry !== null)
@@ -39,9 +41,9 @@ const menuLocked = computed(
 const typeOptions = computed(() => {
   const types: MenuType[] = effectiveParent.value
     ? ['send_message', 'link']
-    : ['send_message', 'link', 'menu']
+    : ['send_message', 'link', 'switch', 'menu']
   return types.map((value) => ({
-    title: t(`views.dashboard.menu.type.${value}`, TYPE_FALLBACK[value]),
+    title: t(`pages.dashboard.menu.type.${value}`, TYPE_FALLBACK[value]),
     value,
   }))
 })
@@ -49,6 +51,7 @@ const typeOptions = computed(() => {
 const TYPE_FALLBACK: Record<MenuType, string> = {
   send_message: '发送消息',
   link: '跳转链接',
+  switch: '开关',
   menu: '子菜单',
 }
 
@@ -58,6 +61,8 @@ function reset(): void {
   name.value = source?.name ?? ''
   message.value = source?.message ?? ''
   link.value = source?.link ?? ''
+  switchId.value = source?.switch_id ?? ''
+  switchDefault.value = source?.default ?? false
   error.value = ''
 }
 
@@ -87,24 +92,31 @@ function close(): void {
 function onSave(): void {
   const trimmedName = name.value.trim()
   if (!trimmedName) {
-    error.value = t('views.dashboard.menu.validation.nameEmpty', '菜单名称不能为空')
+    error.value = t('pages.dashboard.menu.validation.nameEmpty', '菜单名称不能为空')
     return
   }
   if (type.value === 'menu' && effectiveParent.value) {
-    error.value = t('views.dashboard.menu.validation.menuParent', '子菜单不能设置父菜单')
+    error.value = t('pages.dashboard.menu.validation.menuParent', '子菜单不能设置父菜单')
     return
   }
   if (type.value === 'send_message' && !message.value.trim()) {
     error.value = t(
-      'views.dashboard.menu.validation.messageEmpty',
+      'pages.dashboard.menu.validation.messageEmpty',
       '菜单「{name}」缺少消息内容',
     ).replace('{name}', trimmedName)
     return
   }
   if (type.value === 'link' && !link.value.trim()) {
     error.value = t(
-      'views.dashboard.menu.validation.linkEmpty',
+      'pages.dashboard.menu.validation.linkEmpty',
       '菜单「{name}」缺少链接',
+    ).replace('{name}', trimmedName)
+    return
+  }
+  if (type.value === 'switch' && !switchId.value.trim()) {
+    error.value = t(
+      'pages.dashboard.menu.validation.switchIdEmpty',
+      '菜单「{name}」缺少开关 ID',
     ).replace('{name}', trimmedName)
     return
   }
@@ -114,6 +126,8 @@ function onSave(): void {
     name: trimmedName,
     message: type.value === 'send_message' ? message.value.trim() : undefined,
     link: type.value === 'link' ? normalizeLink(link.value) : undefined,
+    switch_id: type.value === 'switch' ? switchId.value.trim() : undefined,
+    default: type.value === 'switch' ? switchDefault.value : undefined,
     parent: effectiveParent.value,
   })
   close()
@@ -131,13 +145,13 @@ function onSave(): void {
         <v-card-title class="text-body-large">
           {{
             isEditing
-              ? t('views.dashboard.menu.dialogEdit', '编辑菜单条目')
-              : t('views.dashboard.menu.dialogAdd', '添加菜单条目')
+              ? t('pages.dashboard.menu.dialogEdit', '编辑菜单条目')
+              : t('pages.dashboard.menu.dialogAdd', '添加菜单条目')
           }}
         </v-card-title>
         <v-card-subtitle v-if="effectiveParent">
           {{
-            t('views.dashboard.menu.parentLabel', '父菜单：{parent}').replace(
+            t('pages.dashboard.menu.parentLabel', '父菜单：{parent}').replace(
               '{parent}',
               effectiveParent,
             )
@@ -150,7 +164,7 @@ function onSave(): void {
           v-model="type"
           data-field="menu-type"
           :items="typeOptions"
-          :label="t('views.dashboard.menu.fieldType', '类型')"
+          :label="t('pages.dashboard.menu.fieldType', '类型')"
           :disabled="menuLocked"
           variant="outlined"
           density="compact"
@@ -160,7 +174,7 @@ function onSave(): void {
         <v-text-field
           v-model="name"
           data-field="menu-name"
-          :label="t('views.dashboard.menu.fieldName', '菜单名称')"
+          :label="t('pages.dashboard.menu.fieldName', '菜单名称')"
           variant="outlined"
           density="compact"
           class="mb-3"
@@ -171,8 +185,8 @@ function onSave(): void {
           v-if="type === 'send_message'"
           v-model="message"
           data-field="menu-message"
-          :label="t('views.dashboard.menu.fieldMessage', '点击后发送的消息')"
-          :hint="t('views.dashboard.menu.messageHint', '例如 /help')"
+          :label="t('pages.dashboard.menu.fieldMessage', '点击后发送的消息')"
+          :hint="t('pages.dashboard.menu.messageHint', '例如 /help')"
           variant="outlined"
           density="compact"
           persistent-hint
@@ -182,10 +196,10 @@ function onSave(): void {
           v-else-if="type === 'link'"
           v-model="link"
           data-field="menu-link"
-          :label="t('views.dashboard.menu.fieldLink', '点击后打开的链接')"
+          :label="t('pages.dashboard.menu.fieldLink', '点击后打开的链接')"
           :hint="
             t(
-              'views.dashboard.menu.linkHint',
+              'pages.dashboard.menu.linkHint',
               'QQ 要求 https://；未填写协议时会自动补全。',
             )
           "
@@ -194,10 +208,36 @@ function onSave(): void {
           persistent-hint
           class="mb-3"
         />
+        <template v-else-if="type === 'switch'">
+          <v-text-field
+            v-model="switchId"
+            data-field="menu-switch-id"
+            :label="t('pages.dashboard.menu.fieldSwitchId', '开关 ID')"
+            :hint="
+              t(
+                'pages.dashboard.menu.switchHint',
+                '用户切换后，消息 ext 中会携带该 ID。',
+              )
+            "
+            variant="outlined"
+            density="compact"
+            persistent-hint
+            class="mb-3"
+          />
+          <v-switch
+            v-model="switchDefault"
+            data-field="menu-switch-default"
+            color="primary"
+            inset
+            hide-details
+            :label="t('pages.dashboard.menu.switchDefault', '默认开启')"
+            class="mb-3"
+          />
+        </template>
         <div v-else class="qc-metric-note mb-3">
           {{
             t(
-              'views.dashboard.menu.menuHint',
+              'pages.dashboard.menu.menuHint',
               '子菜单本身不发送内容；保存后可继续为它添加发送消息或跳转链接子项。',
             )
           }}
@@ -217,10 +257,10 @@ function onSave(): void {
       <v-card-actions class="px-5 pb-5">
         <v-spacer />
         <v-btn variant="text" @click="close">
-          {{ t('views.dashboard.common.cancel', '取消') }}
+          {{ t('pages.dashboard.common.cancel', '取消') }}
         </v-btn>
         <v-btn color="primary" variant="tonal" data-field="menu-save" @click="onSave">
-          {{ t('views.dashboard.common.save', '保存') }}
+          {{ t('pages.dashboard.common.save', '保存') }}
         </v-btn>
       </v-card-actions>
     </v-card>

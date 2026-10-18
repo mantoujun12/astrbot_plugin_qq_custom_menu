@@ -23,7 +23,6 @@ function configFixture(overrides: Partial<PluginConfigResponse> = {}): PluginCon
       },
     ],
     runtime_platforms: [],
-    using_fallback: false,
     menu: [
       { type: 'send_message', name: '帮助', message: '/help', parent: '' },
       { type: 'menu', name: '更多', parent: '' },

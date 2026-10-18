@@ -18,9 +18,10 @@ function statusFixture(overrides: Partial<StatusResponse> = {}): StatusResponse 
       {
         pf_id: '102*****89',
         appid: '102*****89',
+        name: '主机器人',
         platform: 'qq_official',
         secret_set: true,
-        source: 'plugin',
+        source: 'compatibility',
         state: 'synced',
       },
     ],
@@ -79,12 +80,10 @@ describe('StatusOverviewView', () => {
       '1',
       '2',
       '1',
-      '3',
     ])
     expect(wrapper.text()).toContain('102*****89')
     expect(wrapper.text()).toContain('已同步')
-    expect(wrapper.text()).toContain('菜单预览')
-    expect(wrapper.text()).toContain('文档')
+    expect(wrapper.text()).not.toContain('场景状态')
   })
 
   it('shows the backend error instead of the cards', async () => {
@@ -124,10 +123,10 @@ describe('StatusOverviewView', () => {
 
     const wrapper = await mount()
 
-    expect(wrapper.text()).toContain('同步会清空 QQ 上已有的自定义菜单')
+    expect(wrapper.text()).toContain('同步会清理已启用场景中的旧内容')
   })
 
-  it('shows sync-disabled and fallback hints', async () => {
+  it('shows the sync-disabled hint', async () => {
     const { api, mount } = await loadView()
     vi.mocked(api.fetchStatus).mockResolvedValue(
       statusFixture({
@@ -138,7 +137,7 @@ describe('StatusOverviewView', () => {
             appid: 'abc***yz',
             platform: 'qq_official',
             secret_set: true,
-            source: 'astrbot',
+            source: 'compatibility',
             state: 'disabled',
           },
         ],
@@ -147,8 +146,8 @@ describe('StatusOverviewView', () => {
 
     const wrapper = await mount()
 
-    expect(wrapper.text()).toContain('插件只会读取 QQ 菜单')
-    expect(wrapper.text()).toContain('当前平台凭证来自 AstrBot 平台配置')
+    expect(wrapper.text()).toContain('插件只读取 QQ 私聊菜单')
+    expect(wrapper.text()).not.toContain('AstrBot 平台配置')
   })
 
   it('labels mock data in local dev', async () => {

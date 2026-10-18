@@ -15,7 +15,6 @@ function configFixture(overrides: Partial<PluginConfigResponse> = {}): PluginCon
     sync_menu: true,
     qq_platforms: [],
     runtime_platforms: [],
-    using_fallback: false,
     menu: [],
     limits: { top_level_max: 10, sub_items_max: 10 },
     ...overrides,
@@ -53,7 +52,7 @@ describe('SettingsView', () => {
 
     expect(wrapper.text()).toContain('设置')
     expect(wrapper.text()).toContain('日志语言')
-    expect(wrapper.text()).toContain('启动时同步自定义菜单')
+    expect(wrapper.text()).toContain('启动时同步私聊菜单')
     expect(wrapper.text()).toContain('v0.2.3')
     expect(wrapper.find('.qc-github-link').attributes('href')).toContain('github.com')
   })

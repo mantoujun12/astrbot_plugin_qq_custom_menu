@@ -8,6 +8,7 @@ pages/** -text merge=binary linguist-generated=true
 
 # 锁文件与前端源码统一按文本处理，便于 review 时看到真实 diff。
 web/dashboard/pnpm-lock.yaml text eol=lf
+web/dashboard/index.html text eol=lf
 *.py text eol=lf
 *.json text eol=lf
 *.yml text eol=lf

@@ -30,7 +30,6 @@ function configFixture(overrides: Partial<PluginConfigResponse> = {}): PluginCon
         source: 'plugin',
       },
     ],
-    using_fallback: false,
     menu: [],
     limits: { top_level_max: 10, sub_items_max: 10 },
     ...overrides,
@@ -126,30 +125,6 @@ describe('PlatformsView', () => {
 
     expect(wrapper.text()).toContain('缺少 AppID')
     expect(api.saveConfig).not.toHaveBeenCalled()
-  })
-
-  it('explains when credentials come from AstrBot platform config', async () => {
-    const { api, mount } = await loadView()
-    vi.mocked(api.fetchConfig).mockResolvedValue(
-      configFixture({
-        qq_platforms: [],
-        using_fallback: true,
-        runtime_platforms: [
-          {
-            pf_id: 'abc***yz',
-            appid: 'abc***yz',
-            platform: 'qq_official',
-            secret_set: true,
-            source: 'astrbot',
-          },
-        ],
-      }),
-    )
-
-    const wrapper = await mount()
-
-    expect(wrapper.text()).toContain('插件尚未配置凭证')
-    expect(wrapper.text()).toContain('AstrBot 平台配置')
   })
 
   it('shows load errors', async () => {

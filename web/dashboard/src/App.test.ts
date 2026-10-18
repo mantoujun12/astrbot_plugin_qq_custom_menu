@@ -43,8 +43,8 @@ describe('App', () => {
     await waitUntil(() => wrapper.text().includes('状态概览'))
 
     expect(wrapper.find('.v-application').exists()).toBe(true)
-    expect(wrapper.text()).toContain('菜单配置')
     expect(wrapper.text()).toContain('机器人')
+    expect(wrapper.text()).toContain('兼容性')
     expect(wrapper.text()).toContain('设置')
   })
 })

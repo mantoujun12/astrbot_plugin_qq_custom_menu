@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {
   mdiCogOutline,
-  mdiFormatListBulleted,
+  mdiHistory,
   mdiRobotOutline,
   mdiViewDashboardOutline,
 } from '@mdi/js'
@@ -23,28 +23,28 @@ const mainItems = [
   {
     to: '/status',
     icon: mdiViewDashboardOutline,
-    labelKey: 'views.dashboard.nav.status',
+    labelKey: 'pages.dashboard.nav.status',
     fallback: '状态概览',
   },
   {
-    to: '/menu',
-    icon: mdiFormatListBulleted,
-    labelKey: 'views.dashboard.nav.menu',
-    fallback: '菜单配置',
-  },
-  {
-    to: '/platforms',
+    to: '/robots',
     icon: mdiRobotOutline,
-    labelKey: 'views.dashboard.nav.platforms',
+    labelKey: 'pages.dashboard.nav.robots',
     fallback: '机器人',
   },
 ]
 
 const bottomItems = [
   {
+    to: '/compatibility',
+    icon: mdiHistory,
+    labelKey: 'pages.dashboard.nav.compatibility',
+    fallback: '兼容性',
+  },
+  {
     to: '/settings',
     icon: mdiCogOutline,
-    labelKey: 'views.dashboard.nav.settings',
+    labelKey: 'pages.dashboard.nav.settings',
     fallback: '设置',
   },
 ]
@@ -68,13 +68,13 @@ const bottomItems = [
       </v-btn>
     </div>
 
-    <v-list nav density="comfortable">
+    <v-list nav density="comfortable" data-nav-section="main">
       <NavItem v-for="item in mainItems" :key="item.to" v-bind="item" :rail="rail" />
     </v-list>
 
     <v-spacer />
 
-    <v-list nav density="comfortable">
+    <v-list nav density="comfortable" data-nav-section="bottom">
       <NavItem v-for="item in bottomItems" :key="item.to" v-bind="item" :rail="rail" />
     </v-list>
 

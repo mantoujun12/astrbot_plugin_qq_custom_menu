@@ -6,6 +6,7 @@
  */
 
 import type { PluginConfigResponse, StatusResponse } from '../types/dashboard'
+import type { RobotConfigResponse } from '../types/robotConfig'
 
 export const MOCK_STATUS: StatusResponse = {
   plugin: { name: 'astrbot_plugin_qq_custom_menu', version: 'v0.2.3' },
@@ -16,18 +17,38 @@ export const MOCK_STATUS: StatusResponse = {
     {
       pf_id: '102*****89',
       appid: '102*****89',
+      name: '主机器人',
       platform: 'qq_official',
       secret_set: true,
-      source: 'plugin',
+      source: 'robot',
       state: 'synced',
+      scenes: [
+        {
+          scene: 'c2c',
+          enabled: true,
+          state: 'synced',
+          item_count: 2,
+          digest: 'mock-c2c',
+        },
+      ],
     },
     {
       pf_id: '103*****88',
       appid: '103*****88',
+      name: '兼容机器人',
       platform: 'qq_official_webhook',
       secret_set: true,
-      source: 'plugin',
+      source: 'compatibility',
       state: 'pending',
+      scenes: [
+        {
+          scene: 'c2c',
+          enabled: true,
+          state: 'pending',
+          item_count: 1,
+          digest: 'mock-legacy',
+        },
+      ],
     },
   ],
   menu: {
@@ -46,6 +67,7 @@ export const MOCK_STATUS: StatusResponse = {
       },
     ],
   },
+  robots: { new: 1, compatibility: 1 },
 }
 
 export const MOCK_CONFIG: PluginConfigResponse = {
@@ -69,11 +91,49 @@ export const MOCK_CONFIG: PluginConfigResponse = {
       source: 'plugin',
     },
   ],
-  using_fallback: false,
   menu: [
     { type: 'send_message', name: '帮助', message: '/help', parent: '' },
     { type: 'menu', name: '更多', parent: '' },
     { type: 'link', name: '文档', link: 'https://docs.example.com', parent: '更多' },
   ],
-  limits: { top_level_max: 10, sub_items_max: 10 },
+  limits: { top_level_max: 10, sub_items_max: 5 },
+}
+
+export const MOCK_ROBOTS: RobotConfigResponse = {
+  plugin: { name: 'astrbot_plugin_qq_custom_menu', version: 'v0.2.3' },
+  version: 1,
+  robots: [
+    {
+      id: 'mock-robot-1',
+      name: '主机器人',
+      appid: '1023456789',
+      platform: 'qq_official',
+      secret_masked: 'ab*****yz',
+      secret_set: true,
+      scenes: {
+        c2c: {
+          enabled: true,
+          items: [
+            { type: 'send_message', name: '帮助', message: '/help', parent: '' },
+            { type: 'menu', name: '更多', parent: '' },
+            {
+              type: 'link',
+              name: '文档',
+              link: 'https://docs.example.com',
+              parent: '更多',
+            },
+            {
+              type: 'switch',
+              name: '联网搜索',
+              switch_id: 'search',
+              default: false,
+              parent: '',
+            },
+          ],
+        },
+      },
+    },
+  ],
+  available_scenes: ['c2c'],
+  menu_limits: { top_level_max: 10, sub_items_max: 5 },
 }

@@ -74,7 +74,7 @@ describe('SyncPanel', () => {
     await flush()
 
     expect(wrapper.text()).toContain('本地开发环境没有 AstrBot 后端')
-    const sync = wrapper.findAll('button').find((button) => button.text().includes('同步菜单'))
+    const sync = wrapper.findAll('button').find((button) => button.text().includes('开始同步'))
     expect(sync?.attributes('disabled')).toBeDefined()
   })
 
@@ -90,7 +90,7 @@ describe('SyncPanel', () => {
     expect(mocks.attach).toHaveBeenCalled()
     expect(wrapper.text()).toContain('还没有同步记录。')
 
-    const sync = wrapper.findAll('button').find((button) => button.text().includes('同步菜单'))
+    const sync = wrapper.findAll('button').find((button) => button.text().includes('开始同步'))
     await sync?.trigger('click')
     await flush()
 

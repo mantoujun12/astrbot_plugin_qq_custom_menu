@@ -48,7 +48,7 @@ const {
     <v-app-bar v-if="mobile" flat border>
       <v-app-bar-nav-icon
         :icon="mdiMenu"
-        :aria-label="t('views.dashboard.nav.openDrawer', '打开侧边栏')"
+        :aria-label="t('pages.dashboard.nav.openDrawer', '打开侧边栏')"
         @click="drawer = true"
       />
       <v-app-bar-title>{{ title }}</v-app-bar-title>

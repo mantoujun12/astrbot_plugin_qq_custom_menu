@@ -470,13 +470,15 @@
 @media (max-width: 959.98px) {
   .qc-robots-shell {
     flex-direction: column;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .qc-robot-list {
-    flex: 0 0 clamp(180px, 30vh, 260px);
+    flex: 0 0 auto;
     width: 100%;
-    overflow-y: auto;
+    overflow: visible;
   }
 
   .qc-robot-list > .v-card-item {
@@ -484,9 +486,9 @@
   }
 
   .qc-robot-editor {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     width: 100%;
-    overflow-y: auto;
+    overflow: visible;
     padding: 16px;
   }
 
@@ -505,5 +507,6 @@
 /* 浮层里的卡片一律给实底，避免 outlined 变体透出遮罩。 */
 .v-overlay__content > .v-card {
   background-color: rgb(var(--v-theme-surface));
+  border-radius: 20px;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
 }

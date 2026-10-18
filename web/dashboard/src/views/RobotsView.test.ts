@@ -48,6 +48,25 @@ function responseFixture(): RobotConfigResponse {
   }
 }
 
+function twoRobotResponse(): RobotConfigResponse {
+  const response = responseFixture()
+  response.robots.push({
+    id: 'robot-2',
+    name: '备用机器人',
+    appid: '987654321',
+    platform: 'qq_official',
+    secret_masked: 'cd***ef',
+    secret_set: true,
+    scenes: {
+      c2c: {
+        enabled: true,
+        items: [],
+      },
+    },
+  })
+  return response
+}
+
 async function loadView(options: { withBackend?: boolean } = {}) {
   const bridge =
     options.withBackend === false
@@ -111,7 +130,99 @@ describe('RobotsView', () => {
     expect(
       listPane.element.parentElement?.classList.contains('qc-robots-shell'),
     ).toBe(true)
+    expect(wrapper.find('[data-field="robot-select"]').exists()).toBe(true)
     expect(wrapper.find('[data-field="robots-divider-desktop"]').exists()).toBe(true)
+  })
+
+  it('switches robots through the compact selector', async () => {
+    const { robotsApi, mount } = await loadView()
+    vi.mocked(robotsApi.fetchRobots).mockResolvedValue(twoRobotResponse())
+
+    const wrapper = await mount()
+    const robotSelect = wrapper
+      .findAllComponents({ name: 'VSelect' })
+      .find((component) => component.attributes('data-field') === 'robot-select')
+
+    expect(robotSelect).toBeDefined()
+    await wrapper.find('[data-field="robot-select"] .v-field').trigger('mousedown')
+    await flush()
+
+    expect(document.body.textContent).toContain(
+      '987654321 · 启用场景 1 个，菜单条目 0 条。',
+    )
+
+    robotSelect?.vm.$emit('update:modelValue', 'robot:robot-2')
+    await flush()
+
+    expect(
+      wrapper.find('[data-field="robot-name"] input').element,
+    ).toHaveProperty('value', '备用机器人')
+  })
+
+  it('switches robots through the desktop cards', async () => {
+    const { robotsApi, mount } = await loadView()
+    vi.mocked(robotsApi.fetchRobots).mockResolvedValue(twoRobotResponse())
+
+    const wrapper = await mount()
+    const cards = wrapper.findAll('[data-pane="list"] .qc-config-item')
+    expect(cards).toHaveLength(2)
+
+    await cards[1].trigger('click')
+    await flush()
+    expect(
+      wrapper.find('[data-field="robot-name"] input').element,
+    ).toHaveProperty('value', '备用机器人')
+
+    await cards[0].trigger('keydown', { key: 'Enter' })
+    await flush()
+    expect(
+      wrapper.find('[data-field="robot-name"] input').element,
+    ).toHaveProperty('value', '主机器人')
+
+    await cards[1].trigger('keydown', { key: ' ' })
+    await flush()
+    expect(
+      wrapper.find('[data-field="robot-name"] input').element,
+    ).toHaveProperty('value', '备用机器人')
+  })
+
+  it('renders fallback metadata for an incomplete robot draft', async () => {
+    const { robotsApi, mount } = await loadView()
+    const response = responseFixture()
+    response.robots.push({
+      id: '',
+      name: '',
+      appid: '',
+      platform: 'qq_official',
+      secret_masked: '',
+      secret_set: false,
+      scenes: {
+        c2c: {
+          enabled: true,
+          items: [],
+        },
+      },
+    })
+    vi.mocked(robotsApi.fetchRobots).mockResolvedValue(response)
+
+    const wrapper = await mount()
+    const robotSelect = wrapper
+      .findAllComponents({ name: 'VSelect' })
+      .find((component) => component.attributes('data-field') === 'robot-select')
+    await wrapper.find('[data-field="robot-select"] .v-field').trigger('mousedown')
+    await flush()
+
+    expect(document.body.textContent).toContain('未命名机器人')
+    expect(document.body.textContent).toContain(
+      '— · 启用场景 1 个，菜单条目 0 条。',
+    )
+
+    const slot = robotSelect?.vm.$slots.item
+    const nodes = slot?.({
+      props: { value: 'missing', title: 'missing' },
+      index: 0,
+    }) as Array<{ props?: { subtitle?: string } }>
+    expect(nodes[0]?.props?.subtitle).toBe('')
   })
 
   it('saves private-chat menu data', async () => {

@@ -274,6 +274,7 @@
         "secretSaved": "当前密钥：{masked}",
         "listTitle": "机器人",
         "listSubtitle": "选择一台机器人编辑它的场景。",
+        "selectRobot": "选择机器人",
         "emptyRobots": "还没有机器人，先新增一台。",
         "editorEmpty": "请选择或新增一台机器人。",
         "robotSummary": "启用场景 {scenes} 个，菜单条目 {items} 条。",

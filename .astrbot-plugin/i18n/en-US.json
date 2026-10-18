@@ -274,6 +274,7 @@
         "secretSaved": "Current secret: {masked}",
         "listTitle": "Robots",
         "listSubtitle": "Select a robot to edit its scenes.",
+        "selectRobot": "Select robot",
         "emptyRobots": "No robots yet. Add one first.",
         "editorEmpty": "Select or add a robot.",
         "robotSummary": "{scenes} scene(s) enabled, {items} menu item(s).",

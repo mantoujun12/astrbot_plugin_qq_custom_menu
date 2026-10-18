@@ -10,17 +10,17 @@
     "hint": "仅影响插件日志，不影响用户自定义的菜单内容。"
   },
   "sync_menu": {
-    "description": "启动时同步自定义菜单",
+    "description": "启动时同步私聊菜单",
     "type": "bool",
     "default": true,
-    "hint": "关闭后仅读取 QQ 当前菜单，不会覆盖 QQ 机器人菜单。"
+    "hint": "关闭后仅读取 QQ 当前私聊菜单，不会覆盖线上内容。"
   },
   "qq_platforms": {
-    "description": "QQ 官方机器人平台凭证",
+    "description": "兼容性平台凭证",
     "type": "template_list",
     "default": [],
     "obvious_hint": true,
-    "hint": "填写 AppID 和 ClientSecret；留空时尝试从 AstrBot 平台配置读取。",
+    "hint": "本页保留旧版全局配置；新版请到插件视图的「机器人」逐台配置。未被新版按 AppID 接管的平台仍可使用这里的凭证。",
     "templates": {
       "qq_platform": {
         "name": "QQ 机器人",
@@ -48,11 +48,11 @@
     }
   },
   "menu": {
-    "description": "QQ 私聊自定义菜单",
+    "description": "兼容性私聊自定义菜单",
     "type": "template_list",
     "default": [],
     "obvious_hint": true,
-    "hint": "点击「添加条目」选择菜单类型并填写内容。一级菜单最多 10 个；需要子菜单时先添加一条「子菜单」，再添加「发送消息」或「跳转链接」条目，并把「父菜单名称」填写为该子菜单的名称。",
+    "hint": "旧版全局私聊菜单仍可在这里维护；已被「机器人」接管的 AppID 不再使用本菜单。一级菜单最多 10 个，每个子菜单最多 5 项。",
     "templates": {
       "send_message": {
         "name": "发送消息",
@@ -96,6 +96,28 @@
             "type": "string",
             "default": "",
             "hint": "留空为一级菜单；填写某个「子菜单」条目的名称时，作为它的子项。"
+          }
+        }
+      },
+      "switch": {
+        "name": "开关",
+        "display_item": "name",
+        "items": {
+          "name": {
+            "description": "开关名称",
+            "type": "string",
+            "default": ""
+          },
+          "switch_id": {
+            "description": "开关 ID",
+            "type": "string",
+            "default": "",
+            "hint": "用户切换后，消息 ext 中会携带这个标识。"
+          },
+          "default": {
+            "description": "默认开启",
+            "type": "bool",
+            "default": false
           }
         }
       },

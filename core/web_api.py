@@ -1,16 +1,8 @@
-"""插件可视化视图（Dashboard）的后端 Web API。
-
-注册的接口（视图内使用相对路径，bridge 会补上插件名前缀）：
-
-- ``GET  /<plugin_name>/status``       状态概览（本地配置 + 同步摘要）
-- ``GET  /<plugin_name>/config``       读取可编辑配置（secret 只回掩码）
-- ``POST /<plugin_name>/config``       校验并写回配置
-- ``POST /<plugin_name>/sync``         触发一次后台同步（单飞）
-- ``GET  /<plugin_name>/sync/events``  SSE 推送同步进度
-"""
+"""插件可视化视图（Dashboard）的 Web API。"""
 
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import Awaitable, Callable
 from pathlib import Path
@@ -21,21 +13,36 @@ from astrbot.api.star import Context
 
 from .config import (
     MENU_LIMITS,
+    SCENE_C2C,
     export_config,
     get_menu,
     get_plugin_platforms,
     mask_appid,
+    menu_from_entries,
     menu_stats,
     normalize_config_payload,
 )
 from .i18n import LOG_TAG, t
 from .menu import MenuSynchronizer
 from .paths import PLUGIN_NAME, PLUGIN_VERSION
+from .robot_config import (
+    MenuConfigError,
+    build_runtime_robots,
+    empty_menu_config,
+    export_menu_config,
+    legacy_to_robot_drafts,
+    load_menu_config,
+    robot_item_counts,
+    save_menu_config,
+    validate_menu_config,
+)
 from .state import MenuStateStore, menu_digest
 from .sync_runner import SyncRunner
 
 STATUS_ROUTE_SUFFIX = "status"
 CONFIG_ROUTE_SUFFIX = "config"
+ROBOTS_ROUTE_SUFFIX = "robots"
+ROBOTS_IMPORT_ROUTE_SUFFIX = "robots/import-legacy"
 SYNC_ROUTE_SUFFIX = "sync"
 SYNC_EVENTS_ROUTE_SUFFIX = "sync/events"
 
@@ -46,7 +53,7 @@ SYNC_STATE_DISABLED = "disabled"
 
 
 def _web() -> Any:
-    """延迟导入 astrbot.api.web，较早的 AstrBot 版本没有该模块。"""
+    """延迟导入 astrbot.api.web，兼容较早的 AstrBot 版本。"""
     from astrbot.api import web
 
     return web
@@ -58,7 +65,6 @@ def _platform_state(
     stored_digest: str | None,
     current_digest: str,
 ) -> str:
-    """根据本地摘要与当前菜单摘要判断单个平台的同步状态。"""
     if not sync_menu:
         return SYNC_STATE_DISABLED
     if stored_digest is None:
@@ -68,61 +74,148 @@ def _platform_state(
     return SYNC_STATE_PENDING
 
 
+def _aggregate_state(states: list[str]) -> str:
+    if not states:
+        return SYNC_STATE_DISABLED
+    if SYNC_STATE_DISABLED in states and all(state == SYNC_STATE_DISABLED for state in states):
+        return SYNC_STATE_DISABLED
+    active = [state for state in states if state != SYNC_STATE_DISABLED]
+    if not active:
+        return SYNC_STATE_DISABLED
+    if SYNC_STATE_PENDING in active:
+        return SYNC_STATE_PENDING
+    if SYNC_STATE_UNKNOWN in active:
+        return SYNC_STATE_UNKNOWN
+    return SYNC_STATE_SYNCED
+
+
+def _scene_status(
+    scene: str,
+    scene_config: dict[str, Any],
+    *,
+    sync_menu: bool,
+    appid: str,
+    store: MenuStateStore | None,
+) -> dict[str, Any]:
+    enabled = bool(scene_config.get("enabled", False))
+    items = scene_config.get("items") if isinstance(scene_config.get("items"), list) else []
+    digest = menu_digest(menu_from_entries(items))
+    stored = store.digest_for_scene(appid, scene) if store is not None and enabled else None
+    state = (
+        _platform_state(
+            sync_menu=sync_menu,
+            stored_digest=stored,
+            current_digest=digest,
+        )
+        if enabled
+        else SYNC_STATE_DISABLED
+    )
+    return {
+        "scene": scene,
+        "enabled": enabled,
+        "state": state,
+        "item_count": len(items),
+        "digest": digest,
+    }
+
+
+def _load_robot_config_for_status(
+    data_dir: Path | str | None,
+) -> dict[str, Any]:
+    if data_dir is None:
+        return empty_menu_config()
+    return load_menu_config(data_dir)
+
+
 def build_status(
     config: dict[str, Any],
     *,
     platforms: list[dict[str, str]] | None = None,
     data_dir: Path | str | None = None,
+    robot_config: dict[str, Any] | None = None,
     version: str = PLUGIN_VERSION,
     ready: bool = True,
 ) -> dict[str, Any]:
-    """组装状态概览响应体（对应前端 ``StatusResponse``）。
-
-    这里只读取本地配置与 ``menu_state.yaml``，不会请求 QQ API，因此可以在每次
-    进入页面时安全调用。真实远端状态由同步流程在 PUT 前读取后刷新。
-    """
-    menu = get_menu(config)
-    digest = menu_digest(menu)
+    """组装本地状态概览，不请求 QQ API。"""
+    runtime_platforms = get_plugin_platforms(config) if platforms is None else platforms
+    robot_config = _load_robot_config_for_status(data_dir) if robot_config is None else robot_config
+    runtime = build_runtime_robots(config, robot_config, runtime_platforms)
+    store = MenuStateStore(data_dir) if data_dir is not None else None
     sync_menu = config.get("sync_menu", True) is not False
-    runtime = get_plugin_platforms(config) if platforms is None else platforms
-
-    stored: dict[str, str] = {}
-    if data_dir is not None:
-        stored = MenuStateStore(data_dir).load()
-
-    source = "plugin" if get_plugin_platforms(config) else "astrbot"
-    platform_payload = [
-        {
-            "pf_id": mask_appid(entry.get("appid")),
-            "appid": mask_appid(entry.get("appid")),
-            "platform": str(entry.get("platform") or "qq_official"),
-            "secret_set": bool(entry.get("secret")),
-            "source": source,
-            "state": _platform_state(
+    platform_payload: list[dict[str, Any]] = []
+    for robot in runtime:
+        appid = str(robot.get("appid") or "")
+        scenes_config = robot.get("scenes") if isinstance(robot.get("scenes"), dict) else {}
+        scenes = [
+            _scene_status(
+                scene,
+                scenes_config.get(scene, {}) if isinstance(scenes_config, dict) else {},
                 sync_menu=sync_menu,
-                stored_digest=stored.get(str(entry.get("appid") or "")),
-                current_digest=digest,
+                appid=appid,
+                store=store,
+            )
+            for scene in (SCENE_C2C,)
+        ]
+        active_states = [str(scene["state"]) for scene in scenes if scene["enabled"]]
+        platform_payload.append(
+            {
+                "pf_id": mask_appid(appid),
+                "appid": mask_appid(appid),
+                "name": str(robot.get("name") or mask_appid(appid)),
+                "platform": str(robot.get("platform") or "qq_official"),
+                "secret_set": bool(robot.get("secret")),
+                "source": str(robot.get("source") or "robot"),
+                "state": _aggregate_state(active_states),
+                "scenes": scenes,
+            }
+        )
+
+    counts = robot_item_counts(robot_config)
+    has_new_config = bool(robot_config.get("robots"))
+    if has_new_config:
+        menu_payload = {
+            "top_level": counts["c2c_top_level"],
+            "sub_items": counts["c2c_sub_items"],
+            "total": counts["c2c_items"],
+            "top_level_max": MENU_LIMITS["top_level_max"],
+            "sub_items_max": MENU_LIMITS["sub_items_max"],
+            "digest": menu_digest(
+                {
+                    "robots": [
+                        {
+                            "appid": robot.get("appid"),
+                            "scenes": robot.get("scenes"),
+                        }
+                        for robot in runtime
+                    ]
+                }
             ),
+            "items": [],
         }
-        for entry in runtime
-    ]
+    else:
+        legacy_menu = get_menu(config)
+        menu_payload = {
+            **menu_stats(config),
+            "digest": menu_digest(legacy_menu),
+            "items": legacy_menu["items"],
+        }
 
     return {
         "plugin": {"name": PLUGIN_NAME, "version": version},
         "ready": ready,
         "sync_menu": sync_menu,
         "platforms": platform_payload,
-        "menu": {
-            **menu_stats(config),
-            "digest": digest,
-            "items": menu["items"],
+        "menu": menu_payload,
+        "robots": {
+            "new": counts["robots"],
+            "compatibility": sum(1 for robot in runtime if robot.get("source") == "compatibility"),
         },
         "state": {"available": data_dir is not None},
     }
 
 
 class WebApiBundle:
-    """Dashboard Web API 的 handler 集合，以及共享的同步任务状态。"""
+    """Dashboard Web API 的 handler 集合与共享同步任务状态。"""
 
     def __init__(
         self,
@@ -140,6 +233,7 @@ class WebApiBundle:
         self._save_config = save_config
         self._data_dir = Path(data_dir) if data_dir is not None else None
         self._version = version
+        self._config_lock = asyncio.Lock()
         self.runner = SyncRunner()
 
     def _platforms(self) -> list[dict[str, str]]:
@@ -159,9 +253,15 @@ class WebApiBundle:
         payload["plugin"] = {"name": PLUGIN_NAME, "version": self._version}
         return payload
 
-    # ------------------------------------------------------------------
-    # 注册
-    # ------------------------------------------------------------------
+    def _load_robot_config(self) -> dict[str, Any]:
+        if self._data_dir is None:
+            return empty_menu_config()
+        return load_menu_config(self._data_dir)
+
+    def _robot_response(self) -> dict[str, Any]:
+        payload = export_menu_config(self._load_robot_config())
+        payload["plugin"] = {"name": PLUGIN_NAME, "version": self._version}
+        return payload
 
     def register(self, context: Context) -> bool:
         """注册全部视图接口，宿主不支持时返回 False。"""
@@ -178,45 +278,68 @@ class WebApiBundle:
             return False
 
         prefix = f"/{PLUGIN_NAME}"
-        context.register_web_api(
-            f"{prefix}/{STATUS_ROUTE_SUFFIX}",
-            self.page_status,
-            ["GET"],
-            "Plugin dashboard status overview",
+        routes = (
+            (
+                f"{prefix}/{STATUS_ROUTE_SUFFIX}",
+                self.page_status,
+                ["GET"],
+                "Plugin dashboard status overview",
+            ),
+            (
+                f"{prefix}/{CONFIG_ROUTE_SUFFIX}",
+                self.page_config_get,
+                ["GET"],
+                "Plugin compatibility config read",
+            ),
+            (
+                f"{prefix}/{CONFIG_ROUTE_SUFFIX}",
+                self.page_config_save,
+                ["POST"],
+                "Plugin compatibility config save",
+            ),
+            (
+                f"{prefix}/{ROBOTS_ROUTE_SUFFIX}",
+                self.page_robots_get,
+                ["GET"],
+                "Plugin robot menu config read",
+            ),
+            (
+                f"{prefix}/{ROBOTS_ROUTE_SUFFIX}",
+                self.page_robots_save,
+                ["POST"],
+                "Plugin robot menu config save",
+            ),
+            (
+                f"{prefix}/{ROBOTS_IMPORT_ROUTE_SUFFIX}",
+                self.page_robots_import_legacy,
+                ["POST"],
+                "Import compatibility config into robot menu config",
+            ),
+            (
+                f"{prefix}/{SYNC_ROUTE_SUFFIX}",
+                self.page_sync_start,
+                ["POST"],
+                "Plugin dashboard menu sync",
+            ),
+            (
+                f"{prefix}/{SYNC_EVENTS_ROUTE_SUFFIX}",
+                self.page_sync_events,
+                ["GET"],
+                "Plugin dashboard menu sync progress (SSE)",
+            ),
         )
-        context.register_web_api(
-            f"{prefix}/{CONFIG_ROUTE_SUFFIX}",
-            self.page_config_get,
-            ["GET"],
-            "Plugin dashboard config read",
-        )
-        context.register_web_api(
-            f"{prefix}/{CONFIG_ROUTE_SUFFIX}",
-            self.page_config_save,
-            ["POST"],
-            "Plugin dashboard config save",
-        )
-        context.register_web_api(
-            f"{prefix}/{SYNC_ROUTE_SUFFIX}",
-            self.page_sync_start,
-            ["POST"],
-            "Plugin dashboard menu sync",
-        )
-        context.register_web_api(
-            f"{prefix}/{SYNC_EVENTS_ROUTE_SUFFIX}",
-            self.page_sync_events,
-            ["GET"],
-            "Plugin dashboard menu sync progress (SSE)",
-        )
+        for route, handler, methods, description in routes:
+            context.register_web_api(route, handler, methods, description)
         return True
-
-    # ------------------------------------------------------------------
-    # handler
-    # ------------------------------------------------------------------
 
     async def page_status(self) -> Any:
         web = _web()
-        return web.json_response(self._status_payload())
+        try:
+            payload = self._status_payload()
+        except MenuConfigError as exc:
+            logger.error(f"{LOG_TAG} " + str(exc), exc_info=True)
+            return web.error_response(str(exc), status_code=500)
+        return web.json_response(payload)
 
     async def page_config_get(self) -> Any:
         web = _web()
@@ -233,18 +356,138 @@ class WebApiBundle:
 
         values, errors = normalize_config_payload(self._get_config(), payload)
         if errors:
-            return web.error_response(t("common.error_separator").join(errors), status_code=400)
+            return web.error_response(
+                t("common.error_separator").join(errors),
+                status_code=400,
+            )
 
         try:
             await self._save_config(values)
         except Exception as exc:
-            logger.error(f"{LOG_TAG} " + t("web.config_save_failed", exc=exc), exc_info=True)
-            return web.error_response(t("web.config_save_failed", exc=exc), status_code=500)
+            logger.error(
+                f"{LOG_TAG} " + t("web.config_save_failed", exc=exc),
+                exc_info=True,
+            )
+            return web.error_response(
+                t("web.config_save_failed", exc=exc),
+                status_code=500,
+            )
 
         syncer = self._get_syncer()
         if syncer is not None:
             syncer.set_config(self._get_config())
+            syncer.set_platforms(self._platforms())
         return web.json_response(self._config_payload())
+
+    async def page_robots_get(self) -> Any:
+        web = _web()
+        try:
+            return web.json_response(self._robot_response())
+        except MenuConfigError as exc:
+            return web.error_response(str(exc), status_code=500)
+
+    async def page_robots_save(self) -> Any:
+        web = _web()
+        if self._data_dir is None:
+            return web.error_response(t("web.robot_config_unavailable"), status_code=503)
+        payload = await web.request.json(default={})
+        if not isinstance(payload, dict):
+            return web.error_response(t("web.config_invalid_body"), status_code=400)
+
+        async with self._config_lock:
+            try:
+                current = self._load_robot_config()
+            except MenuConfigError as exc:
+                return web.error_response(str(exc), status_code=500)
+            submitted_version = payload.get("version", current.get("version", 1))
+            if type(submitted_version) is not int or submitted_version != current.get("version", 1):
+                return web.error_response(
+                    t("web.robot_version_conflict"),
+                    status_code=409,
+                )
+            normalized, errors = validate_menu_config(current, payload)
+            if errors:
+                return web.error_response(
+                    t("common.error_separator").join(errors),
+                    status_code=400,
+                )
+            normalized["version"] = int(current.get("version", 1)) + 1
+            try:
+                save_menu_config(self._data_dir, normalized)
+            except MenuConfigError as exc:
+                return web.error_response(str(exc), status_code=500)
+        return web.json_response(
+            {
+                **export_menu_config(normalized),
+                "plugin": {"name": PLUGIN_NAME, "version": self._version},
+            }
+        )
+
+    async def page_robots_import_legacy(self) -> Any:
+        web = _web()
+        if self._data_dir is None:
+            return web.error_response(t("web.robot_config_unavailable"), status_code=503)
+        payload = await web.request.json(default={})
+        if not isinstance(payload, dict):
+            return web.error_response(t("web.config_invalid_body"), status_code=400)
+        appids = payload.get("appids")
+        if not isinstance(appids, list) or not appids:
+            return web.error_response(t("web.robot_import_appids_invalid"), status_code=400)
+
+        async with self._config_lock:
+            try:
+                current = self._load_robot_config()
+            except MenuConfigError as exc:
+                return web.error_response(str(exc), status_code=500)
+            submitted_version = payload.get("version", current.get("version", 1))
+            if type(submitted_version) is not int or submitted_version != current.get("version", 1):
+                return web.error_response(
+                    t("web.robot_version_conflict"),
+                    status_code=409,
+                )
+
+            drafts = legacy_to_robot_drafts(
+                self._get_config(),
+                self._platforms(),
+                [str(appid) for appid in appids],
+            )
+            robots = current.get("robots")
+            merged = (
+                [dict(item) for item in robots if isinstance(item, dict)]
+                if isinstance(robots, list)
+                else []
+            )
+            existing = {str(item.get("appid") or "") for item in merged}
+            imported = 0
+            for draft in drafts:
+                if str(draft.get("appid") or "") in existing:
+                    continue
+                merged.append(draft)
+                imported += 1
+            if imported == 0:
+                return web.error_response(t("web.robot_import_empty"), status_code=400)
+
+            normalized, errors = validate_menu_config(
+                current,
+                {"robots": merged},
+            )
+            if errors:
+                return web.error_response(
+                    t("common.error_separator").join(errors),
+                    status_code=400,
+                )
+            normalized["version"] = int(current.get("version", 1)) + 1
+            try:
+                save_menu_config(self._data_dir, normalized)
+            except MenuConfigError as exc:
+                return web.error_response(str(exc), status_code=500)
+        return web.json_response(
+            {
+                **export_menu_config(normalized),
+                "plugin": {"name": PLUGIN_NAME, "version": self._version},
+                "imported": imported,
+            }
+        )
 
     async def page_sync_start(self) -> Any:
         web = _web()
@@ -275,10 +518,9 @@ class WebApiBundle:
         self,
         syncer: MenuSynchronizer,
     ) -> Callable[[Callable[[dict[str, Any]], Awaitable[None]]], Awaitable[Any]]:
-        """构造同步任务：先刷新配置，再把文本进度与结构化事件一起推送。"""
-
         async def run(emit: Callable[[dict[str, Any]], Awaitable[None]]) -> Any:
             syncer.set_config(self._get_config())
+            syncer.set_platforms(self._platforms())
 
             async def push_text(message: str) -> None:
                 await emit({"type": "message", "text": message})
@@ -315,6 +557,8 @@ def register_web_apis(
 __all__ = [
     "CONFIG_ROUTE_SUFFIX",
     "MENU_LIMITS",
+    "ROBOTS_IMPORT_ROUTE_SUFFIX",
+    "ROBOTS_ROUTE_SUFFIX",
     "STATUS_ROUTE_SUFFIX",
     "SYNC_EVENTS_ROUTE_SUFFIX",
     "SYNC_ROUTE_SUFFIX",

@@ -15,6 +15,7 @@ from typing import Any
 import pytest
 
 from core.config import get_menu
+from core.robot_config import load_menu_config, save_menu_config
 from core.state import MenuStateStore
 from core.web_api import WebApiBundle, build_status, register_web_apis
 
@@ -172,7 +173,7 @@ def test_build_status_marks_platform_states(tmp_path: Path) -> None:
     assert payload["sync_menu"] is True
     assert payload["state"] == {"available": True}
     assert [item["state"] for item in payload["platforms"]] == ["synced", "pending"]
-    assert payload["platforms"][0]["source"] == "plugin"
+    assert payload["platforms"][0]["source"] == "compatibility"
     assert payload["platforms"][0]["appid"] == "123****89"
     assert payload["menu"]["top_level"] == 1
     assert payload["menu"]["sub_items"] == 1
@@ -189,6 +190,47 @@ def test_build_status_sync_disabled_and_no_state_dir() -> None:
     assert payload["state"] == {"available": False}
     assert payload["platforms"] == []
     assert payload["ready"] is True
+
+
+def test_build_status_includes_robot_scenes() -> None:
+    config = {"sync_menu": True, "menu": []}
+    robot_config = {
+        "version": 1,
+        "robots": [
+            {
+                "id": "robot-1",
+                "name": "主机器人",
+                "appid": "app-robot",
+                "secret": "secret",
+                "platform": "qq_official",
+                "scenes": {
+                    "c2c": {
+                        "enabled": True,
+                        "items": [
+                            {
+                                "type": "send_message",
+                                "name": "帮助",
+                                "message": "/help",
+                                "parent": "",
+                            }
+                        ],
+                    },
+                },
+            }
+        ],
+    }
+
+    payload = build_status(
+        config,
+        platforms=[],
+        robot_config=robot_config,
+    )
+
+    platform = payload["platforms"][0]
+    assert platform["source"] == "robot"
+    assert [scene["scene"] for scene in platform["scenes"]] == ["c2c"]
+    assert [scene["state"] for scene in platform["scenes"]] == ["unknown"]
+    assert payload["robots"] == {"new": 1, "compatibility": 0}
 
 
 def test_register_requires_web_module(monkeypatch: Any) -> None:
@@ -219,6 +261,9 @@ def test_register_adds_all_routes(monkeypatch: Any) -> None:
         ("/astrbot_plugin_qq_custom_menu/status", ("GET",)),
         ("/astrbot_plugin_qq_custom_menu/config", ("GET",)),
         ("/astrbot_plugin_qq_custom_menu/config", ("POST",)),
+        ("/astrbot_plugin_qq_custom_menu/robots", ("GET",)),
+        ("/astrbot_plugin_qq_custom_menu/robots", ("POST",)),
+        ("/astrbot_plugin_qq_custom_menu/robots/import-legacy", ("POST",)),
         ("/astrbot_plugin_qq_custom_menu/sync", ("POST",)),
         ("/astrbot_plugin_qq_custom_menu/sync/events", ("GET",)),
     }
@@ -407,3 +452,84 @@ async def test_make_run_pushes_text_and_structured_events() -> None:
     assert result["ok"] is True
     assert syncer.configs == [{"menu": MENU}]
     assert [event["type"] for event in events] == ["start", "message", "platform", "finish"]
+
+
+@pytest.mark.asyncio
+async def test_robot_config_get_and_save(monkeypatch: Any, tmp_path: Path) -> None:
+    install_web(
+        monkeypatch,
+        payload={
+            "version": 1,
+            "robots": [
+                {
+                    "id": "",
+                    "name": "主机器人",
+                    "appid": "app-new",
+                    "secret": "secret",
+                    "platform": "qq_official",
+                    "scenes": {
+                        "c2c": {
+                            "enabled": True,
+                            "items": [
+                                {
+                                    "type": "send_message",
+                                    "name": "帮助",
+                                    "message": "/help",
+                                    "parent": "",
+                                }
+                            ],
+                        },
+                    },
+                }
+            ],
+        },
+    )
+    bundle = make_bundle(config={}, data_dir=tmp_path)
+
+    empty = await bundle.page_robots_get()
+    assert empty.status_code == 200
+    assert empty.data["version"] == 1
+    assert empty.data["robots"] == []
+
+    saved = await bundle.page_robots_save()
+    assert saved.status_code == 200
+    assert saved.data["version"] == 2
+    assert saved.data["robots"][0]["secret_masked"] == "******"
+    assert load_menu_config(tmp_path)["robots"][0]["appid"] == "app-new"
+
+
+@pytest.mark.asyncio
+async def test_robot_config_save_rejects_stale_version(monkeypatch: Any, tmp_path: Path) -> None:
+    save_menu_config(tmp_path, {"version": 2, "robots": []})
+    install_web(monkeypatch, payload={"version": 1, "robots": []})
+    bundle = make_bundle(config={}, data_dir=tmp_path)
+
+    response = await bundle.page_robots_save()
+
+    assert response.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_robot_config_imports_legacy_appid(monkeypatch: Any, tmp_path: Path) -> None:
+    install_web(
+        monkeypatch,
+        payload={"version": 1, "appids": ["123456789"]},
+    )
+    config = {
+        "menu": MENU,
+        "qq_platforms": [
+            {"appid": "123456789", "secret": "legacy-secret", "platform": "qq_official"}
+        ],
+    }
+    bundle = make_bundle(
+        config=config,
+        data_dir=tmp_path,
+        platforms=[{"appid": "123456789", "secret": "legacy-secret", "platform": "qq_official"}],
+    )
+
+    response = await bundle.page_robots_import_legacy()
+
+    assert response.status_code == 200
+    assert response.data["imported"] == 1
+    assert response.data["robots"][0]["appid"] == "123456789"
+    assert response.data["robots"][0]["scenes"]["c2c"]["enabled"] is True

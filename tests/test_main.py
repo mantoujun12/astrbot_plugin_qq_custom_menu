@@ -129,11 +129,25 @@ async def test_initialize_syncs_and_terminate_closes(monkeypatch: Any, tmp_path:
     monkeypatch.setattr(main, "MenuSynchronizer", Syncer)
     monkeypatch.setattr(main, "resolve_plugin_data_dir", lambda context: tmp_path)
 
-    plugin = main.QQCustomMenuPlugin(FakeContext(), FakeConfig({"language": "zh-CN"}))
+    plugin = main.QQCustomMenuPlugin(
+        FakeContext(
+            {
+                "platform": [
+                    {
+                        "type": "qq_official",
+                        "appid": "astrbot-only",
+                        "secret": "should-not-be-used",
+                    }
+                ]
+            }
+        ),
+        FakeConfig({"language": "zh-CN"}),
+    )
     await plugin.initialize()
 
     assert len(syncers) == 1
     assert syncers[0].synced is True
+    assert syncers[0].platforms == []
     assert syncers[0].data_dir == tmp_path
     assert plugin._http is sessions[0]
     assert sessions[0].kwargs["timeout"].total == 15

@@ -9,10 +9,12 @@ from astrbot.api import logger
 from .i18n import DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES, t
 
 QQ_PLATFORM_TYPES = frozenset({"qq_official", "qq_official_webhook"})
+SCENES = ("c2c",)
+SCENE_C2C = "c2c"
 
-# QQ 官方菜单限制：一级菜单最多 10 个，每个子菜单最多 10 个子项。
+# QQ 官方菜单限制：一级菜单最多 10 个，每个子菜单最多 5 个子项。
 MENU_TOP_LEVEL_MAX = 10
-MENU_SUB_ITEM_MAX = 10
+MENU_SUB_ITEM_MAX = 5
 MENU_LIMITS: dict[str, int] = {
     "top_level_max": MENU_TOP_LEVEL_MAX,
     "sub_items_max": MENU_SUB_ITEM_MAX,
@@ -20,11 +22,12 @@ MENU_LIMITS: dict[str, int] = {
 
 # template_list 模板 key -> QQ 菜单 type
 _TEMPLATE_MENU_TYPES = {
+    "switch": "switch",
     "send_message": "send_message",
     "link": "link",
     "menu": "menu",
 }
-_MENU_TYPES = frozenset({"send_message", "link", "menu"})
+_MENU_TYPES = frozenset({"switch", "send_message", "link", "menu"})
 _SUB_MENU_TYPES = frozenset({"send_message", "link"})
 
 
@@ -42,7 +45,7 @@ def _platform_entries(value: Any) -> list[dict[str, str]]:
                 {
                     "appid": str(appid),
                     "secret": str(secret),
-                    # 插件配置用 platform 键，AstrBot 平台配置用 type 键
+                    # 插件配置用 platform 键，兼容旧配置的 type 键
                     "platform": str(entry.get("platform") or entry.get("type") or "qq_official"),
                 }
             )
@@ -50,17 +53,13 @@ def _platform_entries(value: Any) -> list[dict[str, str]]:
 
 
 def get_plugin_platforms(config: dict[str, Any]) -> list[dict[str, str]]:
-    """只读取插件配置里的平台凭证，不触发 AstrBot 平台配置回退。"""
+    """只读取插件配置里的平台凭证。"""
     return _platform_entries(config.get("qq_platforms"))
 
 
-def get_platforms(config: dict[str, Any], context: Any) -> list[dict[str, str]]:
-    """优先读取插件配置中的凭证，留空时回退读取 AstrBot 全局配置中的 QQ 官方平台。"""
-    configured = get_plugin_platforms(config)
-    if configured:
-        return configured
-    astrbot = _platform_entries(context.get_config().get("platform", []))
-    return [entry for entry in astrbot if entry["platform"] in QQ_PLATFORM_TYPES]
+def get_platforms(config: dict[str, Any]) -> list[dict[str, str]]:
+    """只读取插件配置中的兼容平台凭证。"""
+    return get_plugin_platforms(config)
 
 
 def _normalize_link(value: str) -> str | None:
@@ -114,6 +113,15 @@ def _normalize_menu_item(
         if normalized_link is None:
             return None
         result["link"] = normalized_link
+    elif item_type == "switch":
+        switch_id = item.get("switch_id")
+        if not isinstance(switch_id, str) or not switch_id.strip():
+            return None
+        enabled = item.get("default", item.get("enabled", False))
+        result["switch"] = {
+            "switch_id": switch_id.strip(),
+            "default": enabled if isinstance(enabled, bool) else False,
+        }
     else:  # menu
         children = item.get("sub_menu_items", [])
         if not isinstance(children, list):
@@ -134,6 +142,8 @@ def _to_qq_item(item: dict[str, Any]) -> dict[str, Any]:
         result["send_message"] = item["send_message"]
     elif item["type"] == "link":
         result["link"] = item["link"]
+    elif item["type"] == "switch":
+        result["switch"] = dict(item["switch"])
     return result
 
 
@@ -144,14 +154,8 @@ def _raw_menu_entries(config: dict[str, Any]) -> list[Any]:
     return raw if isinstance(raw, list) else []
 
 
-def get_menu(config: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
-    """将 WebUI 配置转换为 QQ `/v2/menu` 请求体中的 menu 对象。"""
-    entries = [
-        item
-        for raw in _raw_menu_entries(config)
-        if (item := _normalize_menu_item(raw, _MENU_TYPES)) is not None
-    ]
-
+def _build_menu(entries: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    """把归一化后的扁平私聊菜单条目组装成 QQ API 菜单树。"""
     # 新格式中，子菜单项通过 parent 字段引用所属一级菜单的名称
     pending_children: dict[str, list[dict[str, Any]]] = {}
     for item in entries:
@@ -177,6 +181,21 @@ def get_menu(config: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
     return {"items": items}
 
 
+def menu_from_entries(entries: Any) -> dict[str, list[dict[str, Any]]]:
+    """将 Dashboard/机器人配置中的扁平私聊菜单转换为 QQ 菜单树。"""
+    if not isinstance(entries, list):
+        return {"items": []}
+    normalized = [
+        item for raw in entries if (item := _normalize_menu_item(raw, _MENU_TYPES)) is not None
+    ]
+    return _build_menu(normalized)
+
+
+def get_menu(config: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    """将 WebUI 兼容配置转换为 QQ `/v2/menu` 请求体中的 menu 对象。"""
+    return menu_from_entries(_raw_menu_entries(config))
+
+
 def _migrate_entry(item: Any, parent: str) -> dict[str, Any] | None:
     if (
         not isinstance(item, dict)
@@ -197,6 +216,20 @@ def _migrate_entry(item: Any, parent: str) -> dict[str, Any] | None:
             "__template_key": "link",
             "name": item["name"],
             "link": item["link"],
+            "parent": parent,
+        }
+    if item_type == "switch":
+        switch = item.get("switch")
+        if not isinstance(switch, dict):
+            return None
+        switch_id = switch.get("switch_id")
+        if not isinstance(switch_id, str) or not switch_id.strip():
+            return None
+        return {
+            "__template_key": "switch",
+            "name": item["name"],
+            "switch_id": switch_id,
+            "default": bool(switch.get("default", False)),
             "parent": parent,
         }
     return None
@@ -273,6 +306,9 @@ def _editor_entry_append(
         entry["message"] = item["send_message"]
     elif item["type"] == "link":
         entry["link"] = item["link"]
+    elif item["type"] == "switch":
+        entry["switch_id"] = item["switch"]["switch_id"]
+        entry["default"] = item["switch"]["default"]
     entries.append(entry)
     for child in item.get("sub_menu_items", []):
         _editor_entry_append(entries, child, parent=item["name"])
@@ -331,8 +367,7 @@ def _runtime_platforms(
     config: dict[str, Any],
     overrides: list[dict[str, str]] | None,
 ) -> list[dict[str, Any]]:
-    """导出当前实际生效的平台列表（插件配置优先，否则回退 AstrBot 平台）。"""
-    source = "plugin" if get_plugin_platforms(config) else "astrbot"
+    """导出兼容配置中当前生效的平台列表。"""
     raw = overrides if overrides is not None else get_plugin_platforms(config)
     result: list[dict[str, Any]] = []
     for entry in raw:
@@ -343,7 +378,7 @@ def _runtime_platforms(
                 "appid": mask_appid(entry.get("appid")),
                 "platform": str(entry.get("platform") or "qq_official"),
                 "secret_set": bool(secret),
-                "source": source,
+                "source": "plugin",
             }
         )
     return result
@@ -353,19 +388,13 @@ def export_config(
     config: dict[str, Any],
     runtime_platforms: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
-    """导出 Dashboard 配置接口的响应体。
-
-    ``runtime_platforms`` 是 ``get_platforms()`` 的结果（包含回退到 AstrBot
-    平台配置的凭证）；插件自身的 ``qq_platforms`` 为空时，Dashboard 只能展示
-    这些只读平台，保存时不会把它们写回插件配置。
-    """
+    """导出 Dashboard 配置接口的响应体。"""
     plugin_platforms = _export_plugin_platforms(config)
     return {
         "language": str(config.get("language") or DEFAULT_LANGUAGE),
         "sync_menu": config.get("sync_menu", True) is not False,
         "qq_platforms": plugin_platforms,
         "runtime_platforms": _runtime_platforms(config, runtime_platforms),
-        "using_fallback": not plugin_platforms and bool(runtime_platforms),
         "menu": get_menu_entries(config),
         "limits": dict(MENU_LIMITS),
     }
@@ -441,6 +470,7 @@ def _normalize_menu_entries(raw_menu: Any) -> tuple[list[dict[str, Any]], list[s
     top_level_names: list[str] = []
     menu_names: set[str] = set()
     child_counts: dict[str, int] = {}
+    switch_ids: set[str] = set()
 
     for index, raw in enumerate(raw_menu, start=1):
         if not isinstance(raw, dict):
@@ -464,6 +494,29 @@ def _normalize_menu_entries(raw_menu: Any) -> tuple[list[dict[str, Any]], list[s
             menu_names.add(name)
             top_level_names.append(name)
             entries.append({"__template_key": "menu", "name": name})
+            continue
+
+        if item_type == "switch":
+            if parent:
+                errors.append(t("web.config_switch_parent_not_allowed", name=name))
+                continue
+            switch_id = str(raw.get("switch_id") or "").strip()
+            if not switch_id:
+                errors.append(t("web.config_menu_switch_id_empty", name=name))
+                continue
+            if switch_id in switch_ids:
+                errors.append(t("web.config_menu_switch_id_duplicate", switch_id=switch_id))
+                continue
+            switch_ids.add(switch_id)
+            top_level_names.append(name)
+            entries.append(
+                {
+                    "__template_key": "switch",
+                    "name": name,
+                    "switch_id": switch_id,
+                    "default": bool(raw.get("default", False)),
+                }
+            )
             continue
 
         if not parent:
@@ -563,6 +616,8 @@ __all__ = [
     "MENU_SUB_ITEM_MAX",
     "MENU_TOP_LEVEL_MAX",
     "QQ_PLATFORM_TYPES",
+    "SCENE_C2C",
+    "SCENES",
     "export_config",
     "get_menu",
     "get_menu_entries",
@@ -570,6 +625,7 @@ __all__ = [
     "get_plugin_platforms",
     "mask_appid",
     "mask_secret",
+    "menu_from_entries",
     "menu_stats",
     "migrate_menu_config",
     "normalize_config_payload",

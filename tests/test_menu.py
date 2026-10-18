@@ -12,6 +12,7 @@ import pytest
 from core.config import mask_appid
 from core.menu import MenuSynchronizer
 from core.qq_api import API_BASE
+from core.robot_config import MenuConfigError, save_menu_config
 from tests.fakes import FakeSession
 
 MENU_STATE_DATA = Path(__file__).resolve().parent / "_menu_state_data"
@@ -223,6 +224,7 @@ async def test_sync_all_emits_structured_events() -> None:
         "platforms": 1,
         "succeeded": 1,
         "failed": 0,
+        "scenes": 1,
         "items": 1,
         "sync_menu": True,
     }
@@ -326,3 +328,79 @@ def test_set_config_and_platforms() -> None:
 
     assert syncer.config == {"sync_menu": False}
     assert syncer.platforms == []
+
+
+def robot_config(
+    *,
+    c2c_enabled: bool = True,
+) -> dict[str, Any]:
+    return {
+        "version": 1,
+        "robots": [
+            {
+                "id": "robot-1",
+                "name": "主机器人",
+                "appid": "app-robot",
+                "secret": "robot-secret",
+                "platform": "qq_official",
+                "scenes": {
+                    "c2c": {
+                        "enabled": c2c_enabled,
+                        "items": [
+                            {
+                                "type": "send_message",
+                                "name": "帮助",
+                                "message": "/help",
+                                "parent": "",
+                            }
+                        ],
+                    },
+                },
+            }
+        ],
+    }
+
+
+@pytest.mark.asyncio
+async def test_sync_uses_private_menu_from_robot_config(tmp_path: Path) -> None:
+    save_menu_config(tmp_path, robot_config())
+    session = make_session()
+    syncer = MenuSynchronizer(
+        session,
+        [],
+        {"sync_menu": True},
+        tmp_path,
+    )
+
+    result = await syncer.sync_all()
+
+    assert result["ok"] is True
+    puts = menu_calls(session, "PUT")
+    assert len(puts) == 1
+    assert puts[0]["kwargs"]["json"] == {
+        "menu": {
+            "items": [
+                {
+                    "type": "send_message",
+                    "name": "帮助",
+                    "send_message": "/help",
+                }
+            ]
+        }
+    }
+
+
+@pytest.mark.asyncio
+async def test_invalid_robot_config_emits_error_finish(tmp_path: Path) -> None:
+    (tmp_path / "menu_config.json").write_text("{", encoding="utf-8")
+    syncer = MenuSynchronizer(make_session(), [], {}, tmp_path)
+    events: list[dict[str, Any]] = []
+
+    with pytest.raises(MenuConfigError, match="JSON"):
+        await syncer.sync_all(on_event=lambda event: _collect(events, event))
+
+    assert len(events) == 1
+    assert events[0]["type"] == "finish"
+    assert events[0]["ok"] is False
+    assert events[0]["reason"] == "config_error"
+    assert events[0]["error"]

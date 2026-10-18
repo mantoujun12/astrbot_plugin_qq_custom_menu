@@ -98,7 +98,7 @@ class FakeSession:
 
 
 class FakeContext:
-    """假 AstrBot Context: get_platforms 回退路径只需 get_config()"""
+    """假 AstrBot Context: 只实现 Main 初始化会用到的最小配置接口。"""
 
     def __init__(self, config: dict[str, Any] | None = None) -> None:
         self._config = config if config is not None else {}

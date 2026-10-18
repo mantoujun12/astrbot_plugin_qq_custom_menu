@@ -510,6 +510,26 @@ async def test_robot_config_save_rejects_stale_version(monkeypatch: Any, tmp_pat
 
 
 @pytest.mark.asyncio
+async def test_robot_config_save_requires_version(monkeypatch: Any, tmp_path: Path) -> None:
+    install_web(monkeypatch, payload={"robots": []})
+    bundle = make_bundle(config={}, data_dir=tmp_path)
+
+    response = await bundle.page_robots_save()
+
+    assert response.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_robot_import_requires_version(monkeypatch: Any, tmp_path: Path) -> None:
+    install_web(monkeypatch, payload={"appids": ["123456789"]})
+    bundle = make_bundle(config={}, data_dir=tmp_path)
+
+    response = await bundle.page_robots_import_legacy()
+
+    assert response.status_code == 409
+
+
+@pytest.mark.asyncio
 async def test_robot_config_imports_legacy_appid(monkeypatch: Any, tmp_path: Path) -> None:
     install_web(
         monkeypatch,

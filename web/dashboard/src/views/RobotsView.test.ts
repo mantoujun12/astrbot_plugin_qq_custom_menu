@@ -168,6 +168,10 @@ describe('RobotsView', () => {
 
     expect(wrapper.text()).toContain('不能保存配置')
     expect(saveButton(wrapper)?.attributes('disabled')).toBeDefined()
+    const importButton = wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('从兼容配置导入'))
+    expect(importButton?.attributes('disabled')).toBeDefined()
   })
 
   it('imports legacy AppIDs through the dedicated endpoint', async () => {
@@ -211,6 +215,94 @@ describe('RobotsView', () => {
 
     expect(robotsApi.importLegacyRobots).toHaveBeenCalledWith(['987654321'], 1)
     expect(wrapper.text()).toContain('已从兼容配置导入机器人')
+  })
+
+  it('keeps unsaved drafts when importing legacy robots', async () => {
+    const { robotsApi, dashboardApi, mount } = await loadView()
+    vi.mocked(robotsApi.fetchRobots).mockResolvedValue(responseFixture())
+    vi.mocked(dashboardApi.fetchConfig).mockResolvedValue({
+      plugin: { name: 'astrbot_plugin_qq_custom_menu', version: 'v0.2.3' },
+      language: 'zh-CN',
+      sync_menu: true,
+      qq_platforms: [
+        {
+          appid: '987654321',
+          platform: 'qq_official',
+          secret_masked: 'ab***yz',
+          secret_set: true,
+        },
+      ],
+      runtime_platforms: [],
+      menu: [],
+      limits: { top_level_max: 10, sub_items_max: 5 },
+    })
+    vi.mocked(robotsApi.importLegacyRobots).mockResolvedValue({
+      ...responseFixture(),
+      version: 2,
+      robots: [
+        ...responseFixture().robots,
+        {
+          id: 'robot-2',
+          name: '导入机器人',
+          appid: '987654321',
+          platform: 'qq_official',
+          secret_masked: 'cd***ef',
+          secret_set: true,
+          scenes: {
+            c2c: {
+              enabled: true,
+              items: [
+                { type: 'send_message', name: '旧版菜单', message: '/legacy', parent: '' },
+              ],
+            },
+          },
+        },
+      ],
+    })
+    vi.mocked(robotsApi.saveRobots).mockResolvedValue({
+      ...responseFixture(),
+      version: 3,
+    })
+
+    const wrapper = await mount()
+    const addRobot = wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('新增机器人'))
+    await addRobot?.trigger('click')
+    await flush()
+    await wrapper.find('[data-field="create-name"] input').setValue('草稿机器人')
+    await wrapper.find('[data-field="create-appid"] input').setValue('111222333')
+    await wrapper.find('[data-field="create-secret"] input').setValue('secret')
+    const create = wrapper
+      .findAll('button')
+      .find((button) => button.text().trim() === '创建')
+    await create?.trigger('click')
+    await flush()
+
+    const open = wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('从兼容配置导入'))
+    await open?.trigger('click')
+    await flush()
+    const confirm = wrapper
+      .findAll('button')
+      .find((button) => button.text().trim() === '导入')
+    await confirm?.trigger('click')
+    await flush()
+
+    expect(wrapper.text()).toContain('草稿机器人')
+    expect(wrapper.text()).toContain('导入机器人')
+
+    await saveButton(wrapper)?.trigger('click')
+    await flush()
+
+    const payload = vi.mocked(robotsApi.saveRobots).mock.calls[0][0]
+    expect(payload.version).toBe(2)
+    expect(payload.robots.map((robot) => robot.appid)).toEqual([
+      '1023456789',
+      '111222333',
+      '987654321',
+    ])
   })
 
   it('deletes a selected robot after confirmation', async () => {

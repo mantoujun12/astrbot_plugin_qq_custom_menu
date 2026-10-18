@@ -141,6 +141,26 @@ function applyResponse(next: RobotConfigResponse, preferredAppid = ''): void {
   selectedKey.value = matched?.key ?? drafts.value[0]?.key ?? ''
 }
 
+function mergeImported(next: RobotConfigResponse, appids: string[]): void {
+  const requested = new Set(appids)
+  const known = new Set(
+    drafts.value.map((draft) => draft.form.appid.trim()).filter(Boolean),
+  )
+  const imported: RobotDraft[] = []
+  for (const robot of next.robots) {
+    const appid = robot.appid.trim()
+    if (!requested.has(appid) || known.has(appid)) continue
+    known.add(appid)
+    imported.push(createDraft(robot, drafts.value.length + imported.length))
+  }
+  response.value = next
+  if (!imported.length) return
+  drafts.value = [...drafts.value, ...imported]
+  if (!selectedDraft.value) {
+    selectedKey.value = imported[0]?.key ?? drafts.value[0]?.key ?? ''
+  }
+}
+
 async function load(): Promise<void> {
   loading.value = true
   error.value = ''
@@ -392,7 +412,7 @@ async function importLegacy(): Promise<void> {
   importError.value = ''
   try {
     const next = await importLegacyRobots(appids, response.value.version)
-    applyResponse(next)
+    mergeImported(next, appids)
     importDialog.value = false
     notice.value = t(
       'pages.dashboard.robots.imported',
@@ -435,7 +455,7 @@ async function importLegacy(): Promise<void> {
           variant="tonal"
           color="primary"
           :prepend-icon="mdiImport"
-          :disabled="saving || importing"
+          :disabled="!hasBackend || saving || importing"
           @click="openImport"
         >
           {{ t('pages.dashboard.robots.importLegacy', '从兼容配置导入') }}

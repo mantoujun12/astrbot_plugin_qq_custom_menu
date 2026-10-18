@@ -399,7 +399,7 @@ class WebApiBundle:
                 current = self._load_robot_config()
             except MenuConfigError as exc:
                 return web.error_response(str(exc), status_code=500)
-            submitted_version = payload.get("version", current.get("version", 1))
+            submitted_version = payload.get("version")
             if type(submitted_version) is not int or submitted_version != current.get("version", 1):
                 return web.error_response(
                     t("web.robot_version_conflict"),
@@ -439,7 +439,7 @@ class WebApiBundle:
                 current = self._load_robot_config()
             except MenuConfigError as exc:
                 return web.error_response(str(exc), status_code=500)
-            submitted_version = payload.get("version", current.get("version", 1))
+            submitted_version = payload.get("version")
             if type(submitted_version) is not int or submitted_version != current.get("version", 1):
                 return web.error_response(
                     t("web.robot_version_conflict"),

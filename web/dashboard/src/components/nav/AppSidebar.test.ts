@@ -77,6 +77,6 @@ describe('AppSidebar', () => {
     })
 
     expect(wrapper.text()).not.toContain('自定义菜单')
-    expect(wrapper.text()).not.toContain('v0.2.3')
+    expect(wrapper.text()).not.toContain('v0.3.0')
   })
 })

@@ -34,6 +34,7 @@
 - `main.py` 注册视图 Web API、暴露配置保存回调，并使用 `core/paths.py` 的 `PLUGIN_VERSION` 作为唯一版本来源
 - `core/config.py` 增加 Dashboard 配置导出、菜单统计、脱敏与提交校验 helper
 - `release.yml` 改用 `scripts/bump_version.py --check` 校验版本、`scripts/package_plugin.py` 打包，并把发布流程改为幂等（tag / release 已存在时跳过）
+- 机器人页在窄屏下改用下拉菜单切换机器人，下拉项展示 AppID 与菜单摘要，避免机器人较多时卡片堆叠
 
 ### 修复
 

@@ -120,6 +120,13 @@ const platformItems = computed(() =>
     ),
   })),
 )
+const robotSelectItems = computed(() =>
+  drafts.value.map((draft) => ({
+    value: draft.key,
+    title: robotName(draft),
+    subtitle: `${draft.form.appid || '—'} · ${robotMeta(draft)}`,
+  })),
+)
 
 function createDraft(robot: RobotConfig, index: number): RobotDraft {
   return {
@@ -251,6 +258,10 @@ function robotName(draft: RobotDraft): string {
     'pages.dashboard.robots.untitledRobot',
     '未命名机器人',
   )
+}
+
+function robotSelectSubtitle(key: unknown): string {
+  return robotSelectItems.value.find((item) => item.value === key)?.subtitle ?? ''
 }
 
 function robotMeta(draft: RobotDraft): string {
@@ -700,28 +711,53 @@ async function importLegacy(): Promise<void> {
           <div v-if="!drafts.length" class="qc-metric-note">
             {{ t('pages.dashboard.robots.emptyRobots', '还没有机器人，先新增一台。') }}
           </div>
-          <v-card
-            v-for="draft in drafts"
-            :key="draft.key"
-            class="qc-config-item mb-3"
-            :class="{ 'qc-robot-item--active': draft.key === selectedKey }"
-            :variant="draft.key === selectedKey ? 'tonal' : 'flat'"
-            :color="draft.key === selectedKey ? 'primary' : undefined"
-            role="button"
-            tabindex="0"
-            @click="selectRobot(draft.key)"
-            @keydown.enter.prevent="selectRobot(draft.key)"
-            @keydown.space.prevent="selectRobot(draft.key)"
-          >
-            <div class="d-flex align-center ga-3">
-              <v-icon :icon="mdiRobotOutline" size="22" />
-              <div class="qc-row-main">
-                <div class="font-weight-medium">{{ robotName(draft) }}</div>
-                <div class="qc-metric-note">{{ draft.form.appid || '—' }}</div>
-                <div class="qc-metric-note">{{ robotMeta(draft) }}</div>
-              </div>
+          <template v-else>
+            <v-select
+              :model-value="selectedKey"
+              data-field="robot-select"
+              class="qc-robot-select"
+              :items="robotSelectItems"
+              :label="t('pages.dashboard.robots.selectRobot', '选择机器人')"
+              :prepend-inner-icon="mdiRobotOutline"
+              item-title="title"
+              item-value="value"
+              variant="outlined"
+              density="compact"
+              hide-details
+              @update:model-value="selectRobot"
+            >
+              <template #item="{ props }">
+                <v-list-item
+                  v-bind="props"
+                  :subtitle="robotSelectSubtitle(props.value)"
+                />
+              </template>
+            </v-select>
+            <div class="qc-robot-cards">
+              <v-card
+                v-for="draft in drafts"
+                :key="draft.key"
+                class="qc-config-item mb-3"
+                :class="{ 'qc-robot-item--active': draft.key === selectedKey }"
+                :variant="draft.key === selectedKey ? 'tonal' : 'flat'"
+                :color="draft.key === selectedKey ? 'primary' : undefined"
+                role="button"
+                tabindex="0"
+                @click="selectRobot(draft.key)"
+                @keydown.enter.prevent="selectRobot(draft.key)"
+                @keydown.space.prevent="selectRobot(draft.key)"
+              >
+                <div class="d-flex align-center ga-3">
+                  <v-icon :icon="mdiRobotOutline" size="22" />
+                  <div class="qc-row-main">
+                    <div class="font-weight-medium">{{ robotName(draft) }}</div>
+                    <div class="qc-metric-note">{{ draft.form.appid || '—' }}</div>
+                    <div class="qc-metric-note">{{ robotMeta(draft) }}</div>
+                  </div>
+                </div>
+              </v-card>
             </div>
-          </v-card>
+          </template>
         </v-card-text>
       </section>
 

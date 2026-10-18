@@ -111,7 +111,41 @@ describe('RobotsView', () => {
     expect(
       listPane.element.parentElement?.classList.contains('qc-robots-shell'),
     ).toBe(true)
+    expect(wrapper.find('[data-field="robot-select"]').exists()).toBe(true)
     expect(wrapper.find('[data-field="robots-divider-desktop"]').exists()).toBe(true)
+  })
+
+  it('switches robots through the compact selector', async () => {
+    const { robotsApi, mount } = await loadView()
+    const fixture = responseFixture()
+    fixture.robots.push({
+      id: 'robot-2',
+      name: '备用机器人',
+      appid: '987654321',
+      platform: 'qq_official',
+      secret_masked: 'cd***ef',
+      secret_set: true,
+      scenes: {
+        c2c: {
+          enabled: true,
+          items: [],
+        },
+      },
+    })
+    vi.mocked(robotsApi.fetchRobots).mockResolvedValue(fixture)
+
+    const wrapper = await mount()
+    const robotSelect = wrapper
+      .findAllComponents({ name: 'VSelect' })
+      .find((component) => component.attributes('data-field') === 'robot-select')
+
+    expect(robotSelect).toBeDefined()
+    robotSelect?.vm.$emit('update:modelValue', 'robot:robot-2')
+    await flush()
+
+    expect(
+      wrapper.find('[data-field="robot-name"] input').element,
+    ).toHaveProperty('value', '备用机器人')
   })
 
   it('saves private-chat menu data', async () => {

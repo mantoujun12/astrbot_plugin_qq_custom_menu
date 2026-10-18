@@ -1,8 +1,8 @@
 #### 项目简介
 
-QQ 官方机器人自定义菜单插件。用户在 AstrBot WebUI 或插件可视化视图（Dashboard）中配置私聊菜单，插件在启动时或手动触发时把菜单写入 QQ 官方机器人；用户在 QQ 私聊界面即可看到自定义菜单。
+QQ 官方机器人私聊自定义菜单插件。用户在插件可视化视图（Dashboard）中按机器人配置私聊菜单，插件在启动时或手动触发时写入 QQ 官方接口；旧版全局配置保留为「兼容性」入口。
 
-插件同时保留两套入口：AstrBot 插件配置页（`_conf_schema.json`）与插件视图（`pages/dashboard/`）。两者读写同一份插件配置，不存在第二套数据源。
+新版机器人配置保存在插件数据目录的 `menu_config.json`；AstrBot 插件配置页（`_conf_schema.json`）继续保存旧版兼容性配置。运行时按 AppID 合并，新版优先接管。
 
 #### 技术栈
 
@@ -20,16 +20,17 @@ main.py                    插件入口：@register、initialize() 启动同步�
 core/                      插件自身的 Python 包，业务逻辑都在这里
 ├─ __init__.py             公开 API 汇总（__all__）
 ├─ config.py               配置解析、菜单归一化、Dashboard 导出 / 校验 / 脱敏 helper
-├─ menu.py                 菜单同步流程与结构化事件（sync / sync_all / set_config）
+├─ menu.py                 私聊菜单同步流程与结构化事件
 ├─ qq_api.py               QQ access_token 与 /v2/menu 客户端
+├─ robot_config.py         新版 menu_config.json 读写、校验、导入与运行时合并
 ├─ state.py                menu_state.yaml 读写、摘要与跨进程锁
 ├─ sync_runner.py          Dashboard 后台同步任务、SSE 事件缓冲与断线续订
-├─ web_api.py              Dashboard Web API（status / config / sync / sync/events）
+├─ web_api.py              Dashboard Web API（status / config / robots / sync / sync/events）
 ├─ paths.py                插件数据目录解析、PLUGIN_NAME / PLUGIN_VERSION
 └─ i18n/                   运行期日志翻译（zh-CN.json / en-US.json）
 _conf_schema.json          WebUI 插件配置 schema
 metadata.yaml              插件元数据（版本号唯一来源）
-.astrbot-plugin/i18n/      WebUI 侧 i18n（metadata / config / views.dashboard）
+.astrbot-plugin/i18n/      WebUI 侧 i18n（metadata / config / pages.dashboard）
 web/dashboard/             Dashboard 源码（Vue 3 + TypeScript + Vite + Vuetify + Vitest）
 pages/dashboard/           Dashboard 构建产物（提交进仓库的生成文件）
 tests/                     离线 pytest 套件（conftest 注入 AstrBot stub）
@@ -82,11 +83,11 @@ python scripts/package_plugin.py         # 生成 dist/<插件名>-<版本>.zip
 #### 架构约定
 
 1. QQ API 鉴权先 POST `https://bots.qq.com/app/getAppAccessToken` 换取 `access_token`，再用 `Authorization: QQBot {token}` 调用 `https://api.bot.qq.com` 下的接口。
-2. QQ 菜单接口为 `GET /v2/menu` 读取、`PUT /v2/menu` 整表覆盖写入；菜单项为空且 `sync_menu` 开启时会清空 QQ 上已有的自定义菜单，`sync_menu` 关闭时只读取不覆盖。
+2. 插件只处理 C2C 单聊，使用全局 `GET/PUT /v2/menu`；`sync_menu` 关闭时只读取不覆盖。群聊由其他插件负责。
 3. 每个平台凭证对应一个独立 `QQClient`，token 缓存在实例内并在过期前 600s 刷新；外部禁止直接访问 `_` 前缀私有方法。
 4. 配置解析逻辑整合到 `core/config.py` 的 helper 函数（`get_platforms` / `get_plugin_platforms` / `get_menu` / `migrate_menu_config` / `export_config` / `normalize_config_payload`），不要散落在 `main.py` 或 `web_api.py`。
 5. 菜单项链接必须归一化为 `https://` 开头（QQ 要求），由 `_normalize_link` 统一补全；Dashboard 的 `normalizeLink` 必须与它保持一致。
-6. 配置使用 `template_list`，模板 key 为 `send_message` / `link` / `menu`；子菜单项通过 `parent` 字段引用母菜单名称，不内嵌。
+6. 兼容性配置继续使用 `template_list`，模板 key 为 `send_message` / `link` / `switch` / `menu`；新版私聊菜单同样支持这四类。
 7. 启动时先执行 `migrate_menu_config` 把旧版 dict 菜单迁移为 `template_list` 并保存；Dashboard 导出的旧式子项也要展开成扁平条目。
 8. 异步一律 async/await，不用回调风格；同步流程的进度回调与事件回调也必须是 `Awaitable`。
 9. 日志统一 `from astrbot.api import logger`，前缀 `[qq-custom-menu]`；新增运行期文案写入 `core/i18n/*.json`，不要在代码里硬编码中文日志。
@@ -95,29 +96,32 @@ python scripts/package_plugin.py         # 生成 dist/<插件名>-<版本>.zip
 12. Dashboard 的 Web API 统一注册在 `/<plugin_name>/` 下：
     - `GET /status`：本地状态概览，不请求 QQ API
     - `GET|POST /config`：读写插件配置
+    - `GET|POST /robots`：读写新版机器人私聊菜单配置
+    - `POST /robots/import-legacy`：从兼容配置导入指定 AppID
     - `POST /sync`：触发后台同步，单飞，不排队
     - `GET /sync/events`：SSE 进度流，`since` 用于续订
 13. `ClientSecret` 只能以掩码形式出现在响应、日志和前端；保存时 `secret` 留空表示沿用同 appid 的已保存密钥，新增平台必须提供密钥。
-14. 插件配置里的平台凭证优先；为空时回退 AstrBot 平台配置中的 QQ 官方平台。回退平台在 Dashboard 只读，保存时不会写回插件配置。
+14. 兼容性平台凭证只读取插件配置中的 `qq_platforms`，不得回退读取 AstrBot 平台配置。
 15. `SyncRunner` 负责单飞、事件缓冲与广播：事件带单调递增 `seq`，`stream(since)` 回放后持续推送，收到 `finish` 结束；`start()` 在已有任务运行时返回 `False`。
 16. `MenuSynchronizer.sync_all()` 逐平台隔离异常，并发出 `start` / `message`（由调用方映射）/ `platform` / `finish` 事件；任一平台失败不能中止其余平台。
-17. i18n 分两条管线：`core/i18n/*.json` 供运行期日志使用；`.astrbot-plugin/i18n/*.json` 供 WebUI 读取，Dashboard 文案放在 `views.dashboard` 下，`zh-CN` 与 `en-US` 的 key 集合必须一致。
+17. i18n 分两条管线：`core/i18n/*.json` 供运行期日志使用；`.astrbot-plugin/i18n/*.json` 供 WebUI 读取，Dashboard 文案放在 `pages.dashboard` 下，`zh-CN` 与 `en-US` 的 key 集合必须一致。面板标题不得直接采用宿主传入的原始视图名 `dashboard`。
 18. 版本号只有 `metadata.yaml` 一个来源；`core/paths.py` 的 `PLUGIN_VERSION` 与 `web/dashboard/package.json` 的 `version` 由 `scripts/bump_version.py` 同步，`release.yml` 发布前用 `--check` 校验。
 19. `pages/dashboard/` 是生成文件，由 `pnpm build` 写入，不要手工编辑；冲突时重新构建再 `git add`，不要改成 `merge=ours`。
 20. 测试按模块对应：`core/*.py` → `tests/test_*.py`，Dashboard 源码 → 同目录 `*.test.ts`。公共假件放 `tests/fakes.py` 与 `web/dashboard/src/test/helpers.ts`。
 
 #### Dashboard 数据契约
 
-- `GET /status` 返回 `plugin` / `ready` / `sync_menu` / `platforms` / `menu` / `state`，与 `web/dashboard/src/types/dashboard.ts` 的 `StatusResponse` 对应。
-- `GET /config` 返回 `language` / `sync_menu` / `qq_platforms`（掩码）/ `runtime_platforms` / `using_fallback` / `menu` / `limits`，与 `PluginConfigResponse` 对应。
+- `GET /status` 返回 `plugin` / `ready` / `sync_menu` / `platforms`（含 `c2c` 私聊状态）/ `menu` / `robots` / `state`，与 `web/dashboard/src/types/dashboard.ts` 的 `StatusResponse` 对应。
+- `GET /config` 返回 `language` / `sync_menu` / `qq_platforms`（掩码）/ `runtime_platforms` / `menu` / `limits`，与 `PluginConfigResponse` 对应。
+- `GET /robots` 返回 `version` / `robots` / `available_scenes` / `menu_limits`；`POST /robots` 必须携带当前 `version`，冲突返回 HTTP 409。
 - `POST /config` 接受部分字段，后端按字段合并；任一字段校验失败时整次保存被拒绝。
 - 状态值：`synced`（摘要与当前菜单一致）、`pending`（摘要不一致）、`unknown`（尚未同步）、`disabled`（`sync_menu` 关闭）。
-- 同步事件：`start`（`platforms` / `items`）、`message`（`text`）、`platform`（`pf_id` / `status` / `action` / `saved` / `error`）、`finish`（`ok` / `succeeded` / `failed`）。
+- 同步事件：`start`（`platforms` / `scenes` / `items`）、`message`（`text`）、`platform`（`pf_id` / `status` / `action` / `saved` / `scenes` / `error`）、`finish`（`ok` / `succeeded` / `failed`）。
 
 #### 测试与覆盖率
 
-- Python 覆盖率门禁在 `codecov.yml`（flag `unittests`），核心模块目标 90%+；当前整体约 98%。
-- Dashboard 覆盖率门禁写在 `vitest.config.ts`（lines 85 / statements 85 / functions 80 / branches 80）；当前行覆盖率约 94%。
+- Python 覆盖率门禁在 `codecov.yml`（flag `unittests`），核心模块目标 90%+。
+- Dashboard 覆盖率门禁写在 `vitest.config.ts`（lines 85 / statements 85 / functions 80 / branches 80）。
 - Codecov 分两条上传链路：`codecov-core.yml` 与 `codecov-dashboard.yml`，合并后 `after_n_builds: 2`。
 - 本地开发没有 bridge 时，Dashboard 使用 `web/dashboard/src/api/mock.ts` 的假数据；保存与同步入口必须显式禁用，不能伪装成功。
 

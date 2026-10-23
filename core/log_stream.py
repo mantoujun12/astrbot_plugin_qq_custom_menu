@@ -19,6 +19,7 @@ from typing import Any
 from uuid import uuid4
 
 from .i18n import LOG_TAG, t
+from .redaction import redact_sensitive_text
 
 DEFAULT_LOG_BUFFER_CAPACITY = 1000
 DEFAULT_LOG_HEARTBEAT_SECONDS = 15.0
@@ -50,6 +51,28 @@ class LogEntry:
         if self.traceback:
             event["traceback"] = self.traceback
         return event
+
+
+@dataclass(frozen=True)
+class LogGap:
+    """日志缓冲区淘汰较早记录后产生的可观察缺口。"""
+
+    first_seq: int
+    last_seq: int
+
+    @property
+    def count(self) -> int:
+        """缺口覆盖的日志条数。"""
+        return self.last_seq - self.first_seq + 1
+
+    def as_event(self) -> dict[str, Any]:
+        """转换为 SSE JSON 载荷。"""
+        return {
+            "type": "gap",
+            "first_seq": self.first_seq,
+            "last_seq": self.last_seq,
+            "count": self.count,
+        }
 
 
 class _LogBufferHandler(logging.Handler):
@@ -99,6 +122,7 @@ class LogBuffer:
         self._sink_id: int | None = None
         self._remove_sink: Any | None = None
         self._heartbeat_seconds = heartbeat_seconds
+        self._restore_level: tuple[logging.Logger, int] | None = None
 
     @property
     def stream_id(self) -> str:
@@ -124,6 +148,9 @@ class LogBuffer:
             # logger 上。这里先解析出具体的标准库 logger，再安装。
             target = _resolve_standard_logger(host_logger)
             if target is not None:
+                if target.getEffectiveLevel() > logging.DEBUG:
+                    self._restore_level = (target, target.level)
+                    target.setLevel(logging.DEBUG)
                 handler = _LogBufferHandler(self)
                 target.addHandler(handler)
                 # close() 可能从任意模块调用，捕获绑定方法，保证移除的是安装时
@@ -155,10 +182,12 @@ class LogBuffer:
         remove_handler = self._remove_handler
         sink_id = self._sink_id
         remove_sink = self._remove_sink
+        restore_level = self._restore_level
         self._handler = None
         self._remove_handler = None
         self._sink_id = None
         self._remove_sink = None
+        self._restore_level = None
         try:
             if handler is not None and remove_handler is not None:
                 remove_handler(handler)
@@ -166,6 +195,10 @@ class LogBuffer:
             elif sink_id is not None and remove_sink is not None:
                 remove_sink(sink_id)
         finally:
+            if restore_level is not None:
+                restore_logger, previous_level = restore_level
+                if restore_logger.level == logging.DEBUG:
+                    restore_logger.setLevel(previous_level)
             with self._lock:
                 self._closed = True
                 waiters = list(self._waiters.items())
@@ -197,8 +230,8 @@ class LogBuffer:
         since: int = 0,
         *,
         heartbeat_seconds: float | None = None,
-    ) -> AsyncIterator[LogEntry | None]:
-        """从 ``seq > since`` 开始产出日志；空闲时以 ``None`` 表示心跳。"""
+    ) -> AsyncIterator[LogEntry | LogGap | None]:
+        """从 ``seq > since`` 开始产出日志；缺口与心跳使用独立标记。"""
         cursor = max(0, int(since))
         interval = self._heartbeat_seconds if heartbeat_seconds is None else heartbeat_seconds
         if interval <= 0:
@@ -216,9 +249,22 @@ class LogBuffer:
                 with self._lock:
                     pending = [entry for entry in self._entries if entry.seq > cursor]
                     closed = self._closed
+                    oldest_seq = self._entries[0].seq if self._entries else None
+                    gap: LogGap | None = None
+                    gap_end = (
+                        oldest_seq - 1
+                        if oldest_seq is not None and oldest_seq > cursor + 1
+                        else None
+                    )
+                    if gap_end is not None:
+                        gap = LogGap(first_seq=cursor + 1, last_seq=gap_end)
+                        cursor = gap_end
                     if not pending and not closed:
                         self._waiters[event] = loop
 
+                if gap is not None:
+                    yield gap
+                    continue
                 if pending:
                     cursor = pending[-1].seq
                     for entry in pending:
@@ -242,10 +288,10 @@ class LogBuffer:
     def _entry_from_record(record: logging.LogRecord) -> LogEntry | None:
         if not _is_plugin_source(record.pathname):
             return None
-        message = record.getMessage()
+        message = redact_sensitive_text(record.getMessage())
         if message.startswith(LOG_TAG):
             message = message[len(LOG_TAG) :].lstrip() or LOG_TAG
-        traceback = _format_record_details(record)
+        traceback = redact_sensitive_text(_format_record_details(record))
         message, traceback = _truncate_entry(message, traceback)
         return LogEntry(
             seq=0,
@@ -367,5 +413,6 @@ __all__ = [
     "MAX_LOG_ENTRY_CHARS",
     "LogBuffer",
     "LogEntry",
+    "LogGap",
     "LogSubscriberLimitError",
 ]

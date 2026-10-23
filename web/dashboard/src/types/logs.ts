@@ -19,3 +19,10 @@ export interface LogStreamInfo {
   id: string
   reset: boolean
 }
+
+export interface LogGapEvent {
+  type: 'gap'
+  first_seq: number
+  last_seq: number
+  count: number
+}

@@ -63,6 +63,28 @@ async def test_token_http_error_raises() -> None:
 
 
 @pytest.mark.asyncio
+async def test_token_error_response_redacts_credentials() -> None:
+    session = FakeSession()
+    session.route_token(
+        {
+            "message": "invalid credential",
+            "clientSecret": "sec1",
+            "access_token": "leaked-token",
+        },
+        status=500,
+    )
+    client = make_client(session)
+
+    with pytest.raises(RuntimeError) as captured:
+        await client.get_menu()
+
+    message = str(captured.value)
+    assert "sec1" not in message
+    assert "leaked-token" not in message
+    assert "******" in message
+
+
+@pytest.mark.asyncio
 async def test_token_missing_in_response_raises() -> None:
     session = FakeSession()
     session.route_token({"expires_in": 7200})  # 无 access_token
@@ -101,6 +123,31 @@ async def test_request_http_error_raises_runtime_error() -> None:
 
     with pytest.raises(RuntimeError, match="400"):
         await client.get_menu()
+
+
+@pytest.mark.asyncio
+async def test_request_error_response_redacts_authorization_token() -> None:
+    session = FakeSession()
+    session.route_token({"access_token": "tok1", "expires_in": 7200})
+    session.route_menu(
+        "GET",
+        "/v2/menu",
+        status=400,
+        payload={
+            "message": "denied",
+            "authorization": "QQBot tok1",
+            "echo": "tok1",
+        },
+    )
+    client = make_client(session)
+
+    with pytest.raises(RuntimeError) as captured:
+        await client.get_menu()
+
+    message = str(captured.value)
+    assert "tok1" not in message
+    assert "sec1" not in message
+    assert "******" in message
 
 
 @pytest.mark.asyncio

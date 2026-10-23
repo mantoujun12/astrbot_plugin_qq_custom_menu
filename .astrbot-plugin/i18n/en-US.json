@@ -160,6 +160,7 @@
           "disconnected": "Disconnected"
         },
         "connectionError": "The log stream was interrupted. Use Reconnect in the toolbar to continue.",
+        "gap": "The log buffer has evicted {count} older entries, so this replay is incomplete.",
         "count": "Showing {visible} of {total}",
         "paused": "Display is paused; logs are still being collected in the background.",
         "noMatches": "No logs match the current filters.",

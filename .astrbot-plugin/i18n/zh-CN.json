@@ -160,6 +160,7 @@
           "disconnected": "连接已断开"
         },
         "connectionError": "日志流已中断，点击工具栏里的重新连接继续接收。",
+        "gap": "日志缓冲已覆盖 {count} 条较早记录，当前回放内容不连续。",
         "count": "显示 {visible} / {total} 条",
         "paused": "已暂停显示，后台仍在收集日志。",
         "noMatches": "没有符合筛选条件的日志。",

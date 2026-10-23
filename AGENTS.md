@@ -23,6 +23,7 @@ core/                      插件自身的 Python 包，业务逻辑都在这里
 ├─ log_stream.py           插件日志环形缓冲、SSE 订阅与日志页数据契约
 ├─ menu.py                 私聊菜单同步流程与结构化事件
 ├─ qq_api.py               QQ access_token 与 /v2/menu 客户端
+├─ redaction.py            上游响应与日志文本的凭据脱敏 helper
 ├─ robot_config.py         新版 menu_config.json 读写、校验、导入与运行时合并
 ├─ state.py                menu_state.yaml 读写、摘要与跨进程锁
 ├─ sync_runner.py          Dashboard 后台同步任务、SSE 事件缓冲与断线续订
@@ -102,7 +103,7 @@ python scripts/package_plugin.py         # 生成 dist/<插件名>-<版本>.zip
     - `POST /sync`：触发后台同步，单飞，不排队
     - `GET /sync/events`：SSE 进度流，`since` 用于续订
     - `GET /logs/events`：SSE 日志流，回放最近 1000 条并支持 `since` / `streamId` 续订
-13. `ClientSecret` 只能以掩码形式出现在响应、日志和前端；保存时 `secret` 留空表示沿用同 appid 的已保存密钥，新增平台必须提供密钥。
+13. `ClientSecret` 只能以掩码形式出现在响应、日志和前端；QQ API 错误响应在格式化进异常或日志前必须调用 `core/redaction.py` 脱敏，保存时 `secret` 留空表示沿用同 appid 的已保存密钥，新增平台必须提供密钥。
 14. 兼容性平台凭证只读取插件配置中的 `qq_platforms`，不得回退读取 AstrBot 平台配置。
 15. `SyncRunner` 负责单飞、事件缓冲与广播：事件带单调递增 `seq`，`stream(since)` 回放后持续推送，收到 `finish` 结束；`start()` 在已有任务运行时返回 `False`。
 16. `MenuSynchronizer.sync_all()` 逐平台隔离异常，并发出 `start` / `message`（由调用方映射）/ `platform` / `finish` 事件；任一平台失败不能中止其余平台。
@@ -110,7 +111,7 @@ python scripts/package_plugin.py         # 生成 dist/<插件名>-<版本>.zip
 18. 版本号只有 `metadata.yaml` 一个来源；`core/paths.py` 的 `PLUGIN_VERSION` 与 `web/dashboard/package.json` 的 `version` 由 `scripts/bump_version.py` 同步，`release.yml` 发布前用 `--check` 校验。
 19. `pages/dashboard/` 是生成文件，由 `pnpm build` 写入，不要手工编辑；冲突时重新构建再 `git add`，不要改成 `merge=ours`。
 20. 测试按模块对应：`core/*.py` → `tests/test_*.py`，Dashboard 源码 → 同目录 `*.test.ts`。公共假件放 `tests/fakes.py` 与 `web/dashboard/src/test/helpers.ts`。
-21. `LogBuffer` 只采集插件源码路径产生的日志，环形缓冲容量为 1000；日志只保存在当前进程内存，`terminate()` 必须移除 handler 并结束等待中的 SSE 订阅。
+21. `LogBuffer` 只采集插件源码路径产生的日志，环形缓冲容量为 1000；安装时临时启用 DEBUG 并在关闭时恢复 logger 级别，缓冲淘汰后通过 `gap` 事件报告缺口，日志只保存在当前进程内存。日志采集属于可选能力，安装失败不能阻止插件启动；`terminate()` 或构造失败清理必须移除 handler 并结束等待中的 SSE 订阅。
 
 #### Dashboard 数据契约
 
@@ -120,7 +121,7 @@ python scripts/package_plugin.py         # 生成 dist/<插件名>-<版本>.zip
 - `POST /config` 接受部分字段，后端按字段合并；任一字段校验失败时整次保存被拒绝。
 - 状态值：`synced`（摘要与当前菜单一致）、`pending`（摘要不一致）、`unknown`（尚未同步）、`disabled`（`sync_menu` 关闭）。
 - 同步事件：`start`（`platforms` / `scenes` / `items`）、`message`（`text`）、`platform`（`pf_id` / `status` / `action` / `saved` / `scenes` / `error`）、`finish`（`ok` / `succeeded` / `failed`）。
-- 日志事件：`stream`（`id` / `reset`，连接开始时发送一次）、`log`（`seq` / `timestamp` / `level` / `message` / 可选 `traceback`）、`error`（`code=subscriber_limit`）。
+- 日志事件：`stream`（`id` / `reset`，连接开始时发送一次）、`log`（`seq` / `timestamp` / `level` / `message` / 可选 `traceback`）、`gap`（`first_seq` / `last_seq` / `count`）、`error`（`code=subscriber_limit`）。
 
 #### 测试与覆盖率
 

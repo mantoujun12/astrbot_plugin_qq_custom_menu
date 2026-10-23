@@ -500,7 +500,7 @@ async def test_page_log_events_streams_history_and_stream_identity(
 async def test_page_log_events_resets_reloaded_stream(monkeypatch: Any) -> None:
     install_web(
         monkeypatch,
-        query={"since": "5", "streamId": "old-stream"},
+        query={"since": "0", "streamId": "old-stream"},
     )
     log_buffer = LogBuffer(heartbeat_seconds=0.01)
     bundle = make_bundle(log_buffer=log_buffer)
@@ -516,6 +516,36 @@ async def test_page_log_events_resets_reloaded_stream(monkeypatch: Any) -> None:
     info = json.loads(info_line.removeprefix("data: ").strip())
     assert info["reset"] is True
     assert heartbeat == ": keep-alive\n\n"
+
+
+@pytest.mark.asyncio
+async def test_page_log_events_streams_gap_before_retained_logs(monkeypatch: Any) -> None:
+    install_web(monkeypatch, query={"since": "0"})
+    host_logger = logging.getLogger("test-web-api-log-gap")
+    host_logger.handlers.clear()
+    host_logger.propagate = False
+    host_logger.setLevel(logging.INFO)
+    log_buffer = LogBuffer(capacity=2)
+    log_buffer.install(host_logger)
+    bundle = make_bundle(log_buffer=log_buffer)
+    for message in ("one", "two", "three"):
+        host_logger.info("%s %s", LOG_TAG, message)
+
+    try:
+        stream = await bundle.page_log_events()
+        await asyncio.wait_for(anext(stream.content), timeout=1)
+        gap_line = await asyncio.wait_for(anext(stream.content), timeout=1)
+        first_log = await asyncio.wait_for(anext(stream.content), timeout=1)
+        await stream.content.aclose()
+    finally:
+        log_buffer.close()
+
+    gap = json.loads(gap_line.removeprefix("data: ").strip())
+    first = json.loads(first_log.removeprefix("data: ").strip())
+    assert gap == {"type": "gap", "first_seq": 1, "last_seq": 1, "count": 1}
+    assert first["type"] == "log"
+    assert first["seq"] == 2
+    assert first["message"] == "two"
 
 
 @pytest.mark.asyncio

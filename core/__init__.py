@@ -18,9 +18,9 @@ from .config import (
     migrate_menu_config,
     normalize_config_payload,
 )
+from .i18n import LOG_TAG, t
 from .i18n import initialize as initialize_i18n
-from .i18n import t
-from .log_stream import LogBuffer, LogEntry
+from .log_stream import LogBuffer, LogEntry, LogGap
 from .menu import MenuSynchronizer
 from .paths import PLUGIN_NAME, PLUGIN_VERSION, resolve_plugin_data_dir
 from .robot_config import (
@@ -46,8 +46,10 @@ __all__ = [
     "MENU_SUB_ITEM_MAX",
     "MENU_TOP_LEVEL_MAX",
     "LOG_EVENTS_ROUTE_SUFFIX",
+    "LOG_TAG",
     "LogBuffer",
     "LogEntry",
+    "LogGap",
     "MENU_CONFIG_FILENAME",
     "MenuConfigError",
     "PLUGIN_NAME",

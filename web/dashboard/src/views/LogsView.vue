@@ -14,7 +14,7 @@ import { getMockLogs, subscribeLogs } from '../api/logs'
 import type { LogSubscription } from '../api/logs'
 import { useBridge } from '../composables/useBridge'
 import { LOG_LEVELS } from '../types/logs'
-import type { LogEvent, LogLevel, LogStreamInfo } from '../types/logs'
+import type { LogEvent, LogGapEvent, LogLevel, LogStreamInfo } from '../types/logs'
 
 const MAX_VIEW_LOGS = 1000
 const LEVEL_FALLBACKS: Record<LogLevel, string> = {
@@ -35,6 +35,7 @@ const selectedLevels = ref<LogLevel[]>([...LOG_LEVELS])
 const autoScroll = ref(true)
 const connection = ref<'connecting' | 'connected' | 'disconnected' | 'mock'>('connecting')
 const connectionError = ref(false)
+const missedLogs = ref(0)
 const lastSeq = ref(0)
 const streamId = ref<string | undefined>()
 const expandedSeqs = ref<Set<number>>(new Set())
@@ -126,6 +127,11 @@ function receive(entry: LogEvent): void {
   logs.value = [...logs.value, entry].slice(-MAX_VIEW_LOGS)
 }
 
+function receiveGap(gap: LogGapEvent): void {
+  missedLogs.value += gap.count
+  lastSeq.value = Math.max(lastSeq.value, gap.last_seq)
+}
+
 function togglePause(): void {
   if (paused.value) {
     logs.value = [...frozenLogs.value, ...pendingLogs.value].slice(-MAX_VIEW_LOGS)
@@ -155,6 +161,7 @@ function resetStream(): void {
   expandedSeqs.value = new Set()
   paused.value = false
   lastSeq.value = 0
+  missedLogs.value = 0
 }
 
 function loadMock(): void {
@@ -214,6 +221,11 @@ async function connectLogs(since = 0): Promise<void> {
       onEvent: (entry) => {
         if (!disposed && currentGeneration === generation) {
           receive(entry)
+        }
+      },
+      onGap: (gap) => {
+        if (!disposed && currentGeneration === generation) {
+          receiveGap(gap)
         }
       },
       onStream: (info: LogStreamInfo) => {
@@ -350,6 +362,22 @@ onBeforeUnmount(() => {
       :icon="mdiAlertCircleOutline"
     >
       {{ t('pages.dashboard.logs.connectionError', '日志流已中断，点击工具栏里的重新连接继续接收。') }}
+    </v-alert>
+
+    <v-alert
+      v-if="missedLogs"
+      class="qc-logs-alert qc-logs-alert--gap"
+      type="warning"
+      variant="tonal"
+      density="comfortable"
+      :icon="mdiAlertCircleOutline"
+    >
+      {{
+        t(
+          'pages.dashboard.logs.gap',
+          '日志缓冲已覆盖 {count} 条较早记录，当前回放内容不连续。',
+        ).replace('{count}', String(missedLogs))
+      }}
     </v-alert>
 
     <v-card class="qc-card qc-logs-card" variant="outlined">

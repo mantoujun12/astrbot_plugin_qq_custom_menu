@@ -8,6 +8,7 @@ from typing import Any
 import aiohttp
 
 from .i18n import t
+from .redaction import redact_sensitive_data
 
 TOKEN_URL = "https://bots.qq.com/app/getAppAccessToken"  # noqa: S105 - 端点 URL, 非密钥
 API_BASE = "https://api.bot.qq.com"
@@ -30,7 +31,11 @@ class QQClient:
         ) as response:
             data = await response.json()
             if response.status >= 400 or not data.get("access_token"):
-                raise RuntimeError(t("log.token_failed", status=response.status, data=data))
+                safe_data = redact_sensitive_data(
+                    data,
+                    known_values=(self.secret,),
+                )
+                raise RuntimeError(t("log.token_failed", status=response.status, data=safe_data))
         self._token = str(data["access_token"])
         self._expires_at = time.time() + max(int(data.get("expires_in", 7200)) - 600, 60)
         return self._token
@@ -53,13 +58,17 @@ class QQClient:
             except Exception:
                 data = {"raw": await response.text()}
             if response.status >= 400:
+                safe_data = redact_sensitive_data(
+                    data,
+                    known_values=(self.secret, token),
+                )
                 raise RuntimeError(
                     t(
                         "log.api_failed",
                         method=method,
                         path=path,
                         status=response.status,
-                        data=data,
+                        data=safe_data,
                     )
                 )
             return data if isinstance(data, dict) else {"data": data}

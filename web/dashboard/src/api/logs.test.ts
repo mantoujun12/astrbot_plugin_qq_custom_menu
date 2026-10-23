@@ -1,7 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getMockLogs, isLogEvent, isLogStreamInfo, subscribeLogs } from './logs'
+import {
+  getMockLogs,
+  isLogEvent,
+  isLogGapEvent,
+  isLogStreamInfo,
+  subscribeLogs,
+} from './logs'
 import { createBridgeStub } from '../test/helpers'
-import type { LogEvent, LogStreamInfo } from '../types/logs'
+import type { LogEvent, LogGapEvent, LogStreamInfo } from '../types/logs'
 
 afterEach(() => {
   delete window.AstrBotPluginView
@@ -31,6 +37,12 @@ describe('isLogEvent', () => {
     expect(isLogStreamInfo({ ...info, reset: 'yes' })).toBe(false)
   })
 
+  it('accepts a complete gap range', () => {
+    const gap: LogGapEvent = { type: 'gap', first_seq: 4, last_seq: 6, count: 3 }
+    expect(isLogGapEvent(gap)).toBe(true)
+    expect(isLogGapEvent({ ...gap, count: 2 })).toBe(false)
+  })
+
   it('rejects malformed or foreign events', () => {
     expect(isLogEvent(null)).toBe(false)
     expect(isLogEvent({ type: 'finish', seq: 1 })).toBe(false)
@@ -57,6 +69,7 @@ describe('subscribeLogs', () => {
     window.AstrBotPluginView = bridge
     const onEvent = vi.fn()
     const onStream = vi.fn()
+    const onGap = vi.fn()
     const onOpen = vi.fn()
 
     const subscription = await subscribeLogs({
@@ -64,6 +77,7 @@ describe('subscribeLogs', () => {
       streamId: 'stream-1',
       onEvent,
       onStream,
+      onGap,
       onOpen,
     })
 
@@ -92,6 +106,14 @@ describe('subscribeLogs', () => {
       eventType: 'message',
     })
     expect(onStream).toHaveBeenCalledWith(streamInfo)
+
+    const gap: LogGapEvent = { type: 'gap', first_seq: 2, last_seq: 17, count: 16 }
+    handlers?.onMessage?.({
+      raw: JSON.stringify(gap),
+      parsed: gap,
+      eventType: 'message',
+    })
+    expect(onGap).toHaveBeenCalledWith(gap)
 
     handlers?.onMessage?.({
       raw: '{"type":"finish"}',

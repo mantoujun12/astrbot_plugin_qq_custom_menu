@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { LogEvent, LogStreamInfo } from '../types/logs'
+import type { LogEvent, LogGapEvent, LogStreamInfo } from '../types/logs'
 import { flush, installBridge, mountView, waitUntil } from '../test/helpers'
 
 vi.mock('../api/logs', () => ({
@@ -162,6 +162,17 @@ describe('LogsView', () => {
 
     expect(wrapper.findAll('.qc-log-row')).toHaveLength(1)
     expect(wrapper.text()).toContain('after-clear')
+  })
+
+  it('reports when the backend buffer skipped earlier logs', async () => {
+    const state = await loadView({ initial: [logEvent(9)] })
+    const wrapper = await state.mount()
+    const gap: LogGapEvent = { type: 'gap', first_seq: 2, last_seq: 8, count: 7 }
+
+    state.handlers[0]?.onGap?.(gap)
+    await flush()
+
+    expect(wrapper.text()).toContain('日志缓冲已覆盖 7 条较早记录')
   })
 
   it('expands traceback details on demand', async () => {

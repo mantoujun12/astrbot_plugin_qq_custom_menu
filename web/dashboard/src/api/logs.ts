@@ -7,7 +7,7 @@
 
 import { getBridge } from '../bridge'
 import { LOG_LEVELS } from '../types/logs'
-import type { LogEvent, LogLevel, LogStreamInfo } from '../types/logs'
+import type { LogEvent, LogGapEvent, LogLevel, LogStreamInfo } from '../types/logs'
 import { toPlain } from './serialize'
 
 const LOG_EVENTS_ENDPOINT = 'logs/events'
@@ -89,11 +89,31 @@ export function isLogStreamInfo(value: unknown): value is LogStreamInfo {
   return event.type === 'stream' && typeof event.id === 'string' && typeof event.reset === 'boolean'
 }
 
+export function isLogGapEvent(value: unknown): value is LogGapEvent {
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+  const event = value as Record<string, unknown>
+  return (
+    event.type === 'gap' &&
+    typeof event.first_seq === 'number' &&
+    Number.isInteger(event.first_seq) &&
+    event.first_seq > 0 &&
+    typeof event.last_seq === 'number' &&
+    Number.isInteger(event.last_seq) &&
+    event.last_seq >= event.first_seq &&
+    typeof event.count === 'number' &&
+    Number.isInteger(event.count) &&
+    event.count === event.last_seq - event.first_seq + 1
+  )
+}
+
 export async function subscribeLogs(options: {
   since?: number
   streamId?: string
   onEvent(event: LogEvent): void
   onStream?(info: LogStreamInfo): void
+  onGap?(gap: LogGapEvent): void
   onOpen?(): void
   onError?(error: Error): void
 }): Promise<LogSubscription> {
@@ -111,6 +131,8 @@ export async function subscribeLogs(options: {
           options.onEvent(message.parsed)
         } else if (isLogStreamInfo(message.parsed)) {
           options.onStream?.(message.parsed)
+        } else if (isLogGapEvent(message.parsed)) {
+          options.onGap?.(message.parsed)
         } else if (
           message.parsed &&
           typeof message.parsed === 'object' &&

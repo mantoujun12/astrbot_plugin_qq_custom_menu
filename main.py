@@ -10,6 +10,7 @@ from astrbot.api import logger
 from astrbot.api.star import Context, Star, register
 
 from .core import (
+    LOG_TAG,
     PLUGIN_NAME,
     PLUGIN_VERSION,
     LogBuffer,
@@ -35,32 +36,64 @@ class QQCustomMenuPlugin(Star):
 
     def __init__(self, context: Context, config):
         super().__init__(context)
-        # 尽早安装日志缓冲，Dashboard 才能看到插件启动阶段的记录。
-        self._log_buffer = LogBuffer()
-        self._log_buffer.install(getattr(self, "logger", None) or logger)
         initialize_i18n(Path(__file__).resolve().parent / "core" / "i18n", config.get("language"))
+        self._log_buffer: LogBuffer | None = LogBuffer()
+        self._web_api = None
+        try:
+            self._log_buffer.install(getattr(self, "logger", None) or logger)
+        except Exception as exc:
+            # 日志页属于可选能力；宿主 logger 不兼容时不能阻止插件启动。
+            self._close_log_buffer()
+            logger.warning(
+                "%s %s",
+                LOG_TAG,
+                t("log.log_capture_unavailable", exc=exc),
+            )
         try:
             # 旧版菜单为 dict 结构，首次加载时迁移为 template_list 并保存
             migrate_menu_config(config)
         except Exception as exc:
-            logger.warning(t("log.migration_failed", exc=exc), exc_info=True)
-        # 保留 AstrBotConfig 原对象，Dashboard 保存配置时才能调用它的持久化方法
-        self.config = config
-        self.data_dir = resolve_plugin_data_dir(self.context)
-        self._http: aiohttp.ClientSession | None = None
-        self._syncer: MenuSynchronizer | None = None
-        # 视图接口在 __init__ 注册；syncer 到 initialize() 才创建，handler
-        # 每次请求都会通过回调取最新实例，避免持有过期引用
-        self._web_api = register_web_apis(
-            self.context,
-            lambda: self._syncer,
-            lambda: dict(self.config),
-            get_platforms=lambda: get_platforms(self.config),
-            save_config=self._save_config,
-            data_dir=self.data_dir,
-            log_buffer=self._log_buffer,
-            version=PLUGIN_VERSION,
-        )
+            logger.warning(
+                "%s %s",
+                LOG_TAG,
+                t("log.migration_failed", exc=exc),
+                exc_info=True,
+            )
+        try:
+            # 保留 AstrBotConfig 原对象，Dashboard 保存配置时才能调用它的持久化方法
+            self.config = config
+            self.data_dir = resolve_plugin_data_dir(self.context)
+            self._http: aiohttp.ClientSession | None = None
+            self._syncer: MenuSynchronizer | None = None
+            # 视图接口在 __init__ 注册；syncer 到 initialize() 才创建，handler
+            # 每次请求都会通过回调取最新实例，避免持有过期引用
+            self._web_api = register_web_apis(
+                self.context,
+                lambda: self._syncer,
+                lambda: dict(self.config),
+                get_platforms=lambda: get_platforms(self.config),
+                save_config=self._save_config,
+                data_dir=self.data_dir,
+                log_buffer=self._log_buffer,
+                version=PLUGIN_VERSION,
+            )
+        except Exception:
+            self._close_log_buffer()
+            raise
+
+    def _close_log_buffer(self) -> None:
+        """关闭日志缓冲并确保重复或失败启动时都可安全调用。"""
+        buffer = self._log_buffer
+        self._log_buffer = None
+        if buffer is not None:
+            try:
+                buffer.close()
+            except Exception as exc:
+                logger.debug(
+                    "%s %s",
+                    LOG_TAG,
+                    t("log.log_cleanup_failed", exc=exc),
+                )
 
     async def _save_config(self, values: dict[str, Any]) -> None:
         """把 Dashboard 提交的字段写回 AstrBot 配置并刷新同步器。"""
@@ -89,7 +122,7 @@ class QQCustomMenuPlugin(Star):
         try:
             await self._syncer.sync()
         except Exception as exc:
-            logger.error(t("log.sync_failed", exc=exc), exc_info=True)
+            logger.error("%s %s", LOG_TAG, t("log.sync_failed", exc=exc), exc_info=True)
 
     async def terminate(self) -> None:
         if self._web_api is not None:
@@ -99,7 +132,7 @@ class QQCustomMenuPlugin(Star):
             await self._http.close()
         self._http = None
         self._syncer = None
-        self._log_buffer.close()
+        self._close_log_buffer()
 
 
 __all__ = ["QQCustomMenuPlugin"]

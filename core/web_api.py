@@ -558,11 +558,11 @@ class WebApiBundle:
                 + "\n\n"
             )
             try:
-                async for entry in log_buffer.follow(since):
-                    if entry is None:
+                async for item in log_buffer.follow(since):
+                    if item is None:
                         yield ": keep-alive\n\n"
                         continue
-                    yield f"data: {json.dumps(entry.as_event(), ensure_ascii=False)}\n\n"
+                    yield f"data: {json.dumps(item.as_event(), ensure_ascii=False)}\n\n"
             except LogSubscriberLimitError:
                 payload = {"type": "error", "code": "subscriber_limit"}
                 yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"

@@ -17,8 +17,10 @@ from core.log_stream import (
     MAX_LOG_ENTRY_CHARS,
     LogBuffer,
     LogEntry,
+    LogGap,
     LogSubscriberLimitError,
 )
+from core.redaction import MASK_VALUE
 
 
 def make_logger(name: str) -> logging.Logger:
@@ -29,7 +31,7 @@ def make_logger(name: str) -> logging.Logger:
     return logger
 
 
-async def first_entry(buffer: LogBuffer, since: int = 0) -> LogEntry | None:
+async def first_entry(buffer: LogBuffer, since: int = 0) -> LogEntry | LogGap | None:
     stream = buffer.follow(since, heartbeat_seconds=10)
     try:
         return await asyncio.wait_for(anext(stream), timeout=1)
@@ -47,6 +49,18 @@ def test_log_entry_as_event_includes_optional_traceback() -> None:
     )
 
     assert entry.as_event()["traceback"] == "RuntimeError: boom"
+
+
+def test_log_gap_as_event_reports_missing_range() -> None:
+    gap = LogGap(first_seq=4, last_seq=9)
+
+    assert gap.count == 6
+    assert gap.as_event() == {
+        "type": "gap",
+        "first_seq": 4,
+        "last_seq": 9,
+        "count": 6,
+    }
 
 
 @pytest.mark.parametrize(
@@ -188,6 +202,27 @@ def test_install_targets_shared_logger_not_caller_module() -> None:
     assert entry.message == "via shared logger"
 
 
+@pytest.mark.asyncio
+async def test_install_enables_debug_then_restores_logger_level() -> None:
+    logger = make_logger("debug-level")
+    logger.setLevel(logging.INFO)
+    buffer = LogBuffer()
+    buffer.install(logger)
+    assert logger.level == logging.DEBUG
+    try:
+        logger.debug("%s debug details", LOG_TAG)
+    finally:
+        buffer.close()
+
+    entry = await first_entry(buffer)
+
+    assert logger.level == logging.INFO
+    assert entry is not None
+    assert not isinstance(entry, LogGap)
+    assert entry.level == "debug"
+    assert entry.message == "debug details"
+
+
 def test_same_prefix_from_another_plugin_is_not_captured(tmp_path: Path) -> None:
     buffer = LogBuffer()
     outside_record = logging.LogRecord(
@@ -279,12 +314,22 @@ async def test_buffer_keeps_latest_entries_with_monotonic_seq() -> None:
     finally:
         buffer.close()
 
-    entry = await first_entry(buffer)
+    stream = buffer.follow(0, heartbeat_seconds=10)
+    try:
+        gap = await asyncio.wait_for(anext(stream), timeout=1)
+        first = await asyncio.wait_for(anext(stream), timeout=1)
+        second = await asyncio.wait_for(anext(stream), timeout=1)
+    finally:
+        await stream.aclose()
 
     assert buffer.last_seq == 3
-    assert entry is not None
-    assert entry.seq == 2
-    assert entry.message == "two"
+    assert gap == LogGap(first_seq=1, last_seq=1)
+    assert first is not None and not isinstance(first, LogGap)
+    assert second is not None and not isinstance(second, LogGap)
+    assert first.seq == 2
+    assert first.message == "two"
+    assert second.seq == 3
+    assert second.message == "three"
 
 
 @pytest.mark.asyncio
@@ -462,6 +507,28 @@ async def test_oversized_entry_is_truncated() -> None:
     assert entry is not None
     assert len(entry.message) == MAX_LOG_ENTRY_CHARS
     assert entry.message.endswith(t("log.stream_entry_truncated"))
+
+
+@pytest.mark.asyncio
+async def test_log_messages_and_tracebacks_are_redacted() -> None:
+    buffer = LogBuffer()
+    logger = make_logger("redaction")
+    buffer.install(logger)
+    try:
+        logger.error(
+            '%s request failed: {"clientSecret":"sec1","access_token":"tok1"}',
+            LOG_TAG,
+        )
+    finally:
+        buffer.close()
+
+    entry = await first_entry(buffer)
+
+    assert entry is not None
+    assert not isinstance(entry, LogGap)
+    assert "sec1" not in entry.message
+    assert "tok1" not in entry.message
+    assert entry.message.count(MASK_VALUE) == 2
 
 
 @pytest.mark.asyncio

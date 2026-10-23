@@ -7,6 +7,8 @@
 
 ## [Unreleased]
 
+## [v0.3.1] - 2026-10-23
+
 ### 新增
 
 - Dashboard 新增「日志」页：通过 SSE 实时查看本插件最近 1000 条运行期日志，支持等级筛选、搜索、暂停、自动滚动与堆栈展开
@@ -124,6 +126,7 @@
 - 修复菜单配置 schema 类型错误导致插件加载失败的问题 (#3)
 
 [v0.3.0]: https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/compare/v0.2.3...v0.3.0
+[v0.3.1]: https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/compare/v0.3.0...v0.3.1
 [v0.2.3]: https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/compare/v0.2.2...v0.2.3
 [v0.2.2]: https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/compare/v0.2.1...v0.2.2
 [v0.2.1]: https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/compare/v0.2.0...v0.2.1

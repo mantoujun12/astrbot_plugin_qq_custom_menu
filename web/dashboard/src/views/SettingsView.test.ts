@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { flush, installBridge, mountView, waitUntil } from '../test/helpers'
 import type { PluginConfigResponse } from '../types/dashboard'
+import { PLUGIN_VERSION } from '../version'
 
 vi.mock('../api/dashboard', () => ({
   fetchStatus: vi.fn(),
@@ -58,7 +59,7 @@ describe('SettingsView', () => {
     expect(wrapper.text()).toContain('主题配色')
     expect(wrapper.text()).toContain('主色')
     expect(wrapper.text()).toContain('辅助色')
-    expect(wrapper.text()).toContain('v0.3.0')
+    expect(wrapper.text()).toContain(PLUGIN_VERSION)
     expect(wrapper.find('.qc-github-link').attributes('href')).toContain('github.com')
   })
 

@@ -4,6 +4,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import AppSidebar from './AppSidebar.vue'
 import NavItem from './NavItem.vue'
 import { mountView } from '../../test/helpers'
+import { PLUGIN_VERSION } from '../../version'
 
 function makeRouter() {
   return createRouter({
@@ -33,7 +34,7 @@ describe('AppSidebar', () => {
     expect(wrapper.text()).toContain('日志')
     expect(wrapper.text()).toContain('兼容性')
     expect(wrapper.text()).toContain('设置')
-    expect(wrapper.text()).toContain('v0.3.0')
+    expect(wrapper.text()).toContain(PLUGIN_VERSION)
 
     expect(wrapper.find('[data-nav-section="main"]').text()).not.toContain('兼容性')
     expect(wrapper.find('[data-nav-section="bottom"]').text()).toContain('兼容性')
@@ -78,6 +79,6 @@ describe('AppSidebar', () => {
     })
 
     expect(wrapper.text()).not.toContain('自定义菜单')
-    expect(wrapper.text()).not.toContain('v0.3.0')
+    expect(wrapper.text()).not.toContain(PLUGIN_VERSION)
   })
 })

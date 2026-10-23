@@ -12,6 +12,7 @@
 - Dashboard 新增「日志」页：通过 SSE 实时查看本插件最近 1000 条运行期日志，支持等级筛选、搜索、暂停、自动滚动与堆栈展开
 - 新增 `core/log_stream.py`、`GET /<plugin_name>/logs/events` 与四语言日志页文案
 - 日志流会脱敏 QQ API 错误响应中的常见凭据字段，并在缓冲区淘汰日志时发送缺口事件；日志采集失败不会阻止插件启动
+- 安全扫描排除 Vite 生成的 `pages/dashboard/` 产物，Dashboard 源码仍由 `web/dashboard/` 正常覆盖
 
 ## [v0.3.0] - 2026-10-18
 

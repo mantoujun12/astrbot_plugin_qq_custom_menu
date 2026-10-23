@@ -30,6 +30,7 @@ describe('AppSidebar', () => {
     expect(wrapper.text()).toContain('自定义菜单')
     expect(wrapper.text()).toContain('状态概览')
     expect(wrapper.text()).toContain('机器人')
+    expect(wrapper.text()).toContain('日志')
     expect(wrapper.text()).toContain('兼容性')
     expect(wrapper.text()).toContain('设置')
     expect(wrapper.text()).toContain('v0.3.0')

@@ -15,7 +15,7 @@ describe('router', () => {
     expect(router.currentRoute.value.name).toBe('status')
   })
 
-  it.each(['/robots', '/compatibility', '/settings'])('resolves %s', async (path) => {
+  it.each(['/robots', '/logs', '/compatibility', '/settings'])('resolves %s', async (path) => {
     const router = await makeRouter()
     await router.push(path)
     await router.isReady()

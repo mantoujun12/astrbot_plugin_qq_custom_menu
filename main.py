@@ -12,6 +12,7 @@ from astrbot.api.star import Context, Star, register
 from .core import (
     PLUGIN_NAME,
     PLUGIN_VERSION,
+    LogBuffer,
     MenuSynchronizer,
     get_platforms,
     initialize_i18n,
@@ -34,6 +35,9 @@ class QQCustomMenuPlugin(Star):
 
     def __init__(self, context: Context, config):
         super().__init__(context)
+        # 尽早安装日志缓冲，Dashboard 才能看到插件启动阶段的记录。
+        self._log_buffer = LogBuffer()
+        self._log_buffer.install(getattr(self, "logger", None) or logger)
         initialize_i18n(Path(__file__).resolve().parent / "core" / "i18n", config.get("language"))
         try:
             # 旧版菜单为 dict 结构，首次加载时迁移为 template_list 并保存
@@ -54,6 +58,7 @@ class QQCustomMenuPlugin(Star):
             get_platforms=lambda: get_platforms(self.config),
             save_config=self._save_config,
             data_dir=self.data_dir,
+            log_buffer=self._log_buffer,
             version=PLUGIN_VERSION,
         )
 
@@ -94,6 +99,7 @@ class QQCustomMenuPlugin(Star):
             await self._http.close()
         self._http = None
         self._syncer = None
+        self._log_buffer.close()
 
 
 __all__ = ["QQCustomMenuPlugin"]

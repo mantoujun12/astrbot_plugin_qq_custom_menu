@@ -44,6 +44,7 @@ describe('App', () => {
 
     expect(wrapper.find('.v-application').exists()).toBe(true)
     expect(wrapper.text()).toContain('机器人')
+    expect(wrapper.text()).toContain('日志')
     expect(wrapper.text()).toContain('兼容性')
     expect(wrapper.text()).toContain('设置')
   })

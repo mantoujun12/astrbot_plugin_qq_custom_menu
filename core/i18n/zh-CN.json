@@ -14,6 +14,7 @@
   "log.platform_failed": "平台 {appid} 同步失败：{exc}",
   "log.sync_summary": "菜单同步完成：成功 {succeeded} 个平台，失败 {failed} 个平台",
   "log.robot_config_load_failed": "机器人菜单配置读取失败：{exc}",
+  "log.stream_entry_truncated": "…（日志已截断）",
   "common.error_separator": "；",
   "web.api_unavailable": "当前 AstrBot 版本不支持插件视图 Web API：{exc}",
   "web.not_ready": "插件尚未初始化完成，请稍后重试。",

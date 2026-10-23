@@ -5,7 +5,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
 import sys
 import types
 from dataclasses import dataclass
@@ -15,6 +17,8 @@ from typing import Any
 import pytest
 
 from core.config import get_menu
+from core.i18n import LOG_TAG
+from core.log_stream import LogBuffer
 from core.robot_config import load_menu_config, save_menu_config
 from core.state import MenuStateStore
 from core.web_api import WebApiBundle, build_status, register_web_apis
@@ -137,6 +141,7 @@ def make_bundle(
     data_dir: Path | None = None,
     save_config: Any = None,
     platforms: list[dict[str, str]] | None = None,
+    log_buffer: LogBuffer | None = None,
 ) -> WebApiBundle:
     runtime = (
         platforms
@@ -149,6 +154,7 @@ def make_bundle(
         get_platforms=lambda: runtime,
         save_config=save_config,
         data_dir=data_dir,
+        log_buffer=log_buffer,
         version="v9.9.9",
     )
 
@@ -266,6 +272,7 @@ def test_register_adds_all_routes(monkeypatch: Any) -> None:
         ("/astrbot_plugin_qq_custom_menu/robots/import-legacy", ("POST",)),
         ("/astrbot_plugin_qq_custom_menu/sync", ("POST",)),
         ("/astrbot_plugin_qq_custom_menu/sync/events", ("GET",)),
+        ("/astrbot_plugin_qq_custom_menu/logs/events", ("GET",)),
     }
 
 
@@ -447,6 +454,90 @@ async def test_page_sync_events_since_invalid_and_offset(monkeypatch: Any) -> No
     stream = await bundle.page_sync_events()
     events = [json.loads(line.removeprefix("data: ").strip()) async for line in stream.content]
     assert events[0]["seq"] == 3
+
+
+@pytest.mark.asyncio
+async def test_page_log_events_requires_buffer(monkeypatch: Any) -> None:
+    install_web(monkeypatch)
+    bundle = make_bundle()
+
+    response = await bundle.page_log_events()
+
+    assert response.status_code == 503
+
+
+@pytest.mark.asyncio
+async def test_page_log_events_streams_history_and_stream_identity(
+    monkeypatch: Any,
+) -> None:
+    install_web(monkeypatch, query={"since": "0"})
+    host_logger = logging.getLogger("test-web-api-logs")
+    host_logger.handlers.clear()
+    host_logger.propagate = False
+    host_logger.setLevel(logging.INFO)
+    log_buffer = LogBuffer()
+    log_buffer.install(host_logger)
+    bundle = make_bundle(log_buffer=log_buffer)
+    host_logger.info("%s dashboard ready", LOG_TAG)
+
+    try:
+        stream = await bundle.page_log_events()
+        info_line = await asyncio.wait_for(anext(stream.content), timeout=1)
+        log_line = await asyncio.wait_for(anext(stream.content), timeout=1)
+        await stream.content.aclose()
+    finally:
+        log_buffer.close()
+
+    info = json.loads(info_line.removeprefix("data: ").strip())
+    entry = json.loads(log_line.removeprefix("data: ").strip())
+    assert info == {"type": "stream", "id": log_buffer.stream_id, "reset": False}
+    assert entry["type"] == "log"
+    assert entry["message"] == "dashboard ready"
+    assert entry["seq"] == 1
+
+
+@pytest.mark.asyncio
+async def test_page_log_events_resets_reloaded_stream(monkeypatch: Any) -> None:
+    install_web(
+        monkeypatch,
+        query={"since": "5", "streamId": "old-stream"},
+    )
+    log_buffer = LogBuffer(heartbeat_seconds=0.01)
+    bundle = make_bundle(log_buffer=log_buffer)
+
+    stream = await bundle.page_log_events()
+    try:
+        info_line = await asyncio.wait_for(anext(stream.content), timeout=1)
+        heartbeat = await asyncio.wait_for(anext(stream.content), timeout=1)
+    finally:
+        await stream.content.aclose()
+        log_buffer.close()
+
+    info = json.loads(info_line.removeprefix("data: ").strip())
+    assert info["reset"] is True
+    assert heartbeat == ": keep-alive\n\n"
+
+
+@pytest.mark.asyncio
+async def test_page_log_events_reports_subscriber_limit(monkeypatch: Any) -> None:
+    install_web(monkeypatch)
+    log_buffer = LogBuffer(max_subscribers=1, heartbeat_seconds=0.01)
+    bundle = make_bundle(log_buffer=log_buffer)
+    first = await bundle.page_log_events()
+    second = await bundle.page_log_events()
+
+    try:
+        await anext(first.content)
+        await asyncio.wait_for(anext(first.content), timeout=1)
+        await anext(second.content)
+        rejected = await asyncio.wait_for(anext(second.content), timeout=1)
+    finally:
+        await first.content.aclose()
+        await second.content.aclose()
+        log_buffer.close()
+
+    event = json.loads(rejected.removeprefix("data: ").strip())
+    assert event == {"type": "error", "code": "subscriber_limit"}
 
 
 @pytest.mark.asyncio

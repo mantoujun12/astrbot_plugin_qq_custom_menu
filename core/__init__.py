@@ -20,6 +20,7 @@ from .config import (
 )
 from .i18n import initialize as initialize_i18n
 from .i18n import t
+from .log_stream import LogBuffer, LogEntry
 from .menu import MenuSynchronizer
 from .paths import PLUGIN_NAME, PLUGIN_VERSION, resolve_plugin_data_dir
 from .robot_config import (
@@ -33,12 +34,20 @@ from .robot_config import (
     validate_menu_config,
 )
 from .sync_runner import SyncRunner
-from .web_api import WebApiBundle, build_status, register_web_apis
+from .web_api import (
+    LOG_EVENTS_ROUTE_SUFFIX,
+    WebApiBundle,
+    build_status,
+    register_web_apis,
+)
 
 __all__ = [
     "MENU_LIMITS",
     "MENU_SUB_ITEM_MAX",
     "MENU_TOP_LEVEL_MAX",
+    "LOG_EVENTS_ROUTE_SUFFIX",
+    "LogBuffer",
+    "LogEntry",
     "MENU_CONFIG_FILENAME",
     "MenuConfigError",
     "PLUGIN_NAME",

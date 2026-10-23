@@ -7,6 +7,11 @@
 
 ## [Unreleased]
 
+### 新增
+
+- Dashboard 新增「日志」页：通过 SSE 实时查看本插件最近 1000 条运行期日志，支持等级筛选、搜索、暂停、自动滚动与堆栈展开
+- 新增 `core/log_stream.py`、`GET /<plugin_name>/logs/events` 与四语言日志页文案
+
 ## [v0.3.0] - 2026-10-18
 
 ### 新增

@@ -14,3 +14,4 @@ web/dashboard/index.html text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
 *.md text eol=lf
+.semgrepignore text eol=lf

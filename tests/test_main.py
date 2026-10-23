@@ -51,6 +51,29 @@ class FakeSession:
         self.closed = True
 
 
+class FakeLogBuffer:
+    """记录安装与关闭调用的日志缓冲替身。"""
+
+    instances: list[FakeLogBuffer] = []
+    install_error: Exception | None = None
+    close_error: Exception | None = None
+
+    def __init__(self) -> None:
+        self.installed = False
+        self.closed = False
+        self.instances.append(self)
+
+    def install(self, host_logger: Any) -> None:
+        if self.install_error is not None:
+            raise self.install_error
+        self.installed = True
+
+    def close(self) -> None:
+        self.closed = True
+        if self.close_error is not None:
+            raise self.close_error
+
+
 def load_main() -> types.ModuleType:
     """把仓库根挂成包并加载 main.py，返回模块对象（进程内复用）。"""
     package = sys.modules.get(PACKAGE)
@@ -71,6 +94,16 @@ def load_main() -> types.ModuleType:
     return module
 
 
+@pytest.fixture(autouse=True)
+def isolate_log_buffer(monkeypatch: Any) -> None:
+    """所有装配测试都使用可观察的日志缓冲替身。"""
+    main = load_main()
+    FakeLogBuffer.instances.clear()
+    FakeLogBuffer.install_error = None
+    FakeLogBuffer.close_error = None
+    monkeypatch.setattr(main, "LogBuffer", FakeLogBuffer)
+
+
 def test_init_runs_migration(monkeypatch: Any) -> None:
     main = load_main()
     migrated: list[dict[str, Any]] = []
@@ -87,6 +120,43 @@ def test_init_runs_migration(monkeypatch: Any) -> None:
     assert plugin.config == dict(config)
     assert plugin._http is None
     assert plugin._syncer is None
+    assert FakeLogBuffer.instances[0].installed is True
+
+
+def test_init_continues_when_log_capture_is_unavailable(
+    monkeypatch: Any,
+    tmp_path: Path,
+    caplog: Any,
+) -> None:
+    main = load_main()
+    FakeLogBuffer.install_error = TypeError("unsupported logger")
+    FakeLogBuffer.close_error = RuntimeError("close failed")
+    monkeypatch.setattr(main, "resolve_plugin_data_dir", lambda context: tmp_path)
+
+    with caplog.at_level("WARNING", logger="astrbot"):
+        plugin = main.QQCustomMenuPlugin(FakeContext(), FakeConfig())
+
+    assert plugin._log_buffer is None
+    assert FakeLogBuffer.instances[0].closed is True
+    assert "unsupported logger" in caplog.text
+
+
+def test_init_closes_log_buffer_when_later_setup_fails(
+    monkeypatch: Any,
+    tmp_path: Path,
+) -> None:
+    main = load_main()
+    monkeypatch.setattr(main, "resolve_plugin_data_dir", lambda context: tmp_path)
+
+    def fail_registration(*args: Any, **kwargs: Any) -> None:
+        raise RuntimeError("register failed")
+
+    monkeypatch.setattr(main, "register_web_apis", fail_registration)
+
+    with pytest.raises(RuntimeError, match="register failed"):
+        main.QQCustomMenuPlugin(FakeContext(), FakeConfig())
+
+    assert FakeLogBuffer.instances[0].closed is True
 
 
 def test_init_logs_migration_failure(monkeypatch: Any, caplog: Any) -> None:
@@ -295,3 +365,5 @@ async def test_terminate_closes_web_api(monkeypatch: Any, tmp_path: Path) -> Non
 
     assert bundle.runner.closed is True
     assert plugin._web_api is None
+    assert plugin._log_buffer is None
+    assert FakeLogBuffer.instances[0].closed is True

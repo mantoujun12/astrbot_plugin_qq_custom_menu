@@ -1,4 +1,8 @@
-"""插件可视化视图（Dashboard）的 Web API。"""
+"""插件可视化视图（Dashboard）的 Web API。
+
+除状态、配置与同步接口外，``GET /<plugin_name>/logs/events`` 通过 SSE
+回放最近 1000 条插件日志，并持续推送新记录。
+"""
 
 from __future__ import annotations
 
@@ -23,6 +27,7 @@ from .config import (
     normalize_config_payload,
 )
 from .i18n import LOG_TAG, t
+from .log_stream import LogBuffer, LogSubscriberLimitError
 from .menu import MenuSynchronizer
 from .paths import PLUGIN_NAME, PLUGIN_VERSION
 from .robot_config import (
@@ -45,6 +50,7 @@ ROBOTS_ROUTE_SUFFIX = "robots"
 ROBOTS_IMPORT_ROUTE_SUFFIX = "robots/import-legacy"
 SYNC_ROUTE_SUFFIX = "sync"
 SYNC_EVENTS_ROUTE_SUFFIX = "sync/events"
+LOG_EVENTS_ROUTE_SUFFIX = "logs/events"
 
 SYNC_STATE_SYNCED = "synced"
 SYNC_STATE_PENDING = "pending"
@@ -225,6 +231,7 @@ class WebApiBundle:
         get_platforms: Callable[[], list[dict[str, str]]] | None = None,
         save_config: Callable[[dict[str, Any]], Awaitable[None]] | None = None,
         data_dir: Path | str | None = None,
+        log_buffer: LogBuffer | None = None,
         version: str = PLUGIN_VERSION,
     ) -> None:
         self._get_syncer = get_syncer
@@ -232,6 +239,7 @@ class WebApiBundle:
         self._get_platforms = get_platforms
         self._save_config = save_config
         self._data_dir = Path(data_dir) if data_dir is not None else None
+        self._log_buffer = log_buffer
         self._version = version
         self._config_lock = asyncio.Lock()
         self.runner = SyncRunner()
@@ -326,6 +334,12 @@ class WebApiBundle:
                 self.page_sync_events,
                 ["GET"],
                 "Plugin dashboard menu sync progress (SSE)",
+            ),
+            (
+                f"{prefix}/{LOG_EVENTS_ROUTE_SUFFIX}",
+                self.page_log_events,
+                ["GET"],
+                "Plugin dashboard live logs (SSE)",
             ),
         )
         for route, handler, methods, description in routes:
@@ -514,6 +528,47 @@ class WebApiBundle:
 
         return web.stream_response(events())
 
+    async def page_log_events(self) -> Any:
+        """SSE 推送插件日志；since 用于断线重连和页面重新打开后的回放。"""
+        web = _web()
+        log_buffer = self._log_buffer
+        if log_buffer is None:
+            return web.error_response(t("web.not_ready"), status_code=503)
+
+        raw_since = web.request.query.get("since", "")
+        try:
+            since = max(0, int(raw_since))
+        except (TypeError, ValueError):
+            since = 0
+        client_stream_id = web.request.query.get("streamId", "")
+        stream_id = log_buffer.stream_id
+        reset = (bool(client_stream_id) and client_stream_id != stream_id) or (
+            since > log_buffer.last_seq
+        )
+        if reset:
+            since = 0
+
+        async def events():  # noqa: ANN202 - 流式响应体由宿主消费
+            yield (
+                "data: "
+                + json.dumps(
+                    {"type": "stream", "id": stream_id, "reset": reset},
+                    ensure_ascii=False,
+                )
+                + "\n\n"
+            )
+            try:
+                async for item in log_buffer.follow(since):
+                    if item is None:
+                        yield ": keep-alive\n\n"
+                        continue
+                    yield f"data: {json.dumps(item.as_event(), ensure_ascii=False)}\n\n"
+            except LogSubscriberLimitError:
+                payload = {"type": "error", "code": "subscriber_limit"}
+                yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+        return web.stream_response(events())
+
     def _make_run(
         self,
         syncer: MenuSynchronizer,
@@ -538,6 +593,7 @@ def register_web_apis(
     get_platforms: Callable[[], list[dict[str, str]]] | None = None,
     save_config: Callable[[dict[str, Any]], Awaitable[None]] | None = None,
     data_dir: Path | str | None = None,
+    log_buffer: LogBuffer | None = None,
     version: str = PLUGIN_VERSION,
 ) -> WebApiBundle | None:
     """注册 Dashboard Web API，宿主不支持时返回 None。"""
@@ -547,6 +603,7 @@ def register_web_apis(
         get_platforms=get_platforms,
         save_config=save_config,
         data_dir=data_dir,
+        log_buffer=log_buffer,
         version=version,
     )
     if not bundle.register(context):
@@ -556,6 +613,7 @@ def register_web_apis(
 
 __all__ = [
     "CONFIG_ROUTE_SUFFIX",
+    "LOG_EVENTS_ROUTE_SUFFIX",
     "MENU_LIMITS",
     "ROBOTS_IMPORT_ROUTE_SUFFIX",
     "ROBOTS_ROUTE_SUFFIX",

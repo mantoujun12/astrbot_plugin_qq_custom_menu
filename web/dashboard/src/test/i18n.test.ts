@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { LOG_LEVELS } from '../types/logs'
 
 const LOCALES = ['zh-CN', 'en-US', 'ru-RU', 'ja-JP']
 const DEFAULT_LOCALE = 'zh-CN'
@@ -154,5 +155,15 @@ describe('dashboard i18n resources', () => {
       .filter((call) => lookup(dictionaries[DEFAULT_LOCALE], call.key) !== call.fallback)
       .map((call) => `${call.file}: ${call.key}`)
     expect(drifted).toEqual([])
+  })
+
+  it('defines every log level label', () => {
+    const keys = LOG_LEVELS.map((level) => `pages.dashboard.logs.levels.${level}`)
+    for (const locale of LOCALES) {
+      const missing = keys.filter(
+        (key) => typeof lookup(dictionaries[locale], key) !== 'string',
+      )
+      expect(missing, locale).toEqual([])
+    }
   })
 })

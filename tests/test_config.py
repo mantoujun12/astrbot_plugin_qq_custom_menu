@@ -649,6 +649,58 @@ def test_normalize_config_payload_rejects_invalid_menu() -> None:
         assert "menu" not in values
 
 
+@pytest.mark.parametrize(
+    "invalid_entry",
+    [
+        {"type": "send_message", "name": "缺少消息", "message": "", "parent": "更多"},
+        {"type": "link", "name": "缺少链接", "link": "", "parent": "更多"},
+    ],
+)
+def test_invalid_child_does_not_consume_sub_menu_quota(
+    invalid_entry: dict[str, Any],
+) -> None:
+    menu = [
+        {"type": "menu", "name": "更多"},
+        *[
+            {
+                "type": "send_message",
+                "name": f"子项{index}",
+                "message": "/x",
+                "parent": "更多",
+            }
+            for index in range(MENU_SUB_ITEM_MAX)
+        ],
+        invalid_entry,
+    ]
+
+    _, errors = normalize_config_payload({}, {"menu": menu})
+
+    assert len(errors) == 1
+
+
+@pytest.mark.parametrize(
+    "invalid_entry",
+    [
+        {"type": "send_message", "name": "缺少消息", "message": ""},
+        {"type": "link", "name": "缺少链接", "link": ""},
+    ],
+)
+def test_invalid_top_level_does_not_consume_top_level_quota(
+    invalid_entry: dict[str, Any],
+) -> None:
+    menu = [
+        *[
+            {"type": "send_message", "name": f"菜单{index}", "message": "/x"}
+            for index in range(MENU_TOP_LEVEL_MAX)
+        ],
+        invalid_entry,
+    ]
+
+    _, errors = normalize_config_payload({}, {"menu": menu})
+
+    assert len(errors) == 1
+
+
 def test_normalize_config_payload_rejects_top_level_limit_and_duplicates() -> None:
     too_many = [
         {"type": "send_message", "name": f"菜单{index}", "message": "/x"}

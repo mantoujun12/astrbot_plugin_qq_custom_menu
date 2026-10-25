@@ -9,6 +9,7 @@
 
 ### 修复
 
+- 将 `menu_config.json` 的原子写入临时文件权限收紧为 `0600`，避免同组或其他本地用户读取明文 `ClientSecret`，并覆盖已有宽松权限文件
 - 使用当前 lockfile 重新生成 `pages/dashboard/`，消除 Dashboard 构建产物的 scope id 与依赖更新漂移
 
 ### 工程

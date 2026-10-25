@@ -4,8 +4,7 @@
  * 抽出来是为了让所有规则都能脱离组件单测；视图只负责把结果映射到界面。
  */
 
-import { MENU_TYPES } from '../types/dashboard'
-import type { MenuEntry, MenuLimits, MenuType, QqMenuItem } from '../types/dashboard'
+import type { MenuEntry, MenuLimits, MenuType } from '../types/dashboard'
 
 export interface MenuValidation {
   ok: boolean
@@ -223,30 +222,6 @@ export function validateMenu(
   }
 
   return { ok: true, reason: '' }
-}
-
-/** 把 /status 返回的 QQ 菜单树还原成编辑用的扁平条目，供状态页预览。 */
-export function qqItemsToEntries(items: QqMenuItem[], parent = ''): MenuEntry[] {
-  const entries: MenuEntry[] = []
-  for (const item of items) {
-    const type = (MENU_TYPES as readonly string[]).includes(item.type)
-      ? (item.type as MenuType)
-      : 'send_message'
-    const entry: MenuEntry = { type, name: item.name, parent }
-    if (type === 'send_message') {
-      entry.message = item.send_message ?? ''
-    } else if (type === 'link') {
-      entry.link = item.link ?? ''
-    } else if (type === 'switch') {
-      entry.switch_id = item.switch?.switch_id ?? ''
-      entry.default = item.switch?.default ?? false
-    }
-    entries.push(entry)
-    if (type === 'menu') {
-      entries.push(...qqItemsToEntries(item.sub_menu_items ?? [], item.name))
-    }
-  }
-  return entries
 }
 
 /** 生成提交给后端的菜单载荷，统一 trim 并补全链接协议。 */

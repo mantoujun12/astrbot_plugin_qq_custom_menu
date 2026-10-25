@@ -13,7 +13,6 @@ function mountDialog(props: Record<string, unknown>) {
       modelValue: true,
       entry: null,
       parent: '',
-      menuNames: [],
       ...props,
     },
     global: { stubs: DIALOG_STUB },
@@ -95,7 +94,6 @@ describe('MenuEntryDialog', () => {
     const wrapper = mountDialog({
       entry: { type: 'link', name: '文档', link: '', parent: '更多' },
       parent: '更多',
-      menuNames: ['更多'],
     })
 
     expect(wrapper.text()).toContain('父菜单：更多')

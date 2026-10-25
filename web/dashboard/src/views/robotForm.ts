@@ -1,7 +1,7 @@
 /** 机器人私聊菜单配置页的纯函数：表单转换、校验和统计。 */
 
 import { buildMenuPayload, cloneEntries, validateMenu } from './menuForm'
-import type { MenuEntry, MenuLimits } from '../types/dashboard'
+import type { MenuLimits } from '../types/dashboard'
 import type {
   RobotConfig,
   RobotConfigForm,
@@ -116,29 +116,4 @@ export function validateRobotForm(
       },
     },
   }
-}
-
-export function replaceC2cEntry(
-  form: RobotConfigForm,
-  target: MenuEntry,
-  next: MenuEntry,
-): void {
-  const items = form.scenes.c2c.items
-  const index = items.indexOf(target)
-  if (index >= 0) items[index] = { ...next }
-  if (target.type === 'menu' && target.name) {
-    for (const item of items) {
-      if (item.parent === target.name && item !== target) {
-        item.parent = next.name
-      }
-    }
-  }
-}
-
-export function removeC2cEntry(form: RobotConfigForm, target: MenuEntry): void {
-  form.scenes.c2c.items = form.scenes.c2c.items.filter(
-    (item) =>
-      item !== target &&
-      !(target.type === 'menu' && target.name && item.parent === target.name),
-  )
 }

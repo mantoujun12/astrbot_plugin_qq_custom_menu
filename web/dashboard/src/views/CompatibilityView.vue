@@ -56,11 +56,6 @@ const editable = computed(
 const limits = computed(
   () => config.value?.limits ?? { top_level_max: 10, sub_items_max: 5 },
 )
-const menuNames = computed(() =>
-  topLevelEntries(entries.value)
-    .filter((entry) => entry.type === 'menu')
-    .map((entry) => entry.name),
-)
 const topLevelCount = computed(() => topLevelEntries(entries.value).length)
 const editingHasChildren = computed(
   () =>
@@ -427,7 +422,6 @@ async function save(options: { sync?: boolean } = {}): Promise<void> {
       v-model="dialogOpen"
       :entry="editing"
       :parent="dialogParent"
-      :menu-names="menuNames"
       :has-children="editingHasChildren"
       @save="saveEntry"
     />

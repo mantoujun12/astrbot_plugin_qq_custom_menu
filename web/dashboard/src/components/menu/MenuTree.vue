@@ -15,8 +15,6 @@ import type { MenuEntry } from '../../types/dashboard'
 
 const props = defineProps<{
   entries: MenuEntry[]
-  /** 只读模式用于状态页预览，不显示操作按钮 */
-  readonly?: boolean
 }>()
 
 defineEmits<{
@@ -107,7 +105,7 @@ function detail(entry: MenuEntry): string {
             <span v-if="detail(group.entry)"> · {{ detail(group.entry) }}</span>
           </div>
         </div>
-        <div v-if="!readonly" class="qc-menu-actions">
+        <div class="qc-menu-actions">
           <v-btn
             v-if="group.entry.type === 'menu'"
             icon
@@ -155,7 +153,7 @@ function detail(entry: MenuEntry): string {
               <span v-if="detail(child)"> · {{ detail(child) }}</span>
             </div>
           </div>
-          <div v-if="!readonly" class="qc-menu-actions">
+          <div class="qc-menu-actions">
             <v-btn
               icon
               variant="text"

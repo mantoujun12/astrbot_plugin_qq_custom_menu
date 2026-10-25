@@ -51,16 +51,6 @@ describe('MenuTree', () => {
     warning.mockRestore()
   })
 
-  it('hides actions in readonly mode', () => {
-    const wrapper = mountView(MenuTree, {
-      props: { entries: ENTRIES, readonly: true },
-    })
-
-    expect(wrapper.find('[aria-label="添加子项"]').exists()).toBe(false)
-    expect(wrapper.find('[aria-label="编辑"]').exists()).toBe(false)
-    expect(wrapper.find('[aria-label="删除"]').exists()).toBe(false)
-  })
-
   it('shows the empty state', () => {
     const wrapper = mountView(MenuTree, { props: { entries: [] } })
     expect(wrapper.text()).toContain('还没有菜单条目')

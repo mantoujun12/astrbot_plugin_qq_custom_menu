@@ -1,14 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
   emptyRobotForm,
-  removeC2cEntry,
-  replaceC2cEntry,
   robotItemCount,
   robotSceneCount,
   toRobotForm,
   validateRobotForm,
 } from './robotForm'
-import type { MenuEntry, MenuLimits } from '../types/dashboard'
+import type { MenuLimits } from '../types/dashboard'
 import type { RobotConfig } from '../types/robotConfig'
 
 const t = (_key: string, fallback?: string): string => fallback ?? _key
@@ -97,23 +95,5 @@ describe('robotForm helpers', () => {
     const checked = validateRobotForm(form, MENU_LIMITS, t)
     expect(checked.ok).toBe(false)
     expect(checked.reason).toContain('缺少链接')
-  })
-
-  it('replaces and removes private-chat entries including children', () => {
-    const form = toRobotForm(robot())
-    const menu: MenuEntry = { type: 'menu', name: '更多', parent: '' }
-    const child: MenuEntry = {
-      type: 'send_message',
-      name: '关于',
-      message: '/about',
-      parent: '更多',
-    }
-    form.scenes.c2c.items = [menu, child]
-
-    replaceC2cEntry(form, menu, { ...menu, name: '其它' })
-    expect(form.scenes.c2c.items[1].parent).toBe('其它')
-
-    removeC2cEntry(form, form.scenes.c2c.items[0])
-    expect(form.scenes.c2c.items).toEqual([])
   })
 })

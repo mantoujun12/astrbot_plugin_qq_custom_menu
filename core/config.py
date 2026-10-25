@@ -495,6 +495,7 @@ def _normalize_menu_entries(raw_menu: Any) -> tuple[list[dict[str, Any]], list[s
     top_level_names: list[str] = []
     menu_names: set[str] = set()
     child_counts: dict[str, int] = {}
+    child_names: dict[str, set[str]] = {}
     switch_ids: set[str] = set()
 
     for index, raw in enumerate(raw_menu, start=1):
@@ -574,8 +575,16 @@ def _normalize_menu_entries(raw_menu: Any) -> tuple[list[dict[str, Any]], list[s
     top_level_names = [str(entry["name"]) for entry in entries if not entry.get("parent")]
     for entry in entries:
         parent = str(entry.get("parent") or "")
-        if parent and parent in menu_names:
+        if not parent:
+            continue
+        if parent in menu_names:
             child_counts[parent] = child_counts.get(parent, 0) + 1
+        name = str(entry["name"])
+        sibling_names = child_names.setdefault(parent, set())
+        if name in sibling_names:
+            errors.append(t("web.config_menu_child_duplicate", name=name, parent=parent))
+        else:
+            sibling_names.add(name)
 
     if len(top_level_names) > MENU_TOP_LEVEL_MAX:
         errors.append(t("web.config_menu_top_limit", max=MENU_TOP_LEVEL_MAX))

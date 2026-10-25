@@ -719,6 +719,57 @@ def test_normalize_config_payload_rejects_top_level_limit_and_duplicates() -> No
     assert "menu" not in values
 
 
+def test_normalize_config_payload_rejects_duplicate_child_names() -> None:
+    values, errors = normalize_config_payload(
+        {},
+        {
+            "menu": [
+                {"type": "menu", "name": "更多", "parent": ""},
+                {
+                    "type": "send_message",
+                    "name": "帮助",
+                    "message": "/help",
+                    "parent": "更多",
+                },
+                {
+                    "type": "send_message",
+                    "name": "帮助",
+                    "message": "/help-2",
+                    "parent": "更多",
+                },
+            ]
+        },
+    )
+    assert errors == ["子菜单「更多」下的子项名称「帮助」不能重复。"]
+    assert "menu" not in values
+
+
+def test_normalize_config_payload_allows_same_child_name_under_different_parents() -> None:
+    values, errors = normalize_config_payload(
+        {},
+        {
+            "menu": [
+                {"type": "menu", "name": "更多", "parent": ""},
+                {"type": "menu", "name": "其它", "parent": ""},
+                {
+                    "type": "send_message",
+                    "name": "帮助",
+                    "message": "/help",
+                    "parent": "更多",
+                },
+                {
+                    "type": "send_message",
+                    "name": "帮助",
+                    "message": "/other-help",
+                    "parent": "其它",
+                },
+            ]
+        },
+    )
+    assert errors == []
+    assert "menu" in values
+
+
 def test_normalize_config_payload_validates_switch_ids() -> None:
     values, missing = normalize_config_payload(
         {},

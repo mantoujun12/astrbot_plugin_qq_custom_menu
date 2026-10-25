@@ -41,6 +41,7 @@
   "web.config_menu_parent_invalid": "メニュー「{name}」の親メニュー「{parent}」が存在しません。",
   "web.config_menu_parent_not_allowed": "サブメニュー「{name}」に親メニューを設定できません。",
   "web.config_menu_duplicate": "最上位メニューの名前は重複できません。",
+  "web.config_menu_child_duplicate": "サブメニュー「{parent}」内の子項目名「{name}」は重複できません。",
   "web.config_menu_top_limit": "最上位メニューは最大 {max} 件です。",
   "web.config_menu_sub_limit": "サブメニュー「{name}」は最大 {max} 件の子項目を持てます。",
   "web.config_menu_switch_id_empty": "スイッチ「{name}」に switch_id がありません。",

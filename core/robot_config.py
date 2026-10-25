@@ -358,7 +358,7 @@ def legacy_to_robot_drafts(
 
 
 def robot_item_counts(config: dict[str, Any]) -> dict[str, int]:
-    """统计新版配置中的机器人数与私聊菜单条目数。"""
+    """统计配置中的机器人数与私聊菜单条目数。"""
     robots = config.get("robots")
     result = {
         "robots": 0,

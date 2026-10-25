@@ -239,6 +239,52 @@ def test_build_status_includes_robot_scenes() -> None:
     assert payload["robots"] == {"new": 1, "compatibility": 0}
 
 
+def test_build_status_aggregates_runtime_menu_counts() -> None:
+    config = {
+        "sync_menu": True,
+        "menu": [{"type": "send_message", "name": "兼容菜单", "message": "/legacy"}],
+    }
+    robot_config = {
+        "version": 1,
+        "robots": [
+            {
+                "id": "robot-1",
+                "name": "新版机器人",
+                "appid": "app-new",
+                "secret": "secret",
+                "platform": "qq_official",
+                "scenes": {
+                    "c2c": {
+                        "enabled": True,
+                        "items": [
+                            {
+                                "type": "send_message",
+                                "name": "新版菜单",
+                                "message": "/new",
+                            }
+                        ],
+                    }
+                },
+            }
+        ],
+    }
+
+    payload = build_status(
+        config,
+        platforms=[
+            {"appid": "app-legacy", "secret": "secret", "platform": "qq_official"},
+        ],
+        robot_config=robot_config,
+    )
+
+    assert [robot["source"] for robot in payload["platforms"]] == ["robot", "compatibility"]
+    assert [robot["scenes"][0]["item_count"] for robot in payload["platforms"]] == [1, 1]
+    assert payload["menu"]["top_level"] == 2
+    assert payload["menu"]["sub_items"] == 0
+    assert payload["menu"]["total"] == 2
+    assert payload["robots"] == {"new": 1, "compatibility": 1}
+
+
 def test_register_requires_web_module(monkeypatch: Any) -> None:
     monkeypatch.delitem(sys.modules, "astrbot.api.web", raising=False)
     bundle = make_bundle()

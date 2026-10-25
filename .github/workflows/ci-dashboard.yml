@@ -44,3 +44,13 @@ jobs:
       - name: Build dashboard
         working-directory: web/dashboard
         run: pnpm build
+
+      - name: Verify generated pages are up to date
+        run: |
+          changes="$(git status --porcelain --untracked-files=all -- pages/dashboard)"
+          if [[ -n "$changes" ]]; then
+            echo "::error::pages/dashboard is out of date. Run pnpm build in web/dashboard and commit the generated files."
+            printf '%s\n' "$changes"
+            git --no-pager diff --stat -- pages/dashboard
+            exit 1
+          fi

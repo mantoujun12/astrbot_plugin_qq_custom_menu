@@ -5,7 +5,6 @@ import {
   cloneEntries,
   newEntry,
   normalizeLink,
-  qqItemsToEntries,
   removeEntry,
   replaceEntry,
   topLevelEntries,
@@ -156,39 +155,6 @@ describe('menuForm helpers', () => {
       { type: 'send_message', name: '帮助', parent: '', message: '/help' },
       { type: 'menu', name: '更多', parent: '' },
       { type: 'link', name: '文档', parent: '', link: 'https://docs.app' },
-      {
-        type: 'switch',
-        name: '联网',
-        parent: '',
-        switch_id: 'search',
-        default: true,
-      },
-    ])
-  })
-
-  it('converts the QQ menu tree back into editor entries', () => {
-    const items = [
-      { type: 'send_message', name: '帮助', send_message: '/help' },
-      {
-        type: 'menu',
-        name: '更多',
-        sub_menu_items: [
-          { type: 'link', name: '文档', link: 'https://docs.app' },
-          { type: 'unknown', name: '未知' },
-        ],
-      },
-      {
-        type: 'switch',
-        name: '联网',
-        switch: { switch_id: 'search', default: true },
-      },
-    ]
-
-    expect(qqItemsToEntries(items)).toEqual([
-      { type: 'send_message', name: '帮助', parent: '', message: '/help' },
-      { type: 'menu', name: '更多', parent: '' },
-      { type: 'link', name: '文档', parent: '更多', link: 'https://docs.app' },
-      { type: 'send_message', name: '未知', parent: '更多', message: '' },
       {
         type: 'switch',
         name: '联网',

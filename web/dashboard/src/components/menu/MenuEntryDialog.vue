@@ -10,7 +10,6 @@ const props = defineProps<{
   entry: MenuEntry | null
   /** 新增子项时固定所属母菜单；编辑已有条目时沿用条目的 parent */
   parent: string
-  menuNames: string[]
   /** 母菜单已有子项时禁止改成其它类型，避免子项失去父级 */
   hasChildren?: boolean
 }>()

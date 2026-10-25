@@ -495,6 +495,7 @@ def _normalize_menu_entries(raw_menu: Any) -> tuple[list[dict[str, Any]], list[s
     top_level_names: list[str] = []
     menu_names: set[str] = set()
     child_counts: dict[str, int] = {}
+    child_names: dict[str, set[str]] = {}
     switch_ids: set[str] = set()
 
     for index, raw in enumerate(raw_menu, start=1):
@@ -548,6 +549,11 @@ def _normalize_menu_entries(raw_menu: Any) -> tuple[list[dict[str, Any]], list[s
             top_level_names.append(name)
         else:
             child_counts[parent] = child_counts.get(parent, 0) + 1
+            sibling_names = child_names.setdefault(parent, set())
+            if name in sibling_names:
+                errors.append(t("web.config_menu_child_duplicate", name=name, parent=parent))
+            else:
+                sibling_names.add(name)
 
         if item_type == "send_message":
             message = raw.get("message")

@@ -256,6 +256,7 @@
         "validation": {
           "topLimit": "At most {max} top-level entries are allowed",
           "duplicate": "Top-level menu names must be unique",
+          "childDuplicate": "Child name \"{name}\" under sub-menu \"{parent}\" must be unique",
           "nameEmpty": "Menu name cannot be empty",
           "menuParent": "A sub-menu cannot have a parent",
           "parentMissing": "Parent \"{parent}\" does not exist",

@@ -41,6 +41,7 @@
   "web.config_menu_parent_invalid": "菜单「{name}」的父菜单「{parent}」不存在。",
   "web.config_menu_parent_not_allowed": "子菜单「{name}」不能设置父菜单。",
   "web.config_menu_duplicate": "一级菜单名称不能重复。",
+  "web.config_menu_child_duplicate": "子菜单「{parent}」下的子项名称「{name}」不能重复。",
   "web.config_menu_top_limit": "一级菜单最多 {max} 个。",
   "web.config_menu_sub_limit": "子菜单「{name}」最多 {max} 个子项。",
   "web.config_menu_switch_id_empty": "开关「{name}」缺少 switch_id。",

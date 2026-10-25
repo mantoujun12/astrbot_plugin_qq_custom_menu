@@ -256,6 +256,7 @@
         "validation": {
           "topLimit": "最上位メニューは最大 {max} 件です",
           "duplicate": "最上位メニュー名は重複できません",
+          "childDuplicate": "サブメニュー「{parent}」内の子項目名「{name}」は重複できません",
           "nameEmpty": "メニュー名は空にできません",
           "menuParent": "サブメニューに親メニューを設定できません",
           "parentMissing": "親メニュー「{parent}」が存在しません",

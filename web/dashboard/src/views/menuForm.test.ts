@@ -145,6 +145,30 @@ describe('menuForm helpers', () => {
     }
   })
 
+  it('rejects duplicate child names within the same parent', () => {
+    const entries = [
+      entry({ type: 'menu', name: '更多', message: undefined }),
+      entry({ name: '帮助', message: '/help', parent: '更多' }),
+      entry({ name: '帮助', message: '/help-2', parent: '更多' }),
+    ]
+
+    expect(validateMenu(entries, LIMITS, t)).toEqual({
+      ok: false,
+      reason: '子菜单「更多」下的子项名称「帮助」不能重复',
+    })
+  })
+
+  it('allows the same child name under different parents', () => {
+    const entries = [
+      entry({ type: 'menu', name: '更多', message: undefined }),
+      entry({ type: 'menu', name: '其它', message: undefined }),
+      entry({ name: '帮助', message: '/help', parent: '更多' }),
+      entry({ name: '帮助', message: '/other-help', parent: '其它' }),
+    ]
+
+    expect(validateMenu(entries, LIMITS, t)).toEqual({ ok: true, reason: '' })
+  })
+
   it('builds a trimmed payload with normalized links', () => {
     const entries = [
       entry({ name: ' 帮助 ', message: ' /help ' }),

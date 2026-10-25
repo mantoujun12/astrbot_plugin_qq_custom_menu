@@ -27,6 +27,19 @@ defineEmits<{
 
 const { t } = useBridge()
 
+const entryKeys = new WeakMap<MenuEntry, number>()
+let nextEntryKey = 0
+
+function entryKey(entry: MenuEntry): number {
+  const existing = entryKeys.get(entry)
+  if (existing !== undefined) {
+    return existing
+  }
+  nextEntryKey += 1
+  entryKeys.set(entry, nextEntryKey)
+  return nextEntryKey
+}
+
 const groups = computed(() =>
   topLevelEntries(props.entries).map((entry) => ({
     entry,
@@ -84,7 +97,7 @@ function detail(entry: MenuEntry): string {
       {{ t('pages.dashboard.menu.empty', '还没有菜单条目') }}
     </div>
 
-    <div v-for="group in groups" :key="group.entry.name" class="qc-menu-group">
+    <div v-for="group in groups" :key="entryKey(group.entry)" class="qc-menu-group">
       <div class="qc-menu-row" data-field="menu-row">
         <v-icon :icon="TYPE_META[group.entry.type].icon" size="18" class="qc-menu-icon" />
         <div class="qc-menu-main">
@@ -130,7 +143,7 @@ function detail(entry: MenuEntry): string {
       <div v-if="group.children.length" class="qc-menu-children">
         <div
           v-for="child in group.children"
-          :key="`${group.entry.name}-${child.name}`"
+          :key="entryKey(child)"
           class="qc-menu-row qc-menu-row--child"
           data-field="menu-child-row"
         >

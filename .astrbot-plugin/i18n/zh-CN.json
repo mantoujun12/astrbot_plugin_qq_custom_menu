@@ -256,6 +256,7 @@
         "validation": {
           "topLimit": "一级菜单最多 {max} 个",
           "duplicate": "一级菜单名称不能重复",
+          "childDuplicate": "子菜单「{parent}」下的子项名称「{name}」不能重复",
           "nameEmpty": "菜单名称不能为空",
           "menuParent": "子菜单不能设置父菜单",
           "parentMissing": "父菜单「{parent}」不存在",

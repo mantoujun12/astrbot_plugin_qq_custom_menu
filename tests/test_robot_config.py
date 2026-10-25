@@ -79,6 +79,27 @@ def test_save_enforces_private_file_permissions(tmp_path: Path) -> None:
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
 
 
+def test_save_cleans_up_when_private_write_fails(
+    monkeypatch: Any,
+    tmp_path: Path,
+) -> None:
+    def fail_fchmod(fd: int, mode: int) -> None:
+        raise OSError("chmod failed")
+
+    def fail_close(fd: int) -> None:
+        raise OSError("close failed")
+
+    def fail_unlink(self: Path, *args: Any, **kwargs: Any) -> None:
+        raise OSError("unlink failed")
+
+    with monkeypatch.context() as patch:
+        patch.setattr("core.robot_config.os.fchmod", fail_fchmod)
+        patch.setattr("core.robot_config.os.close", fail_close)
+        patch.setattr(Path, "unlink", fail_unlink)
+        with pytest.raises(MenuConfigError):
+            save_menu_config(tmp_path, empty_menu_config())
+
+
 def test_invalid_json_and_shape_raise(tmp_path: Path) -> None:
     path = tmp_path / MENU_CONFIG_FILENAME
     path.write_text("{", encoding="utf-8")

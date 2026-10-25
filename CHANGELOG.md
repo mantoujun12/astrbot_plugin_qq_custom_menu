@@ -7,6 +7,14 @@
 
 ## [Unreleased]
 
+### 修复
+
+- 使用当前 lockfile 重新生成 `pages/dashboard/`，消除 Dashboard 构建产物的 scope id 与依赖更新漂移
+
+### 工程
+
+- Dashboard CI 在构建后校验 `pages/dashboard/`，拒绝修改、删除或新增的未提交生成文件
+
 ## [v0.3.1] - 2026-10-23
 
 ### 新增

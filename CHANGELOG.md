@@ -10,6 +10,12 @@
 ### 修复
 
 - 修复同一子菜单下子项重名未被前后端拦截的问题，并为菜单列表使用稳定的 Vue key（#42）
+- 将 `menu_config.json` 的原子写入临时文件权限收紧为 `0600`，避免同组或其他本地用户读取明文 `ClientSecret`，并覆盖已有宽松权限文件
+- 使用当前 lockfile 重新生成 `pages/dashboard/`，消除 Dashboard 构建产物的 scope id 与依赖更新漂移
+
+### 工程
+
+- Dashboard CI 在构建后校验 `pages/dashboard/`，拒绝修改、删除或新增的未提交生成文件
 
 ## [v0.3.1] - 2026-10-23
 

@@ -24,7 +24,7 @@
       "hint": "插件视图的辅助强调色，使用 #RRGGBB 格式；也可以到插件视图的「设置」页调整。"
     },
     "sync_menu": {
-      "description": "启动时同步自定义菜单",
+      "description": "启动时同步私聊菜单",
       "hint": "关闭后仅读取 QQ 当前私聊菜单，不会覆盖线上内容。"
     },
     "qq_platforms": {

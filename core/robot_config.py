@@ -8,6 +8,8 @@
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 import uuid
 from pathlib import Path
 from typing import Any
@@ -70,17 +72,30 @@ def save_menu_config(data_dir: str | Path, payload: dict[str, Any]) -> Path:
     """原子写入新版机器人菜单配置。"""
     target = _config_path(data_dir)
     target.parent.mkdir(parents=True, exist_ok=True)
-    temp = target.with_name(f".{target.name}.{uuid.uuid4().hex}.tmp")
+    fd: int | None = None
+    temp: Path | None = None
     try:
-        temp.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
+        fd, temp_name = tempfile.mkstemp(
+            prefix=f".{target.name}.",
+            suffix=".tmp",
+            dir=target.parent,
         )
-        temp.replace(target)
+        temp = Path(temp_name)
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as file:
+            fd = None
+            file.write(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+        os.replace(temp, target)
+        temp = None
     except OSError as exc:
         raise MenuConfigError(t("robot.error.save_failed", path=target, exc=exc)) from exc
     finally:
-        if temp.exists():
+        if fd is not None:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+        if temp is not None:
             try:
                 temp.unlink()
             except OSError:

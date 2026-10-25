@@ -145,6 +145,50 @@ describe('menuForm helpers', () => {
     }
   })
 
+  it('reports invalid entries before quota errors', () => {
+    const cases: MenuEntry[][] = [
+      [
+        ...Array.from({ length: LIMITS.top_level_max }, (_, index) =>
+          entry({ name: `菜单${index}`, message: '/x' }),
+        ),
+        entry({ name: '缺少消息', message: '' }),
+      ],
+      [
+        entry({ type: 'menu', name: '更多', message: undefined }),
+        ...Array.from({ length: LIMITS.sub_items_max }, (_, index) =>
+          entry({ name: `子项${index}`, message: '/x', parent: '更多' }),
+        ),
+        entry({ name: '缺少消息', message: '', parent: '更多' }),
+      ],
+      [
+        ...Array.from({ length: LIMITS.top_level_max }, (_, index) =>
+          entry({ name: `菜单${index}`, message: '/x' }),
+        ),
+        entry({ type: 'link', name: '缺少链接', message: undefined, link: '' }),
+      ],
+      [
+        entry({ type: 'menu', name: '更多', message: undefined }),
+        ...Array.from({ length: LIMITS.sub_items_max }, (_, index) =>
+          entry({ name: `子项${index}`, message: '/x', parent: '更多' }),
+        ),
+        entry({
+          type: 'link',
+          name: '缺少链接',
+          message: undefined,
+          link: '',
+          parent: '更多',
+        }),
+      ],
+    ]
+
+    for (const entries of cases) {
+      const result = validateMenu(entries, LIMITS, t)
+      expect(result.ok).toBe(false)
+      expect(result.reason).toContain('缺少')
+      expect(result.reason).not.toContain('最多')
+    }
+  })
+
   it('builds a trimmed payload with normalized links', () => {
     const entries = [
       entry({ name: ' 帮助 ', message: ' /help ' }),

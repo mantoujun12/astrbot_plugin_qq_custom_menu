@@ -517,7 +517,6 @@ def _normalize_menu_entries(raw_menu: Any) -> tuple[list[dict[str, Any]], list[s
                 errors.append(t("web.config_menu_parent_not_allowed", name=name))
                 continue
             menu_names.add(name)
-            top_level_names.append(name)
             entries.append({"__template_key": "menu", "name": name})
             continue
 
@@ -533,7 +532,6 @@ def _normalize_menu_entries(raw_menu: Any) -> tuple[list[dict[str, Any]], list[s
                 errors.append(t("web.config_menu_switch_id_duplicate", switch_id=switch_id))
                 continue
             switch_ids.add(switch_id)
-            top_level_names.append(name)
             entries.append(
                 {
                     "__template_key": "switch",
@@ -543,11 +541,6 @@ def _normalize_menu_entries(raw_menu: Any) -> tuple[list[dict[str, Any]], list[s
                 }
             )
             continue
-
-        if not parent:
-            top_level_names.append(name)
-        else:
-            child_counts[parent] = child_counts.get(parent, 0) + 1
 
         if item_type == "send_message":
             message = raw.get("message")
@@ -577,6 +570,12 @@ def _normalize_menu_entries(raw_menu: Any) -> tuple[list[dict[str, Any]], list[s
                 "parent": parent,
             }
         )
+
+    top_level_names = [str(entry["name"]) for entry in entries if not entry.get("parent")]
+    for entry in entries:
+        parent = str(entry.get("parent") or "")
+        if parent and parent in menu_names:
+            child_counts[parent] = child_counts.get(parent, 0) + 1
 
     if len(top_level_names) > MENU_TOP_LEVEL_MAX:
         errors.append(t("web.config_menu_top_limit", max=MENU_TOP_LEVEL_MAX))

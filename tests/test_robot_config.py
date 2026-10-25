@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import stat
 from pathlib import Path
 from typing import Any
 
@@ -63,6 +65,39 @@ def test_save_and_load_roundtrip(tmp_path: Path) -> None:
 
     assert path == tmp_path / MENU_CONFIG_FILENAME
     assert load_menu_config(tmp_path) == payload
+
+
+@pytest.mark.skipif(os.name == "nt", reason="Windows does not expose POSIX file modes")
+def test_save_enforces_private_file_permissions(tmp_path: Path) -> None:
+    payload = {"version": 1, "robots": [robot_payload()]}
+
+    path = save_menu_config(tmp_path, payload)
+    assert stat.S_IMODE(path.stat().st_mode) == 0o600
+
+    path.chmod(0o664)
+    save_menu_config(tmp_path, payload)
+    assert stat.S_IMODE(path.stat().st_mode) == 0o600
+
+
+def test_save_cleans_up_when_private_write_fails(
+    monkeypatch: Any,
+    tmp_path: Path,
+) -> None:
+    def fail_fchmod(fd: int, mode: int) -> None:
+        raise OSError("chmod failed")
+
+    def fail_close(fd: int) -> None:
+        raise OSError("close failed")
+
+    def fail_unlink(self: Path, *args: Any, **kwargs: Any) -> None:
+        raise OSError("unlink failed")
+
+    with monkeypatch.context() as patch:
+        patch.setattr("core.robot_config.os.fchmod", fail_fchmod)
+        patch.setattr("core.robot_config.os.close", fail_close)
+        patch.setattr(Path, "unlink", fail_unlink)
+        with pytest.raises(MenuConfigError):
+            save_menu_config(tmp_path, empty_menu_config())
 
 
 def test_invalid_json_and_shape_raise(tmp_path: Path) -> None:
@@ -286,10 +321,10 @@ def test_load_rejects_non_object_and_save_failure(
     with pytest.raises(MenuConfigError):
         load_menu_config(tmp_path)
 
-    def fail_replace(self: Path, target: Path) -> Path:
+    def fail_replace(source: str | Path, target: str | Path) -> None:
         raise OSError("replace failed")
 
-    monkeypatch.setattr(Path, "replace", fail_replace)
+    monkeypatch.setattr("core.robot_config.os.replace", fail_replace)
     with pytest.raises(MenuConfigError):
         save_menu_config(tmp_path, empty_menu_config())
 

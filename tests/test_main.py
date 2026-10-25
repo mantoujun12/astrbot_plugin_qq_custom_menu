@@ -303,15 +303,19 @@ class AsyncSaveConfig(FakeConfig):
 async def test_save_config_prefers_async_api(monkeypatch: Any, tmp_path: Path) -> None:
     main = load_main()
     monkeypatch.setattr(main, "resolve_plugin_data_dir", lambda context: tmp_path)
-    config = AsyncSaveConfig()
+    config = AsyncSaveConfig({"language": "zh-CN"})
     plugin = main.QQCustomMenuPlugin(FakeContext(), config)
     syncer = FakeMenuSyncer()
     plugin._syncer = syncer
 
+    assert main.t("log.no_platforms") == "未配置 QQ 官方机器人凭证，跳过自定义菜单同步"
     await plugin._save_config({"language": "en-US"})
 
     assert config.async_saved == [{"language": "en-US"}]
     assert config["language"] == "en-US"
+    assert main.t("log.no_platforms") == (
+        "no QQ official bot credentials configured, skip custom menu sync"
+    )
     assert syncer.configs == [config]
     assert syncer.platforms == [[]]
 

@@ -23,6 +23,8 @@ from .core import (
     t,
 )
 
+_LOCALES_DIR = Path(__file__).resolve().parent / "core" / "i18n"
+
 
 @register(
     PLUGIN_NAME,
@@ -36,7 +38,7 @@ class QQCustomMenuPlugin(Star):
 
     def __init__(self, context: Context, config):
         super().__init__(context)
-        initialize_i18n(Path(__file__).resolve().parent / "core" / "i18n", config.get("language"))
+        initialize_i18n(_LOCALES_DIR, config.get("language"))
         self._log_buffer: LogBuffer | None = LogBuffer()
         self._web_api = None
         try:
@@ -107,6 +109,7 @@ class QQCustomMenuPlugin(Star):
                 save_sync()
         # save_config_async 内部只在写入时合并字段，这里再同步一次内存视图
         self.config.update(values)
+        initialize_i18n(_LOCALES_DIR, self.config.get("language"))
         if self._syncer is not None:
             self._syncer.set_config(self.config)
             self._syncer.set_platforms(get_platforms(self.config))

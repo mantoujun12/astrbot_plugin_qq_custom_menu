@@ -176,13 +176,14 @@ def build_status(
             }
         )
 
-    counts = robot_item_counts(robot_config)
+    new_counts = robot_item_counts(robot_config)
     has_new_config = bool(robot_config.get("robots"))
     if has_new_config:
+        runtime_counts = robot_item_counts({"robots": runtime})
         menu_payload = {
-            "top_level": counts["c2c_top_level"],
-            "sub_items": counts["c2c_sub_items"],
-            "total": counts["c2c_items"],
+            "top_level": runtime_counts["c2c_top_level"],
+            "sub_items": runtime_counts["c2c_sub_items"],
+            "total": runtime_counts["c2c_items"],
             "top_level_max": MENU_LIMITS["top_level_max"],
             "sub_items_max": MENU_LIMITS["sub_items_max"],
             "digest": menu_digest(
@@ -213,7 +214,7 @@ def build_status(
         "platforms": platform_payload,
         "menu": menu_payload,
         "robots": {
-            "new": counts["robots"],
+            "new": new_counts["robots"],
             "compatibility": sum(1 for robot in runtime if robot.get("source") == "compatibility"),
         },
         "state": {"available": data_dir is not None},

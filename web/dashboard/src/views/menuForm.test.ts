@@ -144,6 +144,74 @@ describe('menuForm helpers', () => {
     }
   })
 
+  it('rejects duplicate child names within the same parent', () => {
+    const entries = [
+      entry({ type: 'menu', name: '更多', message: undefined }),
+      entry({ name: '帮助', message: '/help', parent: '更多' }),
+      entry({ name: '帮助', message: '/help-2', parent: '更多' }),
+    ]
+
+    expect(validateMenu(entries, LIMITS, t)).toEqual({
+      ok: false,
+      reason: '子菜单「更多」下的子项名称「帮助」不能重复',
+    })
+  })
+
+  it('allows the same child name under different parents', () => {
+    const entries = [
+      entry({ type: 'menu', name: '更多', message: undefined }),
+      entry({ type: 'menu', name: '其它', message: undefined }),
+      entry({ name: '帮助', message: '/help', parent: '更多' }),
+      entry({ name: '帮助', message: '/other-help', parent: '其它' }),
+    ]
+
+    expect(validateMenu(entries, LIMITS, t)).toEqual({ ok: true, reason: '' })
+  })
+
+  it('reports invalid entries before quota errors', () => {
+    const cases: MenuEntry[][] = [
+      [
+        ...Array.from({ length: LIMITS.top_level_max }, (_, index) =>
+          entry({ name: `菜单${index}`, message: '/x' }),
+        ),
+        entry({ name: '缺少消息', message: '' }),
+      ],
+      [
+        entry({ type: 'menu', name: '更多', message: undefined }),
+        ...Array.from({ length: LIMITS.sub_items_max }, (_, index) =>
+          entry({ name: `子项${index}`, message: '/x', parent: '更多' }),
+        ),
+        entry({ name: '缺少消息', message: '', parent: '更多' }),
+      ],
+      [
+        ...Array.from({ length: LIMITS.top_level_max }, (_, index) =>
+          entry({ name: `菜单${index}`, message: '/x' }),
+        ),
+        entry({ type: 'link', name: '缺少链接', message: undefined, link: '' }),
+      ],
+      [
+        entry({ type: 'menu', name: '更多', message: undefined }),
+        ...Array.from({ length: LIMITS.sub_items_max }, (_, index) =>
+          entry({ name: `子项${index}`, message: '/x', parent: '更多' }),
+        ),
+        entry({
+          type: 'link',
+          name: '缺少链接',
+          message: undefined,
+          link: '',
+          parent: '更多',
+        }),
+      ],
+    ]
+
+    for (const entries of cases) {
+      const result = validateMenu(entries, LIMITS, t)
+      expect(result.ok).toBe(false)
+      expect(result.reason).toContain('缺少')
+      expect(result.reason).not.toContain('最多')
+    }
+  })
+
   it('builds a trimmed payload with normalized links', () => {
     const entries = [
       entry({ name: ' 帮助 ', message: ' /help ' }),

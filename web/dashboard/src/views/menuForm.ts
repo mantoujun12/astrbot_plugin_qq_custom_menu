@@ -92,25 +92,8 @@ export function validateMenu(
   const menuNames = new Set(
     entries.filter((entry) => entry.type === 'menu' && !entry.parent).map((entry) => entry.name),
   )
+  const childNames = new Map<string, Set<string>>()
   const switchIds = new Set<string>()
-
-  if (topLevel.length > limits.top_level_max) {
-    return {
-      ok: false,
-      reason: t(
-        'pages.dashboard.menu.validation.topLimit',
-        '一级菜单最多 {max} 个',
-      ).replace('{max}', String(limits.top_level_max)),
-    }
-  }
-
-  const names = topLevel.map((entry) => entry.name.trim())
-  if (new Set(names).size !== names.length) {
-    return {
-      ok: false,
-      reason: t('pages.dashboard.menu.validation.duplicate', '一级菜单名称不能重复'),
-    }
-  }
 
   for (const entry of entries) {
     const name = entry.name.trim()
@@ -146,6 +129,22 @@ export function validateMenu(
           '父菜单「{parent}」不存在',
         ).replace('{parent}', entry.parent),
       }
+    }
+    if (entry.parent) {
+      const siblingNames = childNames.get(entry.parent) ?? new Set<string>()
+      if (siblingNames.has(name)) {
+        return {
+          ok: false,
+          reason: t(
+            'pages.dashboard.menu.validation.childDuplicate',
+            '子菜单「{parent}」下的子项名称「{name}」不能重复',
+          )
+            .replace('{parent}', entry.parent)
+            .replace('{name}', name),
+        }
+      }
+      siblingNames.add(name)
+      childNames.set(entry.parent, siblingNames)
     }
     if (entry.type === 'send_message' && !(entry.message ?? '').trim()) {
       return {
@@ -186,6 +185,24 @@ export function validateMenu(
         }
       }
       switchIds.add(switchId)
+    }
+  }
+
+  if (topLevel.length > limits.top_level_max) {
+    return {
+      ok: false,
+      reason: t(
+        'pages.dashboard.menu.validation.topLimit',
+        '一级菜单最多 {max} 个',
+      ).replace('{max}', String(limits.top_level_max)),
+    }
+  }
+
+  const names = topLevel.map((entry) => entry.name.trim())
+  if (new Set(names).size !== names.length) {
+    return {
+      ok: false,
+      reason: t('pages.dashboard.menu.validation.duplicate', '一级菜单名称不能重复'),
     }
   }
 

@@ -41,6 +41,7 @@
   "web.config_menu_parent_invalid": "menu \"{name}\" references missing parent \"{parent}\".",
   "web.config_menu_parent_not_allowed": "sub-menu \"{name}\" cannot have a parent.",
   "web.config_menu_duplicate": "top-level menu names must be unique.",
+  "web.config_menu_child_duplicate": "child name \"{name}\" under sub-menu \"{parent}\" must be unique.",
   "web.config_menu_top_limit": "at most {max} top-level menu items are allowed.",
   "web.config_menu_sub_limit": "sub-menu \"{name}\" allows at most {max} children.",
   "web.config_menu_switch_id_empty": "switch \"{name}\" is missing switch_id.",

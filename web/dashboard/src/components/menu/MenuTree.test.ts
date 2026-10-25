@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import MenuTree from './MenuTree.vue'
 import { mountView } from '../../test/helpers'
 import type { MenuEntry } from '../../types/dashboard'
@@ -34,6 +34,21 @@ describe('MenuTree', () => {
     const deleteButtons = wrapper.findAll('[aria-label="删除"]')
     await deleteButtons[0].trigger('click')
     expect(wrapper.emitted('delete')?.[0]).toEqual([ENTRIES[0]])
+  })
+
+  it('renders duplicate legacy child names without duplicate-key warnings', () => {
+    const duplicateEntries: MenuEntry[] = [
+      { type: 'menu', name: '更多', parent: '' },
+      { type: 'send_message', name: '帮助', message: '/help', parent: '更多' },
+      { type: 'send_message', name: '帮助', message: '/help-2', parent: '更多' },
+    ]
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    const wrapper = mountView(MenuTree, { props: { entries: duplicateEntries } })
+
+    expect(wrapper.findAll('[data-field="menu-child-row"]')).toHaveLength(2)
+    expect(warning).not.toHaveBeenCalled()
+    warning.mockRestore()
   })
 
   it('shows the empty state', () => {

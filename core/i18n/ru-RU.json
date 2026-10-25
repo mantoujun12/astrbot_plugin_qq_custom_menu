@@ -41,6 +41,7 @@
   "web.config_menu_parent_invalid": "в меню «{name}» указано несуществующее родительское меню «{parent}».",
   "web.config_menu_parent_not_allowed": "подменю «{name}» не может иметь родительское меню.",
   "web.config_menu_duplicate": "имена меню верхнего уровня должны быть уникальными.",
+  "web.config_menu_child_duplicate": "имя дочернего пункта «{name}» в подменю «{parent}» должно быть уникальным.",
   "web.config_menu_top_limit": "допускается не более {max} меню верхнего уровня.",
   "web.config_menu_sub_limit": "подменю «{name}» допускает не более {max} дочерних элементов.",
   "web.config_menu_switch_id_empty": "в переключателе «{name}» отсутствует switch_id.",

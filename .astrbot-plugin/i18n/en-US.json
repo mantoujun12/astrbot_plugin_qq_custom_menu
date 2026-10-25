@@ -24,7 +24,7 @@
       "hint": "Secondary accent color for plugin views in #RRGGBB format; also configurable on the Settings page."
     },
     "sync_menu": {
-      "description": "Sync custom menu on startup",
+      "description": "Sync private-chat menu on startup",
       "hint": "When disabled, the plugin only reads the current private-chat menu and does not overwrite it."
     },
     "qq_platforms": {

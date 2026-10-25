@@ -9,8 +9,8 @@ stub 只伪造代码里实际用到的最小接口面:
 - astrbot.api.star.Context / Star / register (仅导入期绑定)
 - astrbot.core.config.astrbot_config.AstrBotConfig (仅 main.py)
 
-注意: main.py 使用 `from .core import ...` 相对导入, 而仓库根不是包,
-`import main` 会失败 — 因此本套测试不覆盖 main.py (装配层, 无业务逻辑)。
+注意：main.py 使用 `from .core import ...` 相对导入，而仓库根不是包。
+`tests/test_main.py` 会挂载临时包命名空间，并覆盖装配、初始化与 `_save_config`。
 """
 
 from __future__ import annotations

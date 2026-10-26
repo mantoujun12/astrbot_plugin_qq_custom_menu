@@ -81,10 +81,12 @@ def save_menu_config(data_dir: str | Path, payload: dict[str, Any]) -> Path:
             dir=target.parent,
         )
         temp = Path(temp_name)
-        os.fchmod(fd, 0o600)
         with os.fdopen(fd, "w", encoding="utf-8") as file:
             fd = None
             file.write(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+        # 用路径版 chmod 而非 os.fchmod：后者在 Windows 的 Python 3.10–3.12 上不存在。
+        # 写入完成后再收紧权限，替换前临时文件仍位于同一目录。
+        os.chmod(temp, 0o600)
         os.replace(temp, target)
         temp = None
     except OSError as exc:

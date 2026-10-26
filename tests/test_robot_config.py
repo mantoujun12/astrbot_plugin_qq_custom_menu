@@ -79,22 +79,32 @@ def test_save_enforces_private_file_permissions(tmp_path: Path) -> None:
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
 
 
+def test_save_works_without_fchmod(
+    monkeypatch: Any,
+    tmp_path: Path,
+) -> None:
+    """Windows 的 Python 3.10–3.12 没有 os.fchmod，保存不应依赖它。"""
+    monkeypatch.delattr("core.robot_config.os.fchmod", raising=False)
+    payload = {"version": 1, "robots": [robot_payload()]}
+
+    path = save_menu_config(tmp_path, payload)
+
+    assert path.exists()
+    assert load_menu_config(tmp_path) == payload
+
+
 def test_save_cleans_up_when_private_write_fails(
     monkeypatch: Any,
     tmp_path: Path,
 ) -> None:
-    def fail_fchmod(fd: int, mode: int) -> None:
+    def fail_chmod(path: str | Path, mode: int, *args: Any, **kwargs: Any) -> None:
         raise OSError("chmod failed")
-
-    def fail_close(fd: int) -> None:
-        raise OSError("close failed")
 
     def fail_unlink(self: Path, *args: Any, **kwargs: Any) -> None:
         raise OSError("unlink failed")
 
     with monkeypatch.context() as patch:
-        patch.setattr("core.robot_config.os.fchmod", fail_fchmod)
-        patch.setattr("core.robot_config.os.close", fail_close)
+        patch.setattr("core.robot_config.os.chmod", fail_chmod)
         patch.setattr(Path, "unlink", fail_unlink)
         with pytest.raises(MenuConfigError):
             save_menu_config(tmp_path, empty_menu_config())

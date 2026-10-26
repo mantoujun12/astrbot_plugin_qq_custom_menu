@@ -5,18 +5,31 @@
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/),
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
-## [Unreleased]
+## [v0.3.2] - 2026-10-26
 
 ### 修复
 
 - 修复同一子菜单下子项重名未被前后端拦截的问题，并为菜单列表使用稳定的 Vue key（#42）
-- 修复状态页菜单统计遗漏兼容性机器人的问题，顶部汇总与空菜单提示现在使用合并后的运行时菜单口径
-- 将 `menu_config.json` 的原子写入临时文件权限收紧为 `0600`，避免同组或其他本地用户读取明文 `ClientSecret`，并覆盖已有宽松权限文件
+- 修复菜单配额校验将缺少消息 / 链接的无效条目计入一级菜单或子项上限的问题，Dashboard 同步调整校验顺序（#55）
+- 修复状态页菜单统计遗漏兼容性机器人的问题，顶部汇总与空菜单提示现在使用合并后的运行时菜单口径（#53）
+- 修复 Dashboard 保存配置后运行期日志未切换语言的问题，保存后立即重新加载运行期 i18n（#54）
+- 将 `menu_config.json` 的原子写入临时文件权限收紧为 `0600`，避免同组或其他本地用户读取明文 `ClientSecret`，并覆盖已有宽松权限文件；使用路径版 `os.chmod`，兼容 Windows 的 Python 3.10–3.12
 - 使用当前 lockfile 重新生成 `pages/dashboard/`，消除 Dashboard 构建产物的 scope id 与依赖更新漂移
 
 ### 工程
 
+- 移除 Dashboard 中不可达的 `PlatformsView`、状态页菜单预览转换与机器人表单辅助函数，减少重复实现（#57）
 - Dashboard CI 在构建后校验 `pages/dashboard/`，拒绝修改、删除或新增的未提交生成文件
+- `.gitattributes` 将 `web/dashboard/` 的 `.vue` / `.ts` / `.css` 源码固定为 LF，避免跨平台换行噪声
+- 升级前端依赖 Vuetify 4.3.0、happy-dom 21.0.4，并将开发依赖 ruff 的最低版本提升到 0.17.1（#49、#48）
+
+### 文档
+
+- README 补充俄语 / 日语国际化说明，并将 `sync_menu` 描述统一为「私聊菜单」（#45）
+
+### 测试
+
+- 补充菜单配置权限与临时文件清理失败、无效菜单条目配额、子菜单重名与状态页运行时菜单汇总的测试
 
 ## [v0.3.1] - 2026-10-23
 
@@ -136,8 +149,9 @@
 
 - 修复菜单配置 schema 类型错误导致插件加载失败的问题 (#3)
 
-[v0.3.0]: https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/compare/v0.2.3...v0.3.0
+[v0.3.2]: https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/compare/v0.3.1...v0.3.2
 [v0.3.1]: https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/compare/v0.3.0...v0.3.1
+[v0.3.0]: https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/compare/v0.2.3...v0.3.0
 [v0.2.3]: https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/compare/v0.2.2...v0.2.3
 [v0.2.2]: https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/compare/v0.2.1...v0.2.2
 [v0.2.1]: https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/compare/v0.2.0...v0.2.1

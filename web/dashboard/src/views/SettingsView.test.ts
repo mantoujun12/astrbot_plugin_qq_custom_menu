@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { flush, installBridge, mountView, waitUntil } from '../test/helpers'
+import { flush, loadDashboardView, saveButton } from '../test/helpers'
+import { pluginConfigFixture } from '../test/fixtures'
 import type { PluginConfigResponse } from '../types/dashboard'
 import { PLUGIN_VERSION } from '../version'
 
@@ -9,41 +10,19 @@ vi.mock('../api/dashboard', () => ({
   saveConfig: vi.fn(),
 }))
 
-function configFixture(overrides: Partial<PluginConfigResponse> = {}): PluginConfigResponse {
-  return {
-    plugin: { name: 'astrbot_plugin_qq_custom_menu', version: 'v0.2.3' },
-    language: 'zh-CN',
-    sync_menu: true,
-    primary_color: '#3c96ca',
-    secondary_color: '#2f86bd',
-    qq_platforms: [],
-    runtime_platforms: [],
-    menu: [],
-    limits: { top_level_max: 10, sub_items_max: 10 },
-    ...overrides,
-  }
+function configFixture(
+  overrides: Partial<PluginConfigResponse> = {},
+): PluginConfigResponse {
+  return pluginConfigFixture({ qq_platforms: [], ...overrides })
 }
 
-async function loadView(options: { withBackend?: boolean } = {}) {
-  const bridge = options.withBackend === false ? null : installBridge()
-  vi.resetModules()
-  const api = await import('../api/dashboard')
-  const { default: SettingsView } = await import('./SettingsView.vue')
-
-  return {
-    bridge,
-    api,
-    async mount() {
-      const wrapper = mountView(SettingsView)
-      await waitUntil(() => vi.mocked(api.fetchConfig).mock.calls.length > 0)
-      await flush()
-      return wrapper
-    },
-  }
-}
-
-function saveButton(wrapper: ReturnType<typeof mountView>) {
-  return wrapper.findAll('button').find((button) => button.text().trim() === '保存')
+function loadView(options: { withBackend?: boolean } = {}) {
+  return loadDashboardView({
+    api: () => import('../api/dashboard'),
+    component: () => import('./SettingsView.vue'),
+    bridge: options.withBackend === false ? false : {},
+    waitFor: (api) => () => vi.mocked(api.fetchConfig).mock.calls.length > 0,
+  })
 }
 
 describe('SettingsView', () => {

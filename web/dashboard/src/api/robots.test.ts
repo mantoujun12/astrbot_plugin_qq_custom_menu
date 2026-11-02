@@ -1,14 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import { installBridge } from '../test/helpers'
-import type { RobotConfigResponse } from '../types/robotConfig'
+import { robotResponseFixture } from '../test/fixtures'
 
-function responseFixture(): RobotConfigResponse {
-  return {
-    version: 2,
-    robots: [],
-    available_scenes: ['c2c'],
-    menu_limits: { top_level_max: 10, sub_items_max: 5 },
-  }
+function responseFixture() {
+  return robotResponseFixture({ version: 2, robots: [] })
 }
 
 async function loadApi() {

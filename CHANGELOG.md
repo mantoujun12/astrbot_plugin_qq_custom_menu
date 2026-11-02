@@ -5,6 +5,12 @@
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/),
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased]
+
+### 工程
+
+- 精简 pytest 与 vitest：抽出共享假件、响应 fixture 与视图挂载 helper，删除多余的 `pytest.mark.asyncio` 标记，测试数量与分支覆盖率保持不变
+
 ## [v0.3.2] - 2026-10-26
 
 ### 修复

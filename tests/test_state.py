@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import shutil
 import tempfile
+import time
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,7 @@ from core.i18n import t
 from core.state import STATE_FILENAME, MenuStateStore, menu_digest
 
 TEST_ROOT = Path(__file__).resolve().parent / "_state_data"
+EMPTY_MENU = {"items": []}
 
 
 @pytest.fixture(autouse=True)
@@ -31,31 +33,36 @@ def make_test_dir(name: str) -> Path:
     return path
 
 
-def test_save_and_load_roundtrip() -> None:
-    tmp_path = make_test_dir("roundtrip")
-    store = MenuStateStore(tmp_path)
+@pytest.fixture
+def make_store() -> Any:
+    def factory(name: str) -> MenuStateStore:
+        return MenuStateStore(make_test_dir(name))
+
+    return factory
+
+
+def test_save_and_load_roundtrip(make_store: Any) -> None:
+    store = make_store("roundtrip")
     menu = {"items": [{"type": "send_message", "name": "帮助", "send_message": "/help"}]}
     digest = menu_digest(menu)
     store.save({"app1": digest})
     assert store.load() == {"app1": digest}
-    assert (tmp_path / STATE_FILENAME).exists()
+    assert (store.data_dir / STATE_FILENAME).exists()
 
 
-def test_missing_file_returns_empty() -> None:
-    tmp_path = make_test_dir("missing")
-    assert MenuStateStore(tmp_path).load() == {}
+def test_missing_file_returns_empty(make_store: Any) -> None:
+    assert make_store("missing").load() == {}
 
 
-def test_corrupt_file_returns_empty() -> None:
-    tmp_path = make_test_dir("corrupt")
-    (tmp_path / STATE_FILENAME).write_text("{not valid yaml: [[", encoding="utf-8")
-    assert MenuStateStore(tmp_path).load() == {}
+def test_corrupt_file_returns_empty(make_store: Any) -> None:
+    store = make_store("corrupt")
+    store.state_file.write_text("{not valid yaml: [[", encoding="utf-8")
+    assert store.load() == {}
 
 
-def test_is_unchanged_and_mark_synced() -> None:
-    tmp_path = make_test_dir("unchanged")
-    store = MenuStateStore(tmp_path)
-    menu = {"items": []}
+def test_is_unchanged_and_mark_synced(make_store: Any) -> None:
+    store = make_store("unchanged")
+    menu = EMPTY_MENU
     assert store.is_unchanged("app1", menu) is False
     store.mark_synced("app1", menu)
     assert store.is_unchanged("app1", menu) is True
@@ -65,15 +72,14 @@ def test_is_unchanged_and_mark_synced() -> None:
     )
 
 
-def test_non_mapping_state_returns_empty() -> None:
-    tmp_path = make_test_dir("non-mapping")
-    (tmp_path / STATE_FILENAME).write_text("- item\n", encoding="utf-8")
-    assert MenuStateStore(tmp_path).load() == {}
+def test_non_mapping_state_returns_empty(make_store: Any) -> None:
+    store = make_store("non-mapping")
+    store.state_file.write_text("- item\n", encoding="utf-8")
+    assert store.load() == {}
 
 
-def test_save_failure_is_logged(monkeypatch: Any, caplog: Any) -> None:
-    tmp_path = make_test_dir("save-failure")
-    store = MenuStateStore(tmp_path)
+def test_save_failure_is_logged(monkeypatch: Any, caplog: Any, make_store: Any) -> None:
+    store = make_store("save-failure")
 
     def fail_safe_dump(*args: Any, **kwargs: Any) -> None:
         raise OSError("boom")
@@ -86,35 +92,30 @@ def test_save_failure_is_logged(monkeypatch: Any, caplog: Any) -> None:
     assert "boom" in caplog.text
 
 
-def test_tmp_cleanup_after_save_failure(monkeypatch: Any) -> None:
-    tmp_path = make_test_dir("tmp-cleanup")
-    store = MenuStateStore(tmp_path)
-    tmp_file = store.state_file.with_suffix(".yaml.tmp")
-    tmp_file.write_text("leftover", encoding="utf-8")
+def test_tmp_cleanup_after_save_failure(monkeypatch: Any, make_store: Any) -> None:
+    store = make_store("tmp-cleanup")
+    store.state_file.with_suffix(".yaml.tmp").write_text("leftover", encoding="utf-8")
 
     def fail_replace(*args: Any, **kwargs: Any) -> None:
         raise OSError("replace failed")
 
     monkeypatch.setattr("core.state.os.replace", fail_replace)
     store.save({"app1": "digest"})
-    assert not any(tmp_path.glob(f"{STATE_FILENAME}.*.tmp"))
+    assert not any(store.data_dir.glob(f"{STATE_FILENAME}.*.tmp"))
 
 
-def test_mark_synced_does_not_clobber_other_appids() -> None:
-    tmp_path = make_test_dir("concurrent")
-    first = MenuStateStore(tmp_path)
-    second = MenuStateStore(tmp_path)
+def test_mark_synced_does_not_clobber_other_appids(make_store: Any) -> None:
+    first = make_store("concurrent")
+    second = MenuStateStore(first.data_dir)
 
-    first.mark_synced("app1", {"items": []})
-    second.mark_synced("app2", {"items": []})
+    first.mark_synced("app1", EMPTY_MENU)
+    second.mark_synced("app2", EMPTY_MENU)
 
-    state = first.load()
-    assert set(state) == {"app1", "app2"}
+    assert set(first.load()) == {"app1", "app2"}
 
 
-def test_scene_digest_keeps_c2c_compatibility_alias() -> None:
-    tmp_path = make_test_dir("scenes")
-    store = MenuStateStore(tmp_path)
+def test_scene_digest_keeps_c2c_compatibility_alias(make_store: Any) -> None:
+    store = make_store("scenes")
     c2c = {"items": [{"type": "send_message", "name": "帮助", "send_message": "/help"}]}
 
     store.mark_scene_synced("app1", "c2c", c2c)
@@ -123,9 +124,8 @@ def test_scene_digest_keeps_c2c_compatibility_alias() -> None:
     assert store.load()["app1"] == menu_digest(c2c)
 
 
-def test_write_uses_unique_tmp_files(monkeypatch: Any) -> None:
-    tmp_path = make_test_dir("unique-tmp")
-    store = MenuStateStore(tmp_path)
+def test_write_uses_unique_tmp_files(monkeypatch: Any, make_store: Any) -> None:
+    store = make_store("unique-tmp")
     seen: list[str] = []
 
     real_mkstemp = tempfile.mkstemp
@@ -136,45 +136,39 @@ def test_write_uses_unique_tmp_files(monkeypatch: Any) -> None:
         return fd, name
 
     monkeypatch.setattr("core.state.tempfile.mkstemp", record_mkstemp)
-    store.mark_synced("app1", {"items": []})
-    store.mark_synced("app2", {"items": []})
+    store.mark_synced("app1", EMPTY_MENU)
+    store.mark_synced("app2", EMPTY_MENU)
 
     assert len(seen) == 2
     assert seen[0] != seen[1]
 
 
-def test_stale_lock_is_removed_and_write_succeeds() -> None:
-    import os
-    import time
-
-    tmp_path = make_test_dir("stale-lock")
-    store = MenuStateStore(tmp_path)
+def test_stale_lock_is_removed_and_write_succeeds(make_store: Any) -> None:
+    store = make_store("stale-lock")
     store.lock_file.write_text("stale", encoding="utf-8")
     old = time.time() - 3600
     os.utime(store.lock_file, (old, old))
 
-    store.mark_synced("app1", {"items": []})
+    store.mark_synced("app1", EMPTY_MENU)
 
-    assert store.is_unchanged("app1", {"items": []}) is True
+    assert store.is_unchanged("app1", EMPTY_MENU) is True
     assert not store.lock_file.exists()
 
 
-def test_lock_timeout_writes_without_lock(monkeypatch: Any, caplog: Any) -> None:
-    tmp_path = make_test_dir("lock-timeout")
-    store = MenuStateStore(tmp_path)
+def test_lock_timeout_writes_without_lock(monkeypatch: Any, caplog: Any, make_store: Any) -> None:
+    store = make_store("lock-timeout")
     store.lock_file.write_text("held", encoding="utf-8")
     monkeypatch.setattr("core.state.LOCK_TIMEOUT_SECONDS", 0.0)
 
     with caplog.at_level("WARNING", logger="astrbot"):
-        store.mark_synced("app1", {"items": []})
+        store.mark_synced("app1", EMPTY_MENU)
 
     assert t("log.lock_unavailable", path=store.lock_file) in caplog.text
-    assert store.is_unchanged("app1", {"items": []}) is True
+    assert store.is_unchanged("app1", EMPTY_MENU) is True
 
 
-def test_lock_release_failure_is_tolerated(monkeypatch: Any) -> None:
-    tmp_path = make_test_dir("lock-release")
-    store = MenuStateStore(tmp_path)
+def test_lock_release_failure_is_tolerated(monkeypatch: Any, make_store: Any) -> None:
+    store = make_store("lock-release")
     real_unlink = Path.unlink
 
     def flaky_unlink(self: Path, *args: Any, **kwargs: Any) -> None:
@@ -183,28 +177,26 @@ def test_lock_release_failure_is_tolerated(monkeypatch: Any) -> None:
         real_unlink(self, *args, **kwargs)
 
     monkeypatch.setattr(Path, "unlink", flaky_unlink)
-    store.mark_synced("app1", {"items": []})
+    store.mark_synced("app1", EMPTY_MENU)
 
-    assert store.is_unchanged("app1", {"items": []}) is True
+    assert store.is_unchanged("app1", EMPTY_MENU) is True
 
 
-def test_lock_acquire_oserror_is_logged(monkeypatch: Any, caplog: Any) -> None:
-    tmp_path = make_test_dir("lock-oserror")
-    store = MenuStateStore(tmp_path)
+def test_lock_acquire_oserror_is_logged(monkeypatch: Any, caplog: Any, make_store: Any) -> None:
+    store = make_store("lock-oserror")
 
     def fail_open(*args: Any, **kwargs: Any) -> int:
         raise OSError("cannot open lock")
 
     monkeypatch.setattr("core.state.os.open", fail_open)
     with caplog.at_level("WARNING", logger="astrbot"):
-        store.mark_synced("app1", {"items": []})
+        store.mark_synced("app1", EMPTY_MENU)
 
     assert t("log.lock_acquire_failed", exc="cannot open lock") in caplog.text
 
 
-def test_state_save_close_failure_is_tolerated(monkeypatch: Any) -> None:
-    tmp_path = make_test_dir("close-failure")
-    store = MenuStateStore(tmp_path)
+def test_state_save_close_failure_is_tolerated(monkeypatch: Any, make_store: Any) -> None:
+    store = make_store("close-failure")
     real_fdopen = os.fdopen
 
     def flaky_fdopen(*args: Any, **kwargs: Any) -> Any:
@@ -219,12 +211,11 @@ def test_state_save_close_failure_is_tolerated(monkeypatch: Any) -> None:
         return handle
 
     monkeypatch.setattr("core.state.os.fdopen", flaky_fdopen)
-    store.mark_synced("app1", {"items": []})
+    store.mark_synced("app1", EMPTY_MENU)
 
 
-def test_stale_lock_stat_failure_falls_back(monkeypatch: Any) -> None:
-    tmp_path = make_test_dir("stale-lock-stat")
-    store = MenuStateStore(tmp_path)
+def test_stale_lock_stat_failure_falls_back(monkeypatch: Any, make_store: Any) -> None:
+    store = make_store("stale-lock-stat")
     store.lock_file.write_text("held", encoding="utf-8")
     monkeypatch.setattr("core.state.LOCK_TIMEOUT_SECONDS", 0.06)
 
@@ -236,16 +227,15 @@ def test_stale_lock_stat_failure_falls_back(monkeypatch: Any) -> None:
         return real_stat(self, *args, **kwargs)
 
     monkeypatch.setattr(Path, "stat", flaky_stat)
-    store.mark_synced("app1", {"items": []})
+    store.mark_synced("app1", EMPTY_MENU)
 
-    assert store.is_unchanged("app1", {"items": []}) is True
+    assert store.is_unchanged("app1", EMPTY_MENU) is True
 
 
-def test_stale_lock_unlink_failure_is_logged(monkeypatch: Any, caplog: Any) -> None:
-    import time
-
-    tmp_path = make_test_dir("stale-lock-unlink")
-    store = MenuStateStore(tmp_path)
+def test_stale_lock_unlink_failure_is_logged(
+    monkeypatch: Any, caplog: Any, make_store: Any
+) -> None:
+    store = make_store("stale-lock-unlink")
     store.lock_file.write_text("stale", encoding="utf-8")
     old = time.time() - 3600
     os.utime(store.lock_file, (old, old))
@@ -260,15 +250,14 @@ def test_stale_lock_unlink_failure_is_logged(monkeypatch: Any, caplog: Any) -> N
 
     monkeypatch.setattr(Path, "unlink", flaky_unlink)
     with caplog.at_level("DEBUG", logger="astrbot"):
-        store.mark_synced("app1", {"items": []})
+        store.mark_synced("app1", EMPTY_MENU)
 
     assert t("log.stale_lock_remove_failed", exc="unlink failed") in caplog.text
-    assert store.is_unchanged("app1", {"items": []}) is True
+    assert store.is_unchanged("app1", EMPTY_MENU) is True
 
 
-def test_release_lock_file_already_gone() -> None:
-    tmp_path = make_test_dir("lock-gone")
-    store = MenuStateStore(tmp_path)
+def test_release_lock_file_already_gone(make_store: Any) -> None:
+    store = make_store("lock-gone")
 
     with store._locked():
         store.lock_file.unlink()
@@ -276,9 +265,8 @@ def test_release_lock_file_already_gone() -> None:
     assert not store.lock_file.exists()
 
 
-def test_cleanup_tmp_failure_is_tolerated(monkeypatch: Any, caplog: Any) -> None:
-    tmp_path = make_test_dir("tmp-cleanup-failure")
-    store = MenuStateStore(tmp_path)
+def test_cleanup_tmp_failure_is_tolerated(monkeypatch: Any, caplog: Any, make_store: Any) -> None:
+    store = make_store("tmp-cleanup-failure")
 
     def fail_replace(*args: Any, **kwargs: Any) -> None:
         raise OSError("replace failed")

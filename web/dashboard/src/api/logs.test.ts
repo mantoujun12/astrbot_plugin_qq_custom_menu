@@ -7,28 +7,18 @@ import {
   subscribeLogs,
 } from './logs'
 import { createBridgeStub } from '../test/helpers'
-import type { LogEvent, LogGapEvent, LogStreamInfo } from '../types/logs'
+import { logEvent } from '../test/fixtures'
+import type { LogGapEvent, LogStreamInfo } from '../types/logs'
 
 afterEach(() => {
   delete window.AstrBotPluginView
   delete window.AstrBotPluginPage
 })
 
-function logEvent(overrides: Partial<LogEvent> = {}): LogEvent {
-  return {
-    type: 'log',
-    seq: 1,
-    timestamp: '2026-10-23T02:18:04.120Z',
-    level: 'info',
-    message: 'ready',
-    ...overrides,
-  }
-}
-
 describe('isLogEvent', () => {
   it('accepts the backend log contract', () => {
     expect(isLogEvent(logEvent())).toBe(true)
-    expect(isLogEvent(logEvent({ traceback: 'Traceback' }))).toBe(true)
+    expect(isLogEvent(logEvent(1, { traceback: 'Traceback' }))).toBe(true)
   })
 
   it('accepts stream identity and reset state', () => {
@@ -46,8 +36,8 @@ describe('isLogEvent', () => {
   it('rejects malformed or foreign events', () => {
     expect(isLogEvent(null)).toBe(false)
     expect(isLogEvent({ type: 'finish', seq: 1 })).toBe(false)
-    expect(isLogEvent(logEvent({ seq: -1 }))).toBe(false)
-    expect(isLogEvent(logEvent({ level: 'trace' as never }))).toBe(false)
+    expect(isLogEvent(logEvent(-1))).toBe(false)
+    expect(isLogEvent(logEvent(1, { level: 'trace' as never }))).toBe(false)
     expect(isLogEvent({ ...logEvent(), traceback: 42 })).toBe(false)
   })
 })
@@ -91,7 +81,7 @@ describe('subscribeLogs', () => {
     handlers?.onOpen?.()
     expect(onOpen).toHaveBeenCalledTimes(1)
 
-    const event = logEvent({ seq: 18, message: 'live' })
+    const event = logEvent(18, { message: 'live' })
     handlers?.onMessage?.({
       raw: JSON.stringify(event),
       parsed: event,

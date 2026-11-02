@@ -15,19 +15,10 @@ from typing import Any
 
 import pytest
 
+from tests.fakes import FakeConfig
+
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = "astrbot_plugin_qq_custom_menu"
-
-
-class FakeConfig(dict):
-    """可记录 save_config 调用的 dict，模拟 AstrBotConfig。"""
-
-    def __init__(self, data: dict[str, Any] | None = None) -> None:
-        super().__init__(data or {})
-        self.saved = 0
-
-    def save_config(self) -> None:
-        self.saved += 1
 
 
 class FakeContext:
@@ -172,7 +163,6 @@ def test_init_logs_migration_failure(monkeypatch: Any, caplog: Any) -> None:
     assert "migration boom" in caplog.text
 
 
-@pytest.mark.asyncio
 async def test_initialize_syncs_and_terminate_closes(monkeypatch: Any, tmp_path: Path) -> None:
     main = load_main()
     sessions: list[FakeSession] = []
@@ -229,7 +219,6 @@ async def test_initialize_syncs_and_terminate_closes(monkeypatch: Any, tmp_path:
     assert plugin._syncer is None
 
 
-@pytest.mark.asyncio
 async def test_initialize_logs_sync_failure(monkeypatch: Any, tmp_path: Path, caplog: Any) -> None:
     main = load_main()
 
@@ -252,7 +241,6 @@ async def test_initialize_logs_sync_failure(monkeypatch: Any, tmp_path: Path, ca
     await plugin.terminate()
 
 
-@pytest.mark.asyncio
 async def test_terminate_without_initialize_is_noop() -> None:
     main = load_main()
     plugin = main.QQCustomMenuPlugin(FakeContext(), FakeConfig())
@@ -263,7 +251,6 @@ async def test_terminate_without_initialize_is_noop() -> None:
     assert plugin._syncer is None
 
 
-@pytest.mark.asyncio
 async def test_terminate_skips_already_closed_session() -> None:
     main = load_main()
     plugin = main.QQCustomMenuPlugin(FakeContext(), FakeConfig())
@@ -299,7 +286,6 @@ class AsyncSaveConfig(FakeConfig):
             self.update(values)
 
 
-@pytest.mark.asyncio
 async def test_save_config_prefers_async_api(monkeypatch: Any, tmp_path: Path) -> None:
     main = load_main()
     monkeypatch.setattr(main, "resolve_plugin_data_dir", lambda context: tmp_path)
@@ -320,7 +306,6 @@ async def test_save_config_prefers_async_api(monkeypatch: Any, tmp_path: Path) -
     assert syncer.platforms == [[]]
 
 
-@pytest.mark.asyncio
 async def test_save_config_falls_back_to_sync_api(monkeypatch: Any, tmp_path: Path) -> None:
     main = load_main()
     monkeypatch.setattr(main, "resolve_plugin_data_dir", lambda context: tmp_path)
@@ -333,7 +318,6 @@ async def test_save_config_falls_back_to_sync_api(monkeypatch: Any, tmp_path: Pa
     assert config["sync_menu"] is False
 
 
-@pytest.mark.asyncio
 async def test_save_config_plain_dict(monkeypatch: Any, tmp_path: Path) -> None:
     main = load_main()
     monkeypatch.setattr(main, "resolve_plugin_data_dir", lambda context: tmp_path)
@@ -345,7 +329,6 @@ async def test_save_config_plain_dict(monkeypatch: Any, tmp_path: Path) -> None:
     assert config["language"] == "en-US"
 
 
-@pytest.mark.asyncio
 async def test_terminate_closes_web_api(monkeypatch: Any, tmp_path: Path) -> None:
     main = load_main()
 

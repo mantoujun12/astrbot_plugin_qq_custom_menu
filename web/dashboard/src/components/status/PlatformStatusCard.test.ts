@@ -1,34 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import PlatformStatusCard from './PlatformStatusCard.vue'
 import { mountView } from '../../test/helpers'
+import { platformFixture } from '../../test/fixtures'
 import type { PlatformStatus } from '../../types/dashboard'
-
-function platform(overrides: Partial<PlatformStatus> = {}): PlatformStatus {
-  return {
-    pf_id: '102*****89',
-    appid: '102*****89',
-    name: '主机器人',
-    platform: 'qq_official',
-    secret_set: true,
-    source: 'compatibility',
-    state: 'synced',
-    scenes: [
-      {
-        scene: 'c2c',
-        enabled: true,
-        state: 'synced',
-        item_count: 2,
-        digest: 'c2c',
-      },
-    ],
-    ...overrides,
-  }
-}
 
 describe('PlatformStatusCard', () => {
   it('renders the platform, source and synced state', () => {
     const wrapper = mountView(PlatformStatusCard, {
-      props: { platform: platform() },
+      props: { platform: platformFixture() },
     })
 
     expect(wrapper.text()).toContain('102*****89')
@@ -47,7 +26,7 @@ describe('PlatformStatusCard', () => {
     ['disabled', '同步已关闭'],
   ])('labels the %s state', (state, label) => {
     const wrapper = mountView(PlatformStatusCard, {
-      props: { platform: platform({ state: state as PlatformStatus['state'] }) },
+      props: { platform: platformFixture({ state: state as PlatformStatus['state'] }) },
     })
 
     expect(wrapper.text()).toContain(label)
@@ -56,7 +35,7 @@ describe('PlatformStatusCard', () => {
   it('marks missing secrets', () => {
     const wrapper = mountView(PlatformStatusCard, {
       props: {
-        platform: platform({ source: 'robot', secret_set: false }),
+        platform: platformFixture({ source: 'robot', secret_set: false }),
       },
     })
 

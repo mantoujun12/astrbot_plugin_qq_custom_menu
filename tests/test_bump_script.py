@@ -12,6 +12,7 @@ import importlib.util
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -338,43 +339,48 @@ def test_main_check_passes(plugin_root: Path, capsys: pytest.CaptureFixture[str]
     assert "版本号校验通过：v0.5.0" in capsys.readouterr().out
 
 
-def test_main_check_reports_mismatch(plugin_root: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    _write(plugin_root, PACKAGE, PACKAGE_TEMPLATE.format(version="0.4.0"))
-    assert bump.main(["--root", str(plugin_root), "--check"]) == 1
-    err = capsys.readouterr().err
-    assert PACKAGE in err
-    assert "不一致" in err
-
-
-def test_main_check_reports_sloppy_writeup(
-    plugin_root: Path, capsys: pytest.CaptureFixture[str]
+@pytest.mark.parametrize(
+    ("setup", "args", "message"),
+    [
+        (
+            lambda root: _write(root, PACKAGE, PACKAGE_TEMPLATE.format(version="0.4.0")),
+            ["--check"],
+            "不一致",
+        ),
+        (
+            lambda root: _write(root, METADATA, "name: demo\nversion: 0.5.0\n"),
+            ["--check"],
+            "应写成 v0.5.0",
+        ),
+        (
+            lambda root: _write(root, PATHS, 'PLUGIN_VERSION = "abc"\n'),
+            ["--check"],
+            "不是合法版本号",
+        ),
+        (
+            lambda root: _write(root, METADATA, "name: demo\nversion: abc\n"),
+            ["-y", "patch"],
+            "错误：",
+        ),
+        (lambda root: None, ["-y", "0.6"], "无法识别的版本号或递增方式"),
+        (lambda root: (root / PACKAGE).unlink(), ["-y", "patch"], "未找到文件"),
+        (
+            lambda root: _write(root, PACKAGE, '{\n  "version": "0.5.0",\n}\n'),
+            ["-y", "patch"],
+            "不是合法 JSON",
+        ),
+    ],
+)
+def test_main_reports_errors(
+    plugin_root: Path,
+    capsys: pytest.CaptureFixture[str],
+    setup: Any,
+    args: list[str],
+    message: str,
 ) -> None:
-    _write(plugin_root, METADATA, "name: demo\nversion: 0.5.0\n")
-    assert bump.main(["--root", str(plugin_root), "--check"]) == 1
-    assert "应写成 v0.5.0" in capsys.readouterr().err
-
-
-def test_main_check_reports_invalid_version(
-    plugin_root: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    _write(plugin_root, PATHS, 'PLUGIN_VERSION = "abc"\n')
-    assert bump.main(["--root", str(plugin_root), "--check"]) == 1
-    assert "不是合法版本号" in capsys.readouterr().err
-
-
-def test_main_reports_unreadable_version_source(
-    plugin_root: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    _write(plugin_root, METADATA, "name: demo\nversion: abc\n")
-    assert bump.main(["--root", str(plugin_root), "-y", "patch"]) == 1
-    assert "错误：" in capsys.readouterr().err
-
-
-def test_main_rejects_unknown_version_argument(
-    plugin_root: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    assert bump.main(["--root", str(plugin_root), "-y", "0.6"]) == 1
-    assert "无法识别的版本号或递增方式" in capsys.readouterr().err
+    setup(plugin_root)
+    assert bump.main(["--root", str(plugin_root), *args]) == 1
+    assert message in capsys.readouterr().err
 
 
 def test_main_rejects_downgrade_without_force(

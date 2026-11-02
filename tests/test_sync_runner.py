@@ -5,8 +5,6 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-import pytest
-
 from core.sync_runner import SyncRunner
 
 
@@ -14,7 +12,6 @@ async def collect(runner: SyncRunner, since: int = 0) -> list[dict[str, Any]]:
     return [event async for event in runner.stream(since)]
 
 
-@pytest.mark.asyncio
 async def test_start_runs_and_emits_finish() -> None:
     runner = SyncRunner()
 
@@ -30,7 +27,6 @@ async def test_start_runs_and_emits_finish() -> None:
     assert runner.finished is True
 
 
-@pytest.mark.asyncio
 async def test_start_is_single_flight() -> None:
     runner = SyncRunner()
     gate = asyncio.Event()
@@ -50,7 +46,6 @@ async def test_start_is_single_flight() -> None:
     await runner.wait()
 
 
-@pytest.mark.asyncio
 async def test_stream_replays_finished_run() -> None:
     runner = SyncRunner()
 
@@ -72,7 +67,6 @@ async def test_stream_replays_finished_run() -> None:
     assert [event["seq"] for event in tail] == [2, 3]
 
 
-@pytest.mark.asyncio
 async def test_stream_receives_live_events() -> None:
     runner = SyncRunner()
     task = asyncio.create_task(collect(runner))
@@ -88,7 +82,6 @@ async def test_stream_receives_live_events() -> None:
     assert [event["type"] for event in events] == ["message", "finish"]
 
 
-@pytest.mark.asyncio
 async def test_exception_emits_failed_finish(caplog: Any) -> None:
     runner = SyncRunner()
 
@@ -106,7 +99,6 @@ async def test_exception_emits_failed_finish(caplog: Any) -> None:
     assert "boom" in caplog.text
 
 
-@pytest.mark.asyncio
 async def test_run_without_finish_gets_default_finish() -> None:
     runner = SyncRunner()
 
@@ -121,7 +113,6 @@ async def test_run_without_finish_gets_default_finish() -> None:
     assert runner.events[-1]["reason"] == "done"
 
 
-@pytest.mark.asyncio
 async def test_close_cancels_busy_run_and_wakes_stream() -> None:
     runner = SyncRunner()
     gate = asyncio.Event()
@@ -143,7 +134,6 @@ async def test_close_cancels_busy_run_and_wakes_stream() -> None:
     await runner.wait()  # 已结束的任务不应再次阻塞
 
 
-@pytest.mark.asyncio
 async def test_buffer_keeps_only_latest_events() -> None:
     runner = SyncRunner(buffer_size=3)
 
@@ -160,7 +150,6 @@ async def test_buffer_keeps_only_latest_events() -> None:
     ]
 
 
-@pytest.mark.asyncio
 async def test_stream_unsubscribes_on_exit() -> None:
     runner = SyncRunner()
 
@@ -174,12 +163,10 @@ async def test_stream_unsubscribes_on_exit() -> None:
     assert runner._subscribers == set()
 
 
-@pytest.mark.asyncio
 async def test_wait_without_task_returns_immediately() -> None:
     await SyncRunner().wait()
 
 
-@pytest.mark.asyncio
 async def test_close_after_finished_is_noop() -> None:
     runner = SyncRunner()
 
@@ -193,7 +180,6 @@ async def test_close_after_finished_is_noop() -> None:
     assert runner.busy is False
 
 
-@pytest.mark.asyncio
 async def test_close_wakes_idle_stream() -> None:
     runner = SyncRunner()
     task = asyncio.create_task(collect(runner))
@@ -204,7 +190,6 @@ async def test_close_wakes_idle_stream() -> None:
     assert await task == []
 
 
-@pytest.mark.asyncio
 async def test_stream_since_beyond_buffer_returns_for_finished_run() -> None:
     runner = SyncRunner()
 

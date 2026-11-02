@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { LogEvent, LogGapEvent, LogStreamInfo } from '../types/logs'
 import { flush, installBridge, mountView, waitUntil } from '../test/helpers'
+import { logEvent } from '../test/fixtures'
 
 vi.mock('../api/logs', () => ({
   getMockLogs: vi.fn(),
@@ -8,17 +9,6 @@ vi.mock('../api/logs', () => ({
 }))
 
 type SubscribeOptions = Parameters<typeof import('../api/logs').subscribeLogs>[0]
-
-function logEvent(seq: number, overrides: Partial<LogEvent> = {}): LogEvent {
-  return {
-    type: 'log',
-    seq,
-    timestamp: `2026-10-23T02:18:0${seq}.000Z`,
-    level: 'info',
-    message: `message-${seq}`,
-    ...overrides,
-  }
-}
 
 async function loadView(
   options: {

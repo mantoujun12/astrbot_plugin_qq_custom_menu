@@ -13,7 +13,7 @@ from core.config import mask_appid
 from core.menu import MenuSynchronizer
 from core.qq_api import API_BASE
 from core.robot_config import MenuConfigError, save_menu_config
-from tests.fakes import FakeSession
+from tests.fakes import FakeSession, make_menu_session
 
 MENU_STATE_DATA = Path(__file__).resolve().parent / "_menu_state_data"
 
@@ -33,15 +33,9 @@ def menu_calls(session: FakeSession, method: str) -> list[dict[str, Any]]:
     return [r for r in session.requests if r["method"] == method and r["url"] == url]
 
 
-def make_session() -> FakeSession:
-    session = FakeSession()
-    session.route_token({"access_token": "tok1", "expires_in": 7200})
-    session.route_menu("GET", "/v2/menu", payload={"menu": {"items": []}})
-    session.route_menu("PUT", "/v2/menu", payload={})
-    return session
+make_session = make_menu_session
 
 
-@pytest.mark.asyncio
 async def test_sync_without_platforms_skips(caplog: Any) -> None:
     session = make_session()
     syncer = MenuSynchronizer(session, [], {})
@@ -52,7 +46,6 @@ async def test_sync_without_platforms_skips(caplog: Any) -> None:
     assert "跳过" in caplog.text
 
 
-@pytest.mark.asyncio
 async def test_sync_reads_then_overwrites_when_enabled() -> None:
     session = make_session()
     config: dict[str, Any] = {
@@ -71,7 +64,6 @@ async def test_sync_reads_then_overwrites_when_enabled() -> None:
     }
 
 
-@pytest.mark.asyncio
 async def test_sync_defaults_to_enabled_when_key_missing() -> None:
     session = make_session()
     syncer = MenuSynchronizer(
@@ -85,7 +77,6 @@ async def test_sync_defaults_to_enabled_when_key_missing() -> None:
     assert len(menu_calls(session, "PUT")) == 1
 
 
-@pytest.mark.asyncio
 async def test_sync_disabled_only_reads(caplog: Any) -> None:
     session = make_session()
     syncer = MenuSynchronizer(
@@ -100,7 +91,6 @@ async def test_sync_disabled_only_reads(caplog: Any) -> None:
     assert menu_calls(session, "PUT") == []
 
 
-@pytest.mark.asyncio
 async def test_sync_empty_menu_clears_remote(caplog: Any) -> None:
     session = make_session()
     # 远端仍有旧菜单，配置为空时才需要 PUT 清空。
@@ -120,7 +110,6 @@ async def test_sync_empty_menu_clears_remote(caplog: Any) -> None:
     assert "清空" in caplog.text
 
 
-@pytest.mark.asyncio
 async def test_sync_iterates_every_platform() -> None:
     session = make_session()
     platforms: list[dict[str, str]] = [
@@ -152,7 +141,6 @@ def make_state_dir() -> Path:
     return data_dir
 
 
-@pytest.mark.asyncio
 async def test_sync_skips_when_remote_matches_config() -> None:
     session = make_session()
     menu = {"items": [{"type": "send_message", "name": "帮助", "send_message": "/help"}]}
@@ -169,7 +157,6 @@ async def test_sync_skips_when_remote_matches_config() -> None:
     assert syncer.state.is_unchanged(PLATFORM["appid"], menu) is True
 
 
-@pytest.mark.asyncio
 async def test_sync_puts_when_remote_differs_from_config_even_if_state_matches() -> None:
     session = make_session()
     menu = {"items": [{"type": "send_message", "name": "帮助", "send_message": "/help"}]}
@@ -185,7 +172,6 @@ async def test_sync_puts_when_remote_differs_from_config_even_if_state_matches()
     assert len(menu_calls(session, "PUT")) == 1
 
 
-@pytest.mark.asyncio
 async def test_sync_does_not_trust_stale_state_after_remote_reset() -> None:
     session = make_session()
     menu = {"items": [{"type": "send_message", "name": "帮助", "send_message": "/help"}]}
@@ -202,7 +188,6 @@ async def test_sync_does_not_trust_stale_state_after_remote_reset() -> None:
     assert len(menu_calls(session, "PUT")) == 1
 
 
-@pytest.mark.asyncio
 async def test_sync_all_emits_structured_events() -> None:
     session = make_session()
     config: dict[str, Any] = {
@@ -239,7 +224,6 @@ async def _collect(target: list[Any], value: Any) -> None:
     target.append(value)
 
 
-@pytest.mark.asyncio
 async def test_sync_all_without_platforms_emits_finish(caplog: Any) -> None:
     session = make_session()
     syncer = MenuSynchronizer(session, [], {})
@@ -262,7 +246,6 @@ async def test_sync_all_without_platforms_emits_finish(caplog: Any) -> None:
     assert "跳过" in caplog.text
 
 
-@pytest.mark.asyncio
 async def test_sync_all_disabled_only_reads() -> None:
     session = make_session()
     syncer = MenuSynchronizer(
@@ -280,7 +263,6 @@ async def test_sync_all_disabled_only_reads() -> None:
     assert menu_calls(session, "PUT") == []
 
 
-@pytest.mark.asyncio
 async def test_sync_all_continues_after_platform_failure(monkeypatch: Any) -> None:
     class FakeClient:
         def __init__(self, appid: str, secret: str, http: Any) -> None:
@@ -361,7 +343,6 @@ def robot_config(
     }
 
 
-@pytest.mark.asyncio
 async def test_sync_uses_private_menu_from_robot_config(tmp_path: Path) -> None:
     save_menu_config(tmp_path, robot_config())
     session = make_session()
@@ -390,7 +371,6 @@ async def test_sync_uses_private_menu_from_robot_config(tmp_path: Path) -> None:
     }
 
 
-@pytest.mark.asyncio
 async def test_invalid_robot_config_emits_error_finish(tmp_path: Path) -> None:
     (tmp_path / "menu_config.json").write_text("{", encoding="utf-8")
     syncer = MenuSynchronizer(make_session(), [], {}, tmp_path)

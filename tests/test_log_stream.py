@@ -31,6 +31,23 @@ def make_logger(name: str) -> logging.Logger:
     return logger
 
 
+@pytest.fixture
+def installed_buffer() -> Any:
+    """构造已安装到独立 logger 的 LogBuffer, 测试结束后统一 close"""
+    created: list[LogBuffer] = []
+
+    def factory(name: str, **kwargs: Any) -> tuple[LogBuffer, logging.Logger]:
+        logger = make_logger(name)
+        buffer = LogBuffer(**kwargs)
+        buffer.install(logger)
+        created.append(buffer)
+        return buffer, logger
+
+    yield factory
+    for buffer in created:
+        buffer.close()
+
+
 async def first_entry(buffer: LogBuffer, since: int = 0) -> LogEntry | LogGap | None:
     stream = buffer.follow(since, heartbeat_seconds=10)
     try:
@@ -76,15 +93,9 @@ def test_invalid_limits_are_rejected(kwargs: dict[str, int]) -> None:
         LogBuffer(**kwargs)
 
 
-@pytest.mark.asyncio
-async def test_install_filters_prefix_and_formats_record() -> None:
-    buffer = LogBuffer()
-    logger = make_logger("format")
-    buffer.install(logger)
-    try:
-        logger.info("%s plugin booted", LOG_TAG)
-    finally:
-        buffer.close()
+async def test_install_filters_prefix_and_formats_record(installed_buffer: Any) -> None:
+    buffer, logger = installed_buffer("format")
+    logger.info("%s plugin booted", LOG_TAG)
 
     entry = await first_entry(buffer)
 
@@ -95,15 +106,9 @@ async def test_install_filters_prefix_and_formats_record() -> None:
     assert entry.timestamp.endswith("Z")
 
 
-@pytest.mark.asyncio
-async def test_plugin_records_without_prefix_are_kept() -> None:
-    buffer = LogBuffer()
-    logger = make_logger("unprefixed")
-    buffer.install(logger)
-    try:
-        logger.warning("readable legacy message")
-    finally:
-        buffer.close()
+async def test_plugin_records_without_prefix_are_kept(installed_buffer: Any) -> None:
+    buffer, logger = installed_buffer("unprefixed")
+    logger.warning("readable legacy message")
 
     entry = await first_entry(buffer)
 
@@ -202,7 +207,6 @@ def test_install_targets_shared_logger_not_caller_module() -> None:
     assert entry.message == "via shared logger"
 
 
-@pytest.mark.asyncio
 async def test_install_enables_debug_then_restores_logger_level() -> None:
     logger = make_logger("debug-level")
     logger.setLevel(logging.INFO)
@@ -240,7 +244,6 @@ def test_same_prefix_from_another_plugin_is_not_captured(tmp_path: Path) -> None
     assert buffer.last_seq == 0
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("method", "level"),
     [
@@ -251,14 +254,9 @@ def test_same_prefix_from_another_plugin_is_not_captured(tmp_path: Path) -> None
         ("critical", "critical"),
     ],
 )
-async def test_levels_are_normalized(method: str, level: str) -> None:
-    buffer = LogBuffer()
-    logger = make_logger(f"level-{level}")
-    buffer.install(logger)
-    try:
-        getattr(logger, method)(f"{LOG_TAG} level message")
-    finally:
-        buffer.close()
+async def test_levels_are_normalized(installed_buffer: Any, method: str, level: str) -> None:
+    buffer, logger = installed_buffer(f"level-{level}")
+    getattr(logger, method)(f"{LOG_TAG} level message")
 
     entry = await first_entry(buffer)
 
@@ -266,18 +264,12 @@ async def test_levels_are_normalized(method: str, level: str) -> None:
     assert entry.level == level
 
 
-@pytest.mark.asyncio
-async def test_exception_traceback_is_captured() -> None:
-    buffer = LogBuffer()
-    logger = make_logger("traceback")
-    buffer.install(logger)
+async def test_exception_traceback_is_captured(installed_buffer: Any) -> None:
+    buffer, logger = installed_buffer("traceback")
     try:
-        try:
-            raise RuntimeError("boom")
-        except RuntimeError:
-            logger.exception(f"{LOG_TAG} failed")
-    finally:
-        buffer.close()
+        raise RuntimeError("boom")
+    except RuntimeError:
+        logger.exception(f"{LOG_TAG} failed")
 
     entry = await first_entry(buffer)
 
@@ -286,15 +278,9 @@ async def test_exception_traceback_is_captured() -> None:
     assert "RuntimeError: boom" in entry.traceback
 
 
-@pytest.mark.asyncio
-async def test_stack_info_is_captured() -> None:
-    buffer = LogBuffer()
-    logger = make_logger("stack")
-    buffer.install(logger)
-    try:
-        logger.info(f"{LOG_TAG} with stack", stack_info=True)
-    finally:
-        buffer.close()
+async def test_stack_info_is_captured(installed_buffer: Any) -> None:
+    buffer, logger = installed_buffer("stack")
+    logger.info(f"{LOG_TAG} with stack", stack_info=True)
 
     entry = await first_entry(buffer)
 
@@ -302,17 +288,11 @@ async def test_stack_info_is_captured() -> None:
     assert "Stack (most recent call last)" in entry.traceback
 
 
-@pytest.mark.asyncio
-async def test_buffer_keeps_latest_entries_with_monotonic_seq() -> None:
-    buffer = LogBuffer(capacity=2)
-    logger = make_logger("capacity")
-    buffer.install(logger)
-    try:
-        logger.info(f"{LOG_TAG} one")
-        logger.info(f"{LOG_TAG} two")
-        logger.info(f"{LOG_TAG} three")
-    finally:
-        buffer.close()
+async def test_buffer_keeps_latest_entries_with_monotonic_seq(installed_buffer: Any) -> None:
+    buffer, logger = installed_buffer("capacity", capacity=2)
+    logger.info(f"{LOG_TAG} one")
+    logger.info(f"{LOG_TAG} two")
+    logger.info(f"{LOG_TAG} three")
 
     stream = buffer.follow(0, heartbeat_seconds=10)
     try:
@@ -332,17 +312,11 @@ async def test_buffer_keeps_latest_entries_with_monotonic_seq() -> None:
     assert second.message == "three"
 
 
-@pytest.mark.asyncio
-async def test_follow_since_replays_only_newer_entries() -> None:
-    buffer = LogBuffer(capacity=3)
-    logger = make_logger("since")
-    buffer.install(logger)
-    try:
-        logger.info(f"{LOG_TAG} one")
-        logger.info(f"{LOG_TAG} two")
-        logger.info(f"{LOG_TAG} three")
-    finally:
-        buffer.close()
+async def test_follow_since_replays_only_newer_entries(installed_buffer: Any) -> None:
+    buffer, logger = installed_buffer("since", capacity=3)
+    logger.info(f"{LOG_TAG} one")
+    logger.info(f"{LOG_TAG} two")
+    logger.info(f"{LOG_TAG} three")
 
     entry = await first_entry(buffer, since=2)
 
@@ -351,31 +325,26 @@ async def test_follow_since_replays_only_newer_entries() -> None:
     assert entry.message == "three"
 
 
-@pytest.mark.asyncio
-async def test_follow_receives_live_entries_and_supports_multiple_subscribers() -> None:
-    buffer = LogBuffer()
-    logger = make_logger("live")
-    buffer.install(logger)
+async def test_follow_receives_live_entries_and_supports_multiple_subscribers(
+    installed_buffer: Any,
+) -> None:
+    buffer, logger = installed_buffer("live")
     first = buffer.follow(0, heartbeat_seconds=10)
     second = buffer.follow(0, heartbeat_seconds=10)
     first_next = asyncio.create_task(anext(first))
     second_next = asyncio.create_task(anext(second))
     await asyncio.sleep(0)
 
-    try:
-        logger.info(f"{LOG_TAG} live")
-        one, two = await asyncio.wait_for(asyncio.gather(first_next, second_next), timeout=1)
-    finally:
-        await first.aclose()
-        await second.aclose()
-        buffer.close()
+    logger.info(f"{LOG_TAG} live")
+    one, two = await asyncio.wait_for(asyncio.gather(first_next, second_next), timeout=1)
+    await first.aclose()
+    await second.aclose()
 
     assert one is not None and two is not None
     assert one.seq == two.seq == 1
     assert one.message == two.message == "live"
 
 
-@pytest.mark.asyncio
 async def test_install_does_not_replace_an_active_buffer_handler() -> None:
     logger = make_logger("replace")
     first_buffer = LogBuffer()
@@ -404,7 +373,6 @@ async def test_install_does_not_replace_an_active_buffer_handler() -> None:
     assert entry.message == "after replacement"
 
 
-@pytest.mark.asyncio
 async def test_follow_limits_concurrent_subscribers() -> None:
     buffer = LogBuffer(max_subscribers=1)
     first = buffer.follow()
@@ -422,7 +390,6 @@ async def test_follow_limits_concurrent_subscribers() -> None:
     buffer.close()
 
 
-@pytest.mark.asyncio
 async def test_follow_rejects_non_positive_heartbeat() -> None:
     stream = LogBuffer().follow(heartbeat_seconds=0)
 
@@ -432,11 +399,8 @@ async def test_follow_rejects_non_positive_heartbeat() -> None:
     await stream.aclose()
 
 
-@pytest.mark.asyncio
-async def test_follow_is_woken_by_logs_from_worker_threads() -> None:
-    buffer = LogBuffer()
-    logger = make_logger("thread")
-    buffer.install(logger)
+async def test_follow_is_woken_by_logs_from_worker_threads(installed_buffer: Any) -> None:
+    buffer, logger = installed_buffer("thread")
     stream = buffer.follow(0, heartbeat_seconds=10)
     pending = asyncio.create_task(anext(stream))
     await asyncio.sleep(0)
@@ -444,18 +408,14 @@ async def test_follow_is_woken_by_logs_from_worker_threads() -> None:
     def log_from_plugin_thread() -> None:
         logger.info(f"{LOG_TAG} from thread")
 
-    try:
-        await asyncio.to_thread(log_from_plugin_thread)
-        entry = await asyncio.wait_for(pending, timeout=1)
-    finally:
-        await stream.aclose()
-        buffer.close()
+    await asyncio.to_thread(log_from_plugin_thread)
+    entry = await asyncio.wait_for(pending, timeout=1)
+    await stream.aclose()
 
     assert entry is not None
     assert entry.message == "from thread"
 
 
-@pytest.mark.asyncio
 async def test_close_removes_handler_and_ends_waiting_stream() -> None:
     buffer = LogBuffer()
     logger = make_logger("close")
@@ -492,15 +452,9 @@ def test_closed_buffer_ignores_new_records() -> None:
     assert buffer.last_seq == 0
 
 
-@pytest.mark.asyncio
-async def test_oversized_entry_is_truncated() -> None:
-    buffer = LogBuffer()
-    logger = make_logger("truncate")
-    buffer.install(logger)
-    try:
-        logger.info(f"{LOG_TAG} {'x' * (MAX_LOG_ENTRY_CHARS + 100)}")
-    finally:
-        buffer.close()
+async def test_oversized_entry_is_truncated(installed_buffer: Any) -> None:
+    buffer, logger = installed_buffer("truncate")
+    logger.info(f"{LOG_TAG} {'x' * (MAX_LOG_ENTRY_CHARS + 100)}")
 
     entry = await first_entry(buffer)
 
@@ -509,18 +463,12 @@ async def test_oversized_entry_is_truncated() -> None:
     assert entry.message.endswith(t("log.stream_entry_truncated"))
 
 
-@pytest.mark.asyncio
-async def test_log_messages_and_tracebacks_are_redacted() -> None:
-    buffer = LogBuffer()
-    logger = make_logger("redaction")
-    buffer.install(logger)
-    try:
-        logger.error(
-            '%s request failed: {"clientSecret":"sec1","access_token":"tok1"}',
-            LOG_TAG,
-        )
-    finally:
-        buffer.close()
+async def test_log_messages_and_tracebacks_are_redacted(installed_buffer: Any) -> None:
+    buffer, logger = installed_buffer("redaction")
+    logger.error(
+        '%s request failed: {"clientSecret":"sec1","access_token":"tok1"}',
+        LOG_TAG,
+    )
 
     entry = await first_entry(buffer)
 
@@ -531,18 +479,12 @@ async def test_log_messages_and_tracebacks_are_redacted() -> None:
     assert entry.message.count(MASK_VALUE) == 2
 
 
-@pytest.mark.asyncio
-async def test_oversized_traceback_is_truncated() -> None:
-    buffer = LogBuffer()
-    logger = make_logger("traceback-truncate")
-    buffer.install(logger)
+async def test_oversized_traceback_is_truncated(installed_buffer: Any) -> None:
+    buffer, logger = installed_buffer("traceback-truncate")
     try:
-        try:
-            raise RuntimeError("x" * (MAX_LOG_ENTRY_CHARS + 100))
-        except RuntimeError:
-            logger.exception(f"{LOG_TAG} failed")
-    finally:
-        buffer.close()
+        raise RuntimeError("x" * (MAX_LOG_ENTRY_CHARS + 100))
+    except RuntimeError:
+        logger.exception(f"{LOG_TAG} failed")
 
     entry = await first_entry(buffer)
 
@@ -551,7 +493,6 @@ async def test_oversized_traceback_is_truncated() -> None:
     assert len(entry.message) + len(entry.traceback) <= MAX_LOG_ENTRY_CHARS
 
 
-@pytest.mark.asyncio
 async def test_follow_emits_heartbeat_when_idle() -> None:
     buffer = LogBuffer(heartbeat_seconds=0.01)
     stream = buffer.follow(0)

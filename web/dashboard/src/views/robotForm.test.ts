@@ -7,26 +7,21 @@ import {
   validateRobotForm,
 } from './robotForm'
 import type { MenuLimits } from '../types/dashboard'
-import type { RobotConfig } from '../types/robotConfig'
+import { MENU_LIMITS as LIMITS, robotFixture } from '../test/fixtures'
 
 const t = (_key: string, fallback?: string): string => fallback ?? _key
-const MENU_LIMITS: MenuLimits = { top_level_max: 10, sub_items_max: 5 }
+const MENU_LIMITS: MenuLimits = LIMITS
 
-function robot(): RobotConfig {
-  return {
-    id: 'robot-1',
-    name: '主机器人',
+function robot() {
+  return robotFixture({
     appid: 'app1',
-    platform: 'qq_official',
-    secret_masked: 'ab***yz',
-    secret_set: true,
     scenes: {
       c2c: {
         enabled: true,
         items: [{ type: 'send_message', name: '帮助', message: '/help', parent: '' }],
       },
     },
-  }
+  })
 }
 
 describe('robotForm helpers', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { flush, installBridge, mountView, waitUntil } from '../test/helpers'
-import type { StatusResponse } from '../types/dashboard'
+import { buttonByText, flush, loadDashboardView } from '../test/helpers'
+import { statusFixture } from '../test/fixtures'
 
 vi.mock('../api/dashboard', () => ({
   fetchStatus: vi.fn(),
@@ -8,63 +8,19 @@ vi.mock('../api/dashboard', () => ({
   saveConfig: vi.fn(),
 }))
 
-function statusFixture(overrides: Partial<StatusResponse> = {}): StatusResponse {
-  return {
-    plugin: { name: 'astrbot_plugin_qq_custom_menu', version: 'v0.2.3' },
-    ready: true,
-    sync_menu: true,
-    state: { available: true },
-    platforms: [
-      {
-        pf_id: '102*****89',
-        appid: '102*****89',
-        name: '主机器人',
-        platform: 'qq_official',
-        secret_set: true,
-        source: 'compatibility',
-        state: 'synced',
-      },
-    ],
-    menu: {
-      top_level: 2,
-      sub_items: 1,
-      total: 3,
-      top_level_max: 10,
-      sub_items_max: 10,
-      digest: 'digest',
-      items: [
-        { type: 'send_message', name: '帮助', send_message: '/help' },
-        {
-          type: 'menu',
-          name: '更多',
-          sub_menu_items: [{ type: 'link', name: '文档', link: 'https://docs.app' }],
-        },
-      ],
-    },
-    ...overrides,
-  }
-}
-
-async function loadView(options: { withBackend?: boolean } = {}) {
-  const bridge =
-    options.withBackend === false ? null : installBridge({
-      subscribeSSE: vi.fn(async () => 'sub-1'),
-      unsubscribeSSE: vi.fn(async () => ({})),
-    })
-  vi.resetModules()
-  const api = await import('../api/dashboard')
-  const { default: StatusOverviewView } = await import('./StatusOverviewView.vue')
-
-  return {
-    bridge,
-    api,
-    async mount() {
-      const wrapper = mountView(StatusOverviewView)
-      await waitUntil(() => vi.mocked(api.fetchStatus).mock.calls.length > 0)
-      await flush()
-      return wrapper
-    },
-  }
+function loadView(options: { withBackend?: boolean } = {}) {
+  return loadDashboardView({
+    api: () => import('../api/dashboard'),
+    component: () => import('./StatusOverviewView.vue'),
+    bridge:
+      options.withBackend === false
+        ? false
+        : {
+            subscribeSSE: vi.fn(async () => 'sub-1'),
+            unsubscribeSSE: vi.fn(async () => ({})),
+          },
+    waitFor: (api) => () => vi.mocked(api.fetchStatus).mock.calls.length > 0,
+  })
 }
 
 describe('StatusOverviewView', () => {
@@ -164,10 +120,7 @@ describe('StatusOverviewView', () => {
     vi.mocked(api.fetchStatus).mockResolvedValue(statusFixture())
 
     const wrapper = await mount()
-    const refresh = wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('刷新'))
-    await refresh?.trigger('click')
+    await buttonByText(wrapper, '刷新')?.trigger('click')
     await flush()
 
     expect(api.fetchStatus).toHaveBeenLastCalledWith({ refresh: true })

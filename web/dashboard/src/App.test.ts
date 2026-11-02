@@ -2,26 +2,27 @@ import { describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { flush, installBridge, mountView, waitUntil } from './test/helpers'
 
-vi.mock('./api/dashboard', () => ({
-  fetchStatus: vi.fn(async () => ({
-    plugin: { name: 'astrbot_plugin_qq_custom_menu', version: 'v0.2.3' },
-    ready: true,
-    sync_menu: true,
-    state: { available: true },
-    platforms: [],
-    menu: {
-      top_level: 0,
-      sub_items: 0,
-      total: 0,
-      top_level_max: 10,
-      sub_items_max: 10,
-      digest: '',
-      items: [],
-    },
-  })),
-  fetchConfig: vi.fn(),
-  saveConfig: vi.fn(),
-}))
+vi.mock('./api/dashboard', async () => {
+  const { statusFixture } = await import('./test/fixtures')
+  return {
+    fetchStatus: vi.fn(async () =>
+      statusFixture({
+        platforms: [],
+        menu: {
+          top_level: 0,
+          sub_items: 0,
+          total: 0,
+          top_level_max: 10,
+          sub_items_max: 10,
+          digest: '',
+          items: [],
+        },
+      }),
+    ),
+    fetchConfig: vi.fn(),
+    saveConfig: vi.fn(),
+  }
+})
 
 describe('App', () => {
   it('mounts the application shell and shows the navigation', async () => {

@@ -23,6 +23,7 @@ from core.config import (
     migrate_menu_config,
     normalize_config_payload,
 )
+from tests.fakes import FakeConfig
 
 # ---------------------------------------------------------------------------
 # get_platforms: 只读取插件配置
@@ -231,19 +232,8 @@ def test_get_menu_empty_configs() -> None:
 # ---------------------------------------------------------------------------
 
 
-class _SaveableDict(dict):
-    """可记录 save_config 调用的 dict, 模拟 AstrBotConfig"""
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        self.saved = 0
-
-    def save_config(self) -> None:
-        self.saved += 1
-
-
 def test_migrate_menu_config_from_legacy() -> None:
-    config = _SaveableDict(
+    config = FakeConfig(
         {
             "menu": {
                 "items": [
@@ -269,20 +259,20 @@ def test_migrate_menu_config_from_legacy() -> None:
 
 
 def test_migrate_menu_config_non_dict_returns_false() -> None:
-    config = _SaveableDict({"menu": [{"type": "send_message"}]})
+    config = FakeConfig({"menu": [{"type": "send_message"}]})
     assert migrate_menu_config(config) is False
     assert config.saved == 0
 
 
 def test_migrate_menu_config_without_items() -> None:
-    config = _SaveableDict({"menu": {}})
+    config = FakeConfig({"menu": {}})
     assert migrate_menu_config(config) is True
     assert config["menu"] == []
     assert config.saved == 1
 
 
 def test_migrate_menu_config_skips_invalid_entries() -> None:
-    config = _SaveableDict(
+    config = FakeConfig(
         {
             "menu": {
                 "items": [
@@ -317,7 +307,7 @@ def test_get_menu_menu_children_non_list_is_ignored() -> None:
 
 
 def test_migrate_menu_config_non_list_items() -> None:
-    config = _SaveableDict({"menu": {"items": "oops"}})
+    config = FakeConfig({"menu": {"items": "oops"}})
     assert migrate_menu_config(config) is True
     assert config["menu"] == []
     assert config.saved == 1
@@ -334,7 +324,7 @@ def test_migrate_menu_config_without_save_config() -> None:
 
 
 def test_migrate_menu_config_skips_invalid_children() -> None:
-    config = _SaveableDict(
+    config = FakeConfig(
         {
             "menu": {
                 "items": [

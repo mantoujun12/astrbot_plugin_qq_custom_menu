@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createMemoryHistory, createRouter } from 'vue-router'
-import { flush, installBridge, mountView, waitUntil } from '../test/helpers'
-import type { PluginConfigResponse } from '../types/dashboard'
+import {
+  buttonByText,
+  flush,
+  loadDashboardView,
+  saveButton,
+  waitUntil,
+} from '../test/helpers'
+import { pluginConfigFixture } from '../test/fixtures'
 
 vi.mock('../api/dashboard', () => ({
   fetchStatus: vi.fn(),
@@ -9,78 +14,36 @@ vi.mock('../api/dashboard', () => ({
   saveConfig: vi.fn(),
 }))
 
-function configFixture(overrides: Partial<PluginConfigResponse> = {}): PluginConfigResponse {
-  return {
-    plugin: { name: 'astrbot_plugin_qq_custom_menu', version: 'v0.2.3' },
-    language: 'zh-CN',
-    sync_menu: true,
-    primary_color: '#3c96ca',
-    secondary_color: '#2f86bd',
-    qq_platforms: [
-      {
-        appid: '1023456789',
-        platform: 'qq_official',
-        secret_masked: 'ab*****yz',
-        secret_set: true,
-      },
-    ],
-    runtime_platforms: [],
-    menu: [
-      { type: 'send_message', name: '帮助', message: '/help', parent: '' },
-      { type: 'menu', name: '更多', parent: '' },
-      { type: 'link', name: '文档', link: 'https://docs.app', parent: '更多' },
-    ],
-    limits: { top_level_max: 10, sub_items_max: 10 },
-    ...overrides,
-  }
-}
+const ROUTES = [
+  { path: '/status', name: 'status', component: { template: '<div />' } },
+  { path: '/menu', name: 'menu', component: { template: '<div />' } },
+  { path: '/:pathMatch(.*)*', redirect: '/status' },
+]
 
-async function loadView(options: { withBackend?: boolean } = {}) {
-  const bridge =
-    options.withBackend === false
-      ? null
-      : installBridge({
-          apiPost: vi.fn(async (endpoint: string) =>
-            endpoint === 'sync' ? { started: true, busy: false } : configFixture(),
-          ),
-          subscribeSSE: vi.fn(async () => 'sub-1'),
-          unsubscribeSSE: vi.fn(async () => ({})),
-        })
-  vi.resetModules()
-  const api = await import('../api/dashboard')
-  const { default: MenuView } = await import('./MenuView.vue')
-  const router = createRouter({
-    history: createMemoryHistory(),
-    routes: [
-      { path: '/status', name: 'status', component: { template: '<div />' } },
-      { path: '/menu', name: 'menu', component: { template: '<div />' } },
-      { path: '/:pathMatch(.*)*', redirect: '/status' },
-    ],
+function loadView(options: { withBackend?: boolean } = {}) {
+  return loadDashboardView({
+    api: () => import('../api/dashboard'),
+    component: () => import('./MenuView.vue'),
+    bridge:
+      options.withBackend === false
+        ? false
+        : {
+            apiPost: vi.fn(async (endpoint: string) =>
+              endpoint === 'sync' ? { started: true, busy: false } : pluginConfigFixture(),
+            ),
+            subscribeSSE: vi.fn(async () => 'sub-1'),
+            unsubscribeSSE: vi.fn(async () => ({})),
+          },
+    routes: ROUTES,
+    initial: '/menu',
+    waitFor: (api) => () => vi.mocked(api.fetchConfig).mock.calls.length > 0,
   })
-  await router.push('/menu')
-  await router.isReady()
-
-  return {
-    bridge,
-    api,
-    router,
-    async mount() {
-      const wrapper = mountView(MenuView, { global: { plugins: [router] } })
-      await waitUntil(() => vi.mocked(api.fetchConfig).mock.calls.length > 0)
-      await flush()
-      return wrapper
-    },
-  }
-}
-
-function saveButton(wrapper: ReturnType<typeof mountView>) {
-  return wrapper.findAll('button').find((button) => button.text().trim() === '保存')
 }
 
 describe('MenuView', () => {
   it('loads and renders the menu tree', async () => {
     const { api, mount } = await loadView()
-    vi.mocked(api.fetchConfig).mockResolvedValue(configFixture())
+    vi.mocked(api.fetchConfig).mockResolvedValue(pluginConfigFixture())
 
     const wrapper = await mount()
 
@@ -93,8 +56,8 @@ describe('MenuView', () => {
 
   it('saves the current menu and shows a notice', async () => {
     const { api, mount } = await loadView()
-    vi.mocked(api.fetchConfig).mockResolvedValue(configFixture())
-    vi.mocked(api.saveConfig).mockResolvedValue(configFixture())
+    vi.mocked(api.fetchConfig).mockResolvedValue(pluginConfigFixture())
+    vi.mocked(api.saveConfig).mockResolvedValue(pluginConfigFixture())
 
     const wrapper = await mount()
     await saveButton(wrapper)?.trigger('click')
@@ -112,8 +75,8 @@ describe('MenuView', () => {
 
   it('deletes an entry before saving', async () => {
     const { api, mount } = await loadView()
-    vi.mocked(api.fetchConfig).mockResolvedValue(configFixture())
-    vi.mocked(api.saveConfig).mockResolvedValue(configFixture())
+    vi.mocked(api.fetchConfig).mockResolvedValue(pluginConfigFixture())
+    vi.mocked(api.saveConfig).mockResolvedValue(pluginConfigFixture())
 
     const wrapper = await mount()
     await wrapper.findAll('[aria-label="删除"]')[0].trigger('click')
@@ -126,8 +89,8 @@ describe('MenuView', () => {
 
   it('adds a child through the dialog', async () => {
     const { api, mount } = await loadView()
-    vi.mocked(api.fetchConfig).mockResolvedValue(configFixture())
-    vi.mocked(api.saveConfig).mockResolvedValue(configFixture())
+    vi.mocked(api.fetchConfig).mockResolvedValue(pluginConfigFixture())
+    vi.mocked(api.saveConfig).mockResolvedValue(pluginConfigFixture())
 
     const wrapper = await mount()
     await wrapper.find('[aria-label="添加子项"]').trigger('click')
@@ -153,15 +116,12 @@ describe('MenuView', () => {
 
   it('saves and syncs, then jumps to the status page', async () => {
     const { api, bridge, router, mount } = await loadView()
-    vi.mocked(api.fetchConfig).mockResolvedValue(configFixture())
-    vi.mocked(api.saveConfig).mockResolvedValue(configFixture())
+    vi.mocked(api.fetchConfig).mockResolvedValue(pluginConfigFixture())
+    vi.mocked(api.saveConfig).mockResolvedValue(pluginConfigFixture())
 
     const wrapper = await mount()
-    const saveAndSync = wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('保存并同步'))
-    await saveAndSync?.trigger('click')
-    await waitUntil(() => router.currentRoute.value.path === '/status')
+    await buttonByText(wrapper, '保存并同步')?.trigger('click')
+    await waitUntil(() => router?.currentRoute.value.path === '/status')
 
     expect(bridge?.apiPost).toHaveBeenCalledWith('sync')
   })
@@ -177,7 +137,7 @@ describe('MenuView', () => {
 
   it('disables editing in local mock mode', async () => {
     const { api, mount } = await loadView({ withBackend: false })
-    vi.mocked(api.fetchConfig).mockResolvedValue(configFixture())
+    vi.mocked(api.fetchConfig).mockResolvedValue(pluginConfigFixture())
 
     const wrapper = await mount()
 
@@ -187,13 +147,10 @@ describe('MenuView', () => {
 
   it('opens the add dialog for a top-level entry', async () => {
     const { api, mount } = await loadView()
-    vi.mocked(api.fetchConfig).mockResolvedValue(configFixture())
+    vi.mocked(api.fetchConfig).mockResolvedValue(pluginConfigFixture())
 
     const wrapper = await mount()
-    const add = wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('添加一级菜单'))
-    await add?.trigger('click')
+    await buttonByText(wrapper, '添加一级菜单')?.trigger('click')
     await flush()
 
     expect(wrapper.findComponent({ name: 'MenuEntryDialog' }).props('modelValue')).toBe(true)

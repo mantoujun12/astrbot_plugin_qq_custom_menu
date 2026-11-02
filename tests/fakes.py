@@ -107,4 +107,32 @@ class FakeContext:
         return self._config
 
 
-__all__ = ["API_BASE", "TOKEN_URL", "FakeContext", "FakeResponse", "FakeSession"]
+class FakeConfig(dict):
+    """可记录 save_config 调用的 dict, 模拟 AstrBotConfig"""
+
+    def __init__(self, data: dict[str, Any] | None = None) -> None:
+        super().__init__(data or {})
+        self.saved = 0
+
+    def save_config(self) -> None:
+        self.saved += 1
+
+
+def make_menu_session(menu_items: list[dict[str, Any]] | None = None) -> FakeSession:
+    """预置 token 与 GET/PUT 菜单路由的 FakeSession"""
+    session = FakeSession()
+    session.route_token({"access_token": "tok1", "expires_in": 7200})
+    session.route_menu("GET", "/v2/menu", payload={"menu": {"items": menu_items or []}})
+    session.route_menu("PUT", "/v2/menu", payload={})
+    return session
+
+
+__all__ = [
+    "API_BASE",
+    "TOKEN_URL",
+    "FakeConfig",
+    "FakeContext",
+    "FakeResponse",
+    "FakeSession",
+    "make_menu_session",
+]

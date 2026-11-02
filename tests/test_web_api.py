@@ -14,8 +14,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import pytest
-
 from core.config import get_menu
 from core.i18n import LOG_TAG
 from core.log_stream import LogBuffer
@@ -27,6 +25,19 @@ MENU: list[dict[str, Any]] = [
     {"type": "menu", "name": "更多"},
     {"type": "send_message", "name": "关于", "message": "/about", "parent": "更多"},
 ]
+
+
+def make_host_logger(name: str) -> logging.Logger:
+    logger = logging.getLogger(name)
+    logger.handlers.clear()
+    logger.propagate = False
+    logger.setLevel(logging.INFO)
+    return logger
+
+
+async def next_event(stream: Any) -> dict[str, Any]:
+    line = await asyncio.wait_for(anext(stream.content), timeout=1)
+    return json.loads(line.removeprefix("data: ").strip())
 
 
 @dataclass
@@ -322,7 +333,6 @@ def test_register_adds_all_routes(monkeypatch: Any) -> None:
     }
 
 
-@pytest.mark.asyncio
 async def test_page_status_and_config_get(monkeypatch: Any, tmp_path: Path) -> None:
     install_web(monkeypatch)
     syncer = FakeSyncer()
@@ -344,7 +354,6 @@ async def test_page_status_and_config_get(monkeypatch: Any, tmp_path: Path) -> N
     ]
 
 
-@pytest.mark.asyncio
 async def test_page_config_save_success(monkeypatch: Any) -> None:
     install_web(
         monkeypatch,
@@ -394,7 +403,6 @@ async def test_page_config_save_success(monkeypatch: Any) -> None:
     assert response.data["secondary_color"] == "#112233"
 
 
-@pytest.mark.asyncio
 async def test_page_config_save_rejects_invalid_body(monkeypatch: Any) -> None:
     install_web(monkeypatch, payload=["not", "an", "object"])
     bundle = make_bundle(save_config=lambda values: None)
@@ -405,7 +413,6 @@ async def test_page_config_save_rejects_invalid_body(monkeypatch: Any) -> None:
     assert "JSON" in response.data["message"]
 
 
-@pytest.mark.asyncio
 async def test_page_config_save_rejects_validation_errors(monkeypatch: Any) -> None:
     install_web(monkeypatch, payload={"menu": [{"type": "bad", "name": "x"}]})
     bundle = make_bundle(save_config=lambda values: None)
@@ -416,7 +423,6 @@ async def test_page_config_save_rejects_validation_errors(monkeypatch: Any) -> N
     assert response.data["message"]
 
 
-@pytest.mark.asyncio
 async def test_page_config_save_reports_missing_save_callback(monkeypatch: Any) -> None:
     install_web(monkeypatch, payload={})
     bundle = make_bundle()
@@ -426,7 +432,6 @@ async def test_page_config_save_reports_missing_save_callback(monkeypatch: Any) 
     assert response.status_code == 503
 
 
-@pytest.mark.asyncio
 async def test_page_config_save_reports_save_failure(monkeypatch: Any) -> None:
     install_web(monkeypatch, payload={"language": "en-US"})
 
@@ -441,7 +446,6 @@ async def test_page_config_save_reports_save_failure(monkeypatch: Any) -> None:
     assert "disk full" in response.data["message"]
 
 
-@pytest.mark.asyncio
 async def test_page_sync_start_is_single_flight(monkeypatch: Any) -> None:
     install_web(monkeypatch)
     syncer = FakeSyncer()
@@ -457,7 +461,6 @@ async def test_page_sync_start_is_single_flight(monkeypatch: Any) -> None:
     assert syncer.calls == 1
 
 
-@pytest.mark.asyncio
 async def test_sync_handlers_require_syncer(monkeypatch: Any) -> None:
     install_web(monkeypatch)
     bundle = make_bundle(syncer=None)
@@ -466,7 +469,6 @@ async def test_sync_handlers_require_syncer(monkeypatch: Any) -> None:
     assert (await bundle.page_sync_events()).status_code == 503
 
 
-@pytest.mark.asyncio
 async def test_page_sync_events_streams_replayed_events(monkeypatch: Any) -> None:
     install_web(monkeypatch, query={"since": "0"})
     syncer = FakeSyncer()
@@ -484,7 +486,6 @@ async def test_page_sync_events_streams_replayed_events(monkeypatch: Any) -> Non
     assert events[1]["text"] == "reading"
 
 
-@pytest.mark.asyncio
 async def test_page_sync_events_since_invalid_and_offset(monkeypatch: Any) -> None:
     install_web(monkeypatch, query={"since": "oops"})
     syncer = FakeSyncer()
@@ -502,7 +503,6 @@ async def test_page_sync_events_since_invalid_and_offset(monkeypatch: Any) -> No
     assert events[0]["seq"] == 3
 
 
-@pytest.mark.asyncio
 async def test_page_log_events_requires_buffer(monkeypatch: Any) -> None:
     install_web(monkeypatch)
     bundle = make_bundle()
@@ -512,15 +512,11 @@ async def test_page_log_events_requires_buffer(monkeypatch: Any) -> None:
     assert response.status_code == 503
 
 
-@pytest.mark.asyncio
 async def test_page_log_events_streams_history_and_stream_identity(
     monkeypatch: Any,
 ) -> None:
     install_web(monkeypatch, query={"since": "0"})
-    host_logger = logging.getLogger("test-web-api-logs")
-    host_logger.handlers.clear()
-    host_logger.propagate = False
-    host_logger.setLevel(logging.INFO)
+    host_logger = make_host_logger("test-web-api-logs")
     log_buffer = LogBuffer()
     log_buffer.install(host_logger)
     bundle = make_bundle(log_buffer=log_buffer)
@@ -528,21 +524,18 @@ async def test_page_log_events_streams_history_and_stream_identity(
 
     try:
         stream = await bundle.page_log_events()
-        info_line = await asyncio.wait_for(anext(stream.content), timeout=1)
-        log_line = await asyncio.wait_for(anext(stream.content), timeout=1)
+        info = await next_event(stream)
+        entry = await next_event(stream)
         await stream.content.aclose()
     finally:
         log_buffer.close()
 
-    info = json.loads(info_line.removeprefix("data: ").strip())
-    entry = json.loads(log_line.removeprefix("data: ").strip())
     assert info == {"type": "stream", "id": log_buffer.stream_id, "reset": False}
     assert entry["type"] == "log"
     assert entry["message"] == "dashboard ready"
     assert entry["seq"] == 1
 
 
-@pytest.mark.asyncio
 async def test_page_log_events_resets_reloaded_stream(monkeypatch: Any) -> None:
     install_web(
         monkeypatch,
@@ -553,24 +546,19 @@ async def test_page_log_events_resets_reloaded_stream(monkeypatch: Any) -> None:
 
     stream = await bundle.page_log_events()
     try:
-        info_line = await asyncio.wait_for(anext(stream.content), timeout=1)
+        info = await next_event(stream)
         heartbeat = await asyncio.wait_for(anext(stream.content), timeout=1)
     finally:
         await stream.content.aclose()
         log_buffer.close()
 
-    info = json.loads(info_line.removeprefix("data: ").strip())
     assert info["reset"] is True
     assert heartbeat == ": keep-alive\n\n"
 
 
-@pytest.mark.asyncio
 async def test_page_log_events_streams_gap_before_retained_logs(monkeypatch: Any) -> None:
     install_web(monkeypatch, query={"since": "0"})
-    host_logger = logging.getLogger("test-web-api-log-gap")
-    host_logger.handlers.clear()
-    host_logger.propagate = False
-    host_logger.setLevel(logging.INFO)
+    host_logger = make_host_logger("test-web-api-log-gap")
     log_buffer = LogBuffer(capacity=2)
     log_buffer.install(host_logger)
     bundle = make_bundle(log_buffer=log_buffer)
@@ -579,22 +567,19 @@ async def test_page_log_events_streams_gap_before_retained_logs(monkeypatch: Any
 
     try:
         stream = await bundle.page_log_events()
-        await asyncio.wait_for(anext(stream.content), timeout=1)
-        gap_line = await asyncio.wait_for(anext(stream.content), timeout=1)
-        first_log = await asyncio.wait_for(anext(stream.content), timeout=1)
+        await next_event(stream)
+        gap = await next_event(stream)
+        first = await next_event(stream)
         await stream.content.aclose()
     finally:
         log_buffer.close()
 
-    gap = json.loads(gap_line.removeprefix("data: ").strip())
-    first = json.loads(first_log.removeprefix("data: ").strip())
     assert gap == {"type": "gap", "first_seq": 1, "last_seq": 1, "count": 1}
     assert first["type"] == "log"
     assert first["seq"] == 2
     assert first["message"] == "two"
 
 
-@pytest.mark.asyncio
 async def test_page_log_events_reports_subscriber_limit(monkeypatch: Any) -> None:
     install_web(monkeypatch)
     log_buffer = LogBuffer(max_subscribers=1, heartbeat_seconds=0.01)
@@ -603,20 +588,18 @@ async def test_page_log_events_reports_subscriber_limit(monkeypatch: Any) -> Non
     second = await bundle.page_log_events()
 
     try:
-        await anext(first.content)
+        await next_event(first)
         await asyncio.wait_for(anext(first.content), timeout=1)
-        await anext(second.content)
-        rejected = await asyncio.wait_for(anext(second.content), timeout=1)
+        await next_event(second)
+        event = await next_event(second)
     finally:
         await first.content.aclose()
         await second.content.aclose()
         log_buffer.close()
 
-    event = json.loads(rejected.removeprefix("data: ").strip())
     assert event == {"type": "error", "code": "subscriber_limit"}
 
 
-@pytest.mark.asyncio
 async def test_make_run_pushes_text_and_structured_events() -> None:
     syncer = FakeSyncer()
     bundle = make_bundle(config={"menu": MENU}, syncer=syncer)
@@ -632,7 +615,6 @@ async def test_make_run_pushes_text_and_structured_events() -> None:
     assert [event["type"] for event in events] == ["start", "message", "platform", "finish"]
 
 
-@pytest.mark.asyncio
 async def test_robot_config_get_and_save(monkeypatch: Any, tmp_path: Path) -> None:
     install_web(
         monkeypatch,
@@ -676,7 +658,6 @@ async def test_robot_config_get_and_save(monkeypatch: Any, tmp_path: Path) -> No
     assert load_menu_config(tmp_path)["robots"][0]["appid"] == "app-new"
 
 
-@pytest.mark.asyncio
 async def test_robot_config_save_rejects_stale_version(monkeypatch: Any, tmp_path: Path) -> None:
     save_menu_config(tmp_path, {"version": 2, "robots": []})
     install_web(monkeypatch, payload={"version": 1, "robots": []})
@@ -687,7 +668,6 @@ async def test_robot_config_save_rejects_stale_version(monkeypatch: Any, tmp_pat
     assert response.status_code == 409
 
 
-@pytest.mark.asyncio
 async def test_robot_config_save_requires_version(monkeypatch: Any, tmp_path: Path) -> None:
     install_web(monkeypatch, payload={"robots": []})
     bundle = make_bundle(config={}, data_dir=tmp_path)
@@ -697,7 +677,6 @@ async def test_robot_config_save_requires_version(monkeypatch: Any, tmp_path: Pa
     assert response.status_code == 409
 
 
-@pytest.mark.asyncio
 async def test_robot_import_requires_version(monkeypatch: Any, tmp_path: Path) -> None:
     install_web(monkeypatch, payload={"appids": ["123456789"]})
     bundle = make_bundle(config={}, data_dir=tmp_path)
@@ -707,7 +686,6 @@ async def test_robot_import_requires_version(monkeypatch: Any, tmp_path: Path) -
     assert response.status_code == 409
 
 
-@pytest.mark.asyncio
 async def test_robot_config_imports_legacy_appid(monkeypatch: Any, tmp_path: Path) -> None:
     install_web(
         monkeypatch,

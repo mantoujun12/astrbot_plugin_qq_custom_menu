@@ -1,39 +1,34 @@
 import { describe, expect, it, vi } from 'vitest'
 import MenuTree from './MenuTree.vue'
 import { mountView } from '../../test/helpers'
+import { MENU_ENTRIES } from '../../test/fixtures'
 import type { MenuEntry } from '../../types/dashboard'
-
-const ENTRIES: MenuEntry[] = [
-  { type: 'send_message', name: '帮助', message: '/help', parent: '' },
-  { type: 'menu', name: '更多', parent: '' },
-  { type: 'link', name: '文档', link: 'https://docs.example.com', parent: '更多' },
-]
 
 describe('MenuTree', () => {
   it('renders top-level entries and children with details', () => {
-    const wrapper = mountView(MenuTree, { props: { entries: ENTRIES } })
+    const wrapper = mountView(MenuTree, { props: { entries: MENU_ENTRIES } })
 
     expect(wrapper.findAll('[data-field="menu-row"]')).toHaveLength(2)
     expect(wrapper.findAll('[data-field="menu-child-row"]')).toHaveLength(1)
     expect(wrapper.text()).toContain('帮助')
     expect(wrapper.text()).toContain('→ /help')
     expect(wrapper.text()).toContain('1 个子项')
-    expect(wrapper.text()).toContain('https://docs.example.com')
+    expect(wrapper.text()).toContain('https://docs.app')
   })
 
   it('emits add-child, edit and delete actions', async () => {
-    const wrapper = mountView(MenuTree, { props: { entries: ENTRIES } })
+    const wrapper = mountView(MenuTree, { props: { entries: MENU_ENTRIES } })
 
     await wrapper.find('[aria-label="添加子项"]').trigger('click')
     expect(wrapper.emitted('addChild')?.[0]).toEqual(['更多'])
 
     const editButtons = wrapper.findAll('[aria-label="编辑"]')
     await editButtons[0].trigger('click')
-    expect(wrapper.emitted('edit')?.[0]).toEqual([ENTRIES[0]])
+    expect(wrapper.emitted('edit')?.[0]).toEqual([MENU_ENTRIES[0]])
 
     const deleteButtons = wrapper.findAll('[aria-label="删除"]')
     await deleteButtons[0].trigger('click')
-    expect(wrapper.emitted('delete')?.[0]).toEqual([ENTRIES[0]])
+    expect(wrapper.emitted('delete')?.[0]).toEqual([MENU_ENTRIES[0]])
   })
 
   it('renders duplicate legacy child names without duplicate-key warnings', () => {

@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createMemoryHistory, createRouter } from 'vue-router'
-import { flush, installBridge, mountView, waitUntil } from '../test/helpers'
+import {
+  buttonByText,
+  flush,
+  loadDashboardView,
+  saveButton,
+} from '../test/helpers'
+import { pluginConfigFixture, robotFixture, robotResponseFixture } from '../test/fixtures'
 import type { RobotConfigResponse } from '../types/robotConfig'
 
 vi.mock('../api/robots', () => ({
@@ -15,108 +20,55 @@ vi.mock('../api/dashboard', () => ({
   saveConfig: vi.fn(),
 }))
 
-function responseFixture(): RobotConfigResponse {
-  return {
-    version: 1,
-    robots: [
-      {
-        id: 'robot-1',
-        name: '主机器人',
-        appid: '1023456789',
-        platform: 'qq_official',
-        secret_masked: 'ab***yz',
-        secret_set: true,
-        scenes: {
-          c2c: {
-            enabled: true,
-            items: [
-              { type: 'send_message', name: '帮助', message: '/help', parent: '' },
-              { type: 'menu', name: '更多', parent: '' },
-              {
-                type: 'link',
-                name: '文档',
-                link: 'https://docs.app',
-                parent: '更多',
-              },
-            ],
-          },
-        },
-      },
-    ],
-    available_scenes: ['c2c'],
-    menu_limits: { top_level_max: 10, sub_items_max: 5 },
-  }
-}
+const ROUTES = [
+  { path: '/status', name: 'status', component: { template: '<div />' } },
+  { path: '/:pathMatch(.*)*', component: { template: '<div />' } },
+]
 
 function twoRobotResponse(): RobotConfigResponse {
-  const response = responseFixture()
-  response.robots.push({
-    id: 'robot-2',
-    name: '备用机器人',
-    appid: '987654321',
-    platform: 'qq_official',
-    secret_masked: 'cd***ef',
-    secret_set: true,
-    scenes: {
-      c2c: {
-        enabled: true,
-        items: [],
-      },
-    },
-  })
+  const response = robotResponseFixture()
+  response.robots.push(
+    robotFixture({
+      id: 'robot-2',
+      name: '备用机器人',
+      appid: '987654321',
+      secret_masked: 'cd***ef',
+      scenes: { c2c: { enabled: true, items: [] } },
+    }),
+  )
   return response
 }
 
 async function loadView(options: { withBackend?: boolean } = {}) {
-  const bridge =
-    options.withBackend === false
-      ? null
-      : installBridge({
-          subscribeSSE: vi.fn(async () => 'sub-1'),
-          unsubscribeSSE: vi.fn(async () => ({})),
-        })
-  vi.resetModules()
-  const robotsApi = await import('../api/robots')
-  const dashboardApi = await import('../api/dashboard')
-  const { default: RobotsView } = await import('./RobotsView.vue')
-  const router = createRouter({
-    history: createMemoryHistory(),
-    routes: [
-      { path: '/status', name: 'status', component: { template: '<div />' } },
-      { path: '/:pathMatch(.*)*', component: { template: '<div />' } },
-    ],
-  })
-  await router.push('/robots')
-  await router.isReady()
-
-  return {
-    bridge,
-    robotsApi,
-    dashboardApi,
-    async mount() {
-      const wrapper = mountView(RobotsView, {
-        global: {
-          plugins: [router],
-          stubs: {
-            VDialog: { template: '<div class="dialog-stub"><slot /></div>' },
+  const loaded = await loadDashboardView({
+    api: async () => ({
+      robots: await import('../api/robots'),
+      dashboard: await import('../api/dashboard'),
+    }),
+    component: () => import('./RobotsView.vue'),
+    bridge:
+      options.withBackend === false
+        ? false
+        : {
+            subscribeSSE: vi.fn(async () => 'sub-1'),
+            unsubscribeSSE: vi.fn(async () => ({})),
           },
-        },
-      })
-      await waitUntil(() => vi.mocked(robotsApi.fetchRobots).mock.calls.length > 0)
-      await flush()
-      return wrapper
-    },
+    routes: ROUTES,
+    initial: '/robots',
+    stubs: { VDialog: { template: '<div class="dialog-stub"><slot /></div>' } },
+    waitFor: (api) => () => vi.mocked(api.robots.fetchRobots).mock.calls.length > 0,
+  })
+  return {
+    ...loaded,
+    robotsApi: loaded.api.robots,
+    dashboardApi: loaded.api.dashboard,
   }
-}
-
-function saveButton(wrapper: ReturnType<typeof mountView>) {
-  return wrapper.findAll('button').find((button) => button.text().trim() === '保存')
 }
 
 describe('RobotsView', () => {
   it('renders each robot private-chat menu', async () => {
     const { robotsApi, mount } = await loadView()
-    vi.mocked(robotsApi.fetchRobots).mockResolvedValue(responseFixture())
+    vi.mocked(robotsApi.fetchRobots).mockResolvedValue(robotResponseFixture())
 
     const wrapper = await mount()
 
@@ -188,21 +140,17 @@ describe('RobotsView', () => {
 
   it('renders fallback metadata for an incomplete robot draft', async () => {
     const { robotsApi, mount } = await loadView()
-    const response = responseFixture()
-    response.robots.push({
-      id: '',
-      name: '',
-      appid: '',
-      platform: 'qq_official',
-      secret_masked: '',
-      secret_set: false,
-      scenes: {
-        c2c: {
-          enabled: true,
-          items: [],
-        },
-      },
-    })
+    const response = robotResponseFixture()
+    response.robots.push(
+      robotFixture({
+        id: '',
+        name: '',
+        appid: '',
+        secret_masked: '',
+        secret_set: false,
+        scenes: { c2c: { enabled: true, items: [] } },
+      }),
+    )
     vi.mocked(robotsApi.fetchRobots).mockResolvedValue(response)
 
     const wrapper = await mount()
@@ -227,9 +175,9 @@ describe('RobotsView', () => {
 
   it('saves private-chat menu data', async () => {
     const { robotsApi, mount } = await loadView()
-    vi.mocked(robotsApi.fetchRobots).mockResolvedValue(responseFixture())
+    vi.mocked(robotsApi.fetchRobots).mockResolvedValue(robotResponseFixture())
     vi.mocked(robotsApi.saveRobots).mockResolvedValue({
-      ...responseFixture(),
+      ...robotResponseFixture(),
       version: 2,
     })
 
@@ -249,22 +197,16 @@ describe('RobotsView', () => {
 
   it('creates a new robot from the dialog', async () => {
     const { robotsApi, mount } = await loadView()
-    vi.mocked(robotsApi.fetchRobots).mockResolvedValue(responseFixture())
+    vi.mocked(robotsApi.fetchRobots).mockResolvedValue(robotResponseFixture())
 
     const wrapper = await mount()
-    const addRobot = wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('新增机器人'))
-    await addRobot?.trigger('click')
+    await buttonByText(wrapper, '新增机器人')?.trigger('click')
     await flush()
 
     await wrapper.find('[data-field="create-name"] input').setValue('二号机器人')
     await wrapper.find('[data-field="create-appid"] input').setValue('987654321')
     await wrapper.find('[data-field="create-secret"] input').setValue('secret')
-    const create = wrapper
-      .findAll('button')
-      .find((button) => button.text().trim() === '创建')
-    await create?.trigger('click')
+    await buttonByText(wrapper, '创建', true)?.trigger('click')
     await flush()
 
     expect(wrapper.text()).toContain('二号机器人')
@@ -273,57 +215,44 @@ describe('RobotsView', () => {
 
   it('disables saving in local mock mode', async () => {
     const { robotsApi, mount } = await loadView({ withBackend: false })
-    vi.mocked(robotsApi.fetchRobots).mockResolvedValue(responseFixture())
+    vi.mocked(robotsApi.fetchRobots).mockResolvedValue(robotResponseFixture())
 
     const wrapper = await mount()
 
     expect(wrapper.text()).toContain('不能保存配置')
     expect(saveButton(wrapper)?.attributes('disabled')).toBeDefined()
-    const importButton = wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('从兼容配置导入'))
-    expect(importButton?.attributes('disabled')).toBeDefined()
+    expect(
+      buttonByText(wrapper, '从兼容配置导入')?.attributes('disabled'),
+    ).toBeDefined()
   })
 
   it('imports legacy AppIDs through the dedicated endpoint', async () => {
     const { robotsApi, dashboardApi, mount } = await loadView()
-    vi.mocked(robotsApi.fetchRobots).mockResolvedValue(responseFixture())
-    vi.mocked(dashboardApi.fetchConfig).mockResolvedValue({
-      plugin: { name: 'astrbot_plugin_qq_custom_menu', version: 'v0.2.3' },
-      language: 'zh-CN',
-      sync_menu: true,
-      primary_color: '#3c96ca',
-      secondary_color: '#2f86bd',
-      qq_platforms: [
-        {
-          appid: '987654321',
-          platform: 'qq_official',
-          secret_masked: 'ab***yz',
-          secret_set: true,
-        },
-      ],
-      runtime_platforms: [],
-      menu: [],
-      limits: { top_level_max: 10, sub_items_max: 5 },
-    })
+    vi.mocked(robotsApi.fetchRobots).mockResolvedValue(robotResponseFixture())
+    vi.mocked(dashboardApi.fetchConfig).mockResolvedValue(
+      pluginConfigFixture({
+        qq_platforms: [
+          {
+            appid: '987654321',
+            platform: 'qq_official',
+            secret_masked: 'ab***yz',
+            secret_set: true,
+          },
+        ],
+      }),
+    )
     vi.mocked(robotsApi.importLegacyRobots).mockResolvedValue({
-      ...responseFixture(),
+      ...robotResponseFixture(),
       version: 2,
     })
 
     const wrapper = await mount()
-    const open = wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('从兼容配置导入'))
-    await open?.trigger('click')
+    await buttonByText(wrapper, '从兼容配置导入')?.trigger('click')
     await flush()
     expect(
       wrapper.find('[data-field="legacy-appids"] textarea').element,
     ).toHaveProperty('value', '987654321')
-    const confirm = wrapper
-      .findAll('button')
-      .find((button) => button.text().trim() === '导入')
-    await confirm?.trigger('click')
+    await buttonByText(wrapper, '导入', true)?.trigger('click')
     await flush()
 
     expect(robotsApi.importLegacyRobots).toHaveBeenCalledWith(['987654321'], 1)
@@ -332,37 +261,29 @@ describe('RobotsView', () => {
 
   it('keeps unsaved drafts when importing legacy robots', async () => {
     const { robotsApi, dashboardApi, mount } = await loadView()
-    vi.mocked(robotsApi.fetchRobots).mockResolvedValue(responseFixture())
-    vi.mocked(dashboardApi.fetchConfig).mockResolvedValue({
-      plugin: { name: 'astrbot_plugin_qq_custom_menu', version: 'v0.2.3' },
-      language: 'zh-CN',
-      sync_menu: true,
-      primary_color: '#3c96ca',
-      secondary_color: '#2f86bd',
-      qq_platforms: [
-        {
-          appid: '987654321',
-          platform: 'qq_official',
-          secret_masked: 'ab***yz',
-          secret_set: true,
-        },
-      ],
-      runtime_platforms: [],
-      menu: [],
-      limits: { top_level_max: 10, sub_items_max: 5 },
-    })
+    vi.mocked(robotsApi.fetchRobots).mockResolvedValue(robotResponseFixture())
+    vi.mocked(dashboardApi.fetchConfig).mockResolvedValue(
+      pluginConfigFixture({
+        qq_platforms: [
+          {
+            appid: '987654321',
+            platform: 'qq_official',
+            secret_masked: 'ab***yz',
+            secret_set: true,
+          },
+        ],
+      }),
+    )
     vi.mocked(robotsApi.importLegacyRobots).mockResolvedValue({
-      ...responseFixture(),
+      ...robotResponseFixture(),
       version: 2,
       robots: [
-        ...responseFixture().robots,
-        {
+        ...robotResponseFixture().robots,
+        robotFixture({
           id: 'robot-2',
           name: '导入机器人',
           appid: '987654321',
-          platform: 'qq_official',
           secret_masked: 'cd***ef',
-          secret_set: true,
           scenes: {
             c2c: {
               enabled: true,
@@ -371,38 +292,26 @@ describe('RobotsView', () => {
               ],
             },
           },
-        },
+        }),
       ],
     })
     vi.mocked(robotsApi.saveRobots).mockResolvedValue({
-      ...responseFixture(),
+      ...robotResponseFixture(),
       version: 3,
     })
 
     const wrapper = await mount()
-    const addRobot = wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('新增机器人'))
-    await addRobot?.trigger('click')
+    await buttonByText(wrapper, '新增机器人')?.trigger('click')
     await flush()
     await wrapper.find('[data-field="create-name"] input').setValue('草稿机器人')
     await wrapper.find('[data-field="create-appid"] input').setValue('111222333')
     await wrapper.find('[data-field="create-secret"] input').setValue('secret')
-    const create = wrapper
-      .findAll('button')
-      .find((button) => button.text().trim() === '创建')
-    await create?.trigger('click')
+    await buttonByText(wrapper, '创建', true)?.trigger('click')
     await flush()
 
-    const open = wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('从兼容配置导入'))
-    await open?.trigger('click')
+    await buttonByText(wrapper, '从兼容配置导入')?.trigger('click')
     await flush()
-    const confirm = wrapper
-      .findAll('button')
-      .find((button) => button.text().trim() === '导入')
-    await confirm?.trigger('click')
+    await buttonByText(wrapper, '导入', true)?.trigger('click')
     await flush()
 
     expect(wrapper.text()).toContain('草稿机器人')
@@ -422,22 +331,15 @@ describe('RobotsView', () => {
 
   it('deletes a selected robot after confirmation', async () => {
     const { robotsApi, mount } = await loadView()
-    vi.mocked(robotsApi.fetchRobots).mockResolvedValue(responseFixture())
+    vi.mocked(robotsApi.fetchRobots).mockResolvedValue(robotResponseFixture())
 
     const wrapper = await mount()
-    const remove = wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('删除机器人配置'))
-    await remove?.trigger('click')
+    await buttonByText(wrapper, '删除机器人配置')?.trigger('click')
     await flush()
-    const confirm = wrapper
-      .findAll('button')
-      .find((button) => button.text().trim() === '确认删除')
-    await confirm?.trigger('click')
+    await buttonByText(wrapper, '确认删除', true)?.trigger('click')
     await flush()
 
     expect(wrapper.text()).toContain('还没有机器人')
     expect(wrapper.text()).toContain('保存后才会写入配置')
   })
-
 })

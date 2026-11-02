@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createMemoryHistory, createRouter } from 'vue-router'
-import { flush, installBridge, mountView, waitUntil } from '../test/helpers'
-import type { PluginConfigResponse } from '../types/dashboard'
+import {
+  buttonByText,
+  flush,
+  loadDashboardView,
+  saveButton,
+} from '../test/helpers'
+import { pluginConfigFixture } from '../test/fixtures'
 
 vi.mock('../api/dashboard', () => ({
   fetchStatus: vi.fn(),
@@ -9,79 +13,32 @@ vi.mock('../api/dashboard', () => ({
   saveConfig: vi.fn(),
 }))
 
-function configFixture(): PluginConfigResponse {
-  return {
-    plugin: { name: 'astrbot_plugin_qq_custom_menu', version: 'v0.2.3' },
-    language: 'zh-CN',
-    sync_menu: true,
-    primary_color: '#3c96ca',
-    secondary_color: '#2f86bd',
-    qq_platforms: [
-      {
-        appid: '1023456789',
-        platform: 'qq_official',
-        secret_masked: 'ab***yz',
-        secret_set: true,
-      },
-    ],
-    runtime_platforms: [],
-    menu: [
-      { type: 'send_message', name: '帮助', message: '/help', parent: '' },
-      { type: 'menu', name: '更多', parent: '' },
-      {
-        type: 'link',
-        name: '文档',
-        link: 'https://docs.app',
-        parent: '更多',
-      },
-    ],
-    limits: { top_level_max: 10, sub_items_max: 5 },
-  }
-}
+const ROUTES = [
+  { path: '/status', name: 'status', component: { template: '<div />' } },
+  { path: '/:pathMatch(.*)*', component: { template: '<div />' } },
+]
 
-async function loadView(options: { withBackend?: boolean } = {}) {
-  const bridge =
-    options.withBackend === false
-      ? null
-      : installBridge({
-          subscribeSSE: vi.fn(async () => 'sub-1'),
-          unsubscribeSSE: vi.fn(async () => ({})),
-        })
-  vi.resetModules()
-  const api = await import('../api/dashboard')
-  const { default: CompatibilityView } = await import('./CompatibilityView.vue')
-  const router = createRouter({
-    history: createMemoryHistory(),
-    routes: [
-      { path: '/status', name: 'status', component: { template: '<div />' } },
-      { path: '/:pathMatch(.*)*', component: { template: '<div />' } },
-    ],
+function loadView(options: { withBackend?: boolean } = {}) {
+  return loadDashboardView({
+    api: () => import('../api/dashboard'),
+    component: () => import('./CompatibilityView.vue'),
+    bridge:
+      options.withBackend === false
+        ? false
+        : {
+            subscribeSSE: vi.fn(async () => 'sub-1'),
+            unsubscribeSSE: vi.fn(async () => ({})),
+          },
+    routes: ROUTES,
+    initial: '/compatibility',
+    waitFor: (api) => () => vi.mocked(api.fetchConfig).mock.calls.length > 0,
   })
-  await router.push('/compatibility')
-  await router.isReady()
-
-  return {
-    bridge,
-    api,
-    async mount() {
-      const wrapper = mountView(CompatibilityView, {
-        global: { plugins: [router] },
-      })
-      await waitUntil(() => vi.mocked(api.fetchConfig).mock.calls.length > 0)
-      await flush()
-      return wrapper
-    },
-  }
-}
-
-function saveButton(wrapper: ReturnType<typeof mountView>) {
-  return wrapper.findAll('button').find((button) => button.text().trim() === '保存')
 }
 
 describe('CompatibilityView', () => {
   it('renders the legacy platform and menu', async () => {
     const { api, mount } = await loadView()
-    vi.mocked(api.fetchConfig).mockResolvedValue(configFixture())
+    vi.mocked(api.fetchConfig).mockResolvedValue(pluginConfigFixture())
 
     const wrapper = await mount()
 
@@ -95,8 +52,8 @@ describe('CompatibilityView', () => {
 
   it('saves compatibility platforms and menu together', async () => {
     const { api, mount } = await loadView()
-    vi.mocked(api.fetchConfig).mockResolvedValue(configFixture())
-    vi.mocked(api.saveConfig).mockResolvedValue(configFixture())
+    vi.mocked(api.fetchConfig).mockResolvedValue(pluginConfigFixture())
+    vi.mocked(api.saveConfig).mockResolvedValue(pluginConfigFixture())
 
     const wrapper = await mount()
     await saveButton(wrapper)?.trigger('click')
@@ -117,13 +74,10 @@ describe('CompatibilityView', () => {
 
   it('adds a compatibility platform', async () => {
     const { api, mount } = await loadView()
-    vi.mocked(api.fetchConfig).mockResolvedValue(configFixture())
+    vi.mocked(api.fetchConfig).mockResolvedValue(pluginConfigFixture())
 
     const wrapper = await mount()
-    const add = wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('添加平台'))
-    await add?.trigger('click')
+    await buttonByText(wrapper, '添加平台')?.trigger('click')
     await flush()
 
     expect(wrapper.findAll('[data-field="platform-appid"] input')).toHaveLength(2)
@@ -131,7 +85,7 @@ describe('CompatibilityView', () => {
 
   it('disables saving in local mock mode', async () => {
     const { api, mount } = await loadView({ withBackend: false })
-    vi.mocked(api.fetchConfig).mockResolvedValue(configFixture())
+    vi.mocked(api.fetchConfig).mockResolvedValue(pluginConfigFixture())
 
     const wrapper = await mount()
 
@@ -141,7 +95,7 @@ describe('CompatibilityView', () => {
 
   it('rejects an empty AppID before saving', async () => {
     const { api, mount } = await loadView()
-    vi.mocked(api.fetchConfig).mockResolvedValue(configFixture())
+    vi.mocked(api.fetchConfig).mockResolvedValue(pluginConfigFixture())
 
     const wrapper = await mount()
     await wrapper.find('[data-field="platform-appid"] input').setValue('')
@@ -154,9 +108,9 @@ describe('CompatibilityView', () => {
 
   it('removes a platform and a legacy menu entry before saving', async () => {
     const { api, mount } = await loadView()
-    vi.mocked(api.fetchConfig).mockResolvedValue(configFixture())
+    vi.mocked(api.fetchConfig).mockResolvedValue(pluginConfigFixture())
     vi.mocked(api.saveConfig).mockResolvedValue({
-      ...configFixture(),
+      ...pluginConfigFixture(),
       qq_platforms: [],
       menu: [{ type: 'send_message', name: '帮助', message: '/help', parent: '' }],
     })

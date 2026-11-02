@@ -1,29 +1,25 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createMemoryHistory, createRouter } from 'vue-router'
 import AppShell from './AppShell.vue'
 import { resolvePageTitle } from './useAppShell'
-import { installBridge, mountView, waitUntil } from '../test/helpers'
+import { installBridge, makeRouter, mountView, waitUntil } from '../test/helpers'
 
-function makeRouter() {
-  return createRouter({
-    history: createMemoryHistory(),
-    routes: [{ path: '/:pathMatch(.*)*', component: { template: '<div>page</div>' } }],
+const ROUTES = [{ path: '/:pathMatch(.*)*', component: { template: '<div>page</div>' } }]
+
+async function mountShell() {
+  vi.resetModules()
+  installBridge({
+    getContext: vi.fn(() => ({ pageTitle: 'Host title', isDark: false })),
+    ready: vi.fn(async () => ({ pageTitle: 'Host title', isDark: false })),
   })
+  const router = await makeRouter(ROUTES, '/status')
+  const wrapper = mountView(AppShell, { global: { plugins: [router] } })
+  await waitUntil(() => wrapper.text().includes('Host title'))
+  return wrapper
 }
 
 describe('AppShell', () => {
   it('renders the host title and navigates between views', async () => {
-    vi.resetModules()
-    installBridge({
-      getContext: vi.fn(() => ({ pageTitle: 'Host title', isDark: false })),
-      ready: vi.fn(async () => ({ pageTitle: 'Host title', isDark: false })),
-    })
-    const router = makeRouter()
-    await router.push('/status')
-    await router.isReady()
-
-    const wrapper = mountView(AppShell, { global: { plugins: [router] } })
-    await waitUntil(() => wrapper.text().includes('Host title'))
+    const wrapper = await mountShell()
 
     expect(wrapper.text()).toContain('Host title')
     expect(wrapper.text()).toContain('page')
@@ -31,17 +27,7 @@ describe('AppShell', () => {
   })
 
   it('collapses the sidebar on wide screens', async () => {
-    vi.resetModules()
-    installBridge({
-      getContext: vi.fn(() => ({ pageTitle: 'Host title', isDark: false })),
-      ready: vi.fn(async () => ({ pageTitle: 'Host title', isDark: false })),
-    })
-    const router = makeRouter()
-    await router.push('/status')
-    await router.isReady()
-
-    const wrapper = mountView(AppShell, { global: { plugins: [router] } })
-    await waitUntil(() => wrapper.text().includes('Host title'))
+    const wrapper = await mountShell()
 
     const toggle = wrapper.find('[aria-label="收起侧边栏"]')
     expect(toggle.exists()).toBe(true)

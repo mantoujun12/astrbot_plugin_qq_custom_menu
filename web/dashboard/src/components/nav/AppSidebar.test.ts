@@ -1,32 +1,28 @@
 import { describe, expect, it } from 'vitest'
 import { mdiCogOutline, mdiHistory } from '@mdi/js'
-import { createMemoryHistory, createRouter } from 'vue-router'
 import AppSidebar from './AppSidebar.vue'
 import NavItem from './NavItem.vue'
-import { mountView } from '../../test/helpers'
+import { makeRouter, mountView } from '../../test/helpers'
 import { PLUGIN_VERSION } from '../../version'
 
-function makeRouter() {
-  return createRouter({
-    history: createMemoryHistory(),
-    routes: [{ path: '/:pathMatch(.*)*', component: { template: '<div />' } }],
+const ROUTES = [{ path: '/:pathMatch(.*)*', component: { template: '<div />' } }]
+
+async function mountSidebar(props: Record<string, unknown> = {}) {
+  const router = await makeRouter(ROUTES, '/status')
+  return mountView(AppSidebar, {
+    props: {
+      title: '自定义菜单',
+      toggleIcon: mdiCogOutline,
+      toggleLabel: '收起侧边栏',
+      ...props,
+    },
+    global: { plugins: [router] },
   })
 }
 
 describe('AppSidebar', () => {
   it('renders navigation, title and version', async () => {
-    const router = makeRouter()
-    await router.push('/status')
-    await router.isReady()
-
-    const wrapper = mountView(AppSidebar, {
-      props: {
-        title: '自定义菜单',
-        toggleIcon: mdiCogOutline,
-        toggleLabel: '收起侧边栏',
-      },
-      global: { plugins: [router] },
-    })
+    const wrapper = await mountSidebar()
 
     expect(wrapper.text()).toContain('自定义菜单')
     expect(wrapper.text()).toContain('状态概览')
@@ -45,18 +41,7 @@ describe('AppSidebar', () => {
   })
 
   it('emits toggle when the brand button is clicked', async () => {
-    const router = makeRouter()
-    await router.push('/status')
-    await router.isReady()
-
-    const wrapper = mountView(AppSidebar, {
-      props: {
-        title: '自定义菜单',
-        toggleIcon: mdiCogOutline,
-        toggleLabel: '收起侧边栏',
-      },
-      global: { plugins: [router] },
-    })
+    const wrapper = await mountSidebar()
 
     await wrapper.find('[aria-label="收起侧边栏"]').trigger('click')
 
@@ -64,19 +49,7 @@ describe('AppSidebar', () => {
   })
 
   it('hides the title and version in rail mode', async () => {
-    const router = makeRouter()
-    await router.push('/status')
-    await router.isReady()
-
-    const wrapper = mountView(AppSidebar, {
-      props: {
-        rail: true,
-        title: '自定义菜单',
-        toggleIcon: mdiCogOutline,
-        toggleLabel: '展开侧边栏',
-      },
-      global: { plugins: [router] },
-    })
+    const wrapper = await mountSidebar({ rail: true, toggleLabel: '展开侧边栏' })
 
     expect(wrapper.text()).not.toContain('自定义菜单')
     expect(wrapper.text()).not.toContain(PLUGIN_VERSION)

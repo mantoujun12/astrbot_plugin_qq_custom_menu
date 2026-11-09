@@ -224,7 +224,7 @@ python scripts/package_plugin.py         # 生成 dist/<插件名>-<版本>.zip
 ### 持续集成
 
 - [ci.yml](.github/workflows/ci.yml)：pre-commit lint + Python 3.10 / 3.11 / 3.12 / 3.13 Pytest 矩阵
-- [ci-dashboard.yml](.github/workflows/ci-dashboard.yml)：Node 24 + pnpm 12 上跑 Vitest、构建 Dashboard，并校验 `pages/dashboard` 无漂移
+- [ci-dashboard.yml](.github/workflows/ci-dashboard.yml)：Node 24 + pnpm 12 上跑 Vitest 与 Dashboard 构建
 - [codecov-core.yml](.github/workflows/codecov-core.yml) / [codecov-dashboard.yml](.github/workflows/codecov-dashboard.yml)：把覆盖率与 JUnit 测试报告上传到 [Codecov](https://codecov.io/gh/mantoujun12/astrbot_plugin_qq_custom_menu)，前后端分别使用 flag `unittests` 与 `dashboard`
 
 ## 目录结构

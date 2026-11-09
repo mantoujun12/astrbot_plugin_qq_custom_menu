@@ -9,6 +9,8 @@
 
 ### 工程
 
+- 升级依赖：Vuetify 4.3.2、Vitest 5.1.0、vue-tsc 3.3.14、@types/node 26.6.6、pytest-asyncio 1.4.1.post1，pre-commit 的 ruff 更新至 v0.17.3（#67、#68、#69）
+- 使用更新后的依赖重新生成 `pages/dashboard/` 构建产物
 - 精简 pytest 与 vitest：抽出共享假件、响应 fixture 与视图挂载 helper，删除多余的 `pytest.mark.asyncio` 标记，测试数量与分支覆盖率保持不变
 
 ## [v0.3.2] - 2026-10-26

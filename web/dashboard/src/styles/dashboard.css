@@ -96,13 +96,13 @@
 .qc-metric-label {
   margin-top: 12px;
   color: var(--qc-muted);
-  font-size: 13px;
+  font-size: 0.75rem;
   font-weight: 500;
 }
 
 .qc-metric-value {
   margin-top: 8px;
-  font-size: clamp(24px, 2vw, 34px);
+  font-size: 1.5rem;
   line-height: 1.1;
   font-weight: 700;
   letter-spacing: -0.03em;
@@ -112,7 +112,7 @@
 .qc-metric-note {
   margin-top: 8px;
   color: var(--qc-subtle);
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
@@ -161,8 +161,8 @@
   min-width: 0;
   overflow: hidden;
   color: rgb(var(--v-theme-on-surface));
-  font-size: 18px;
-  font-weight: 800;
+  font-size: 1.25rem;
+  font-weight: 600;
   line-height: 1.05;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -204,7 +204,7 @@
 }
 
 .qc-sidebar .v-list-item-title {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
   line-height: 20px;
 }
@@ -212,7 +212,7 @@
 .qc-sidebar-version {
   padding: 0 10px 12px;
   color: rgba(var(--v-theme-on-surface), 0.46);
-  font-size: 11px;
+  font-size: 0.75rem;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -240,7 +240,7 @@
   min-width: 0;
   padding: 12px 0;
   border-bottom: 1px solid var(--qc-border);
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .qc-list-row:last-child {
@@ -282,7 +282,7 @@
   border-radius: 12px;
   background: rgba(128, 128, 128, 0.06);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12.5px;
+  font-size: 0.75rem;
   line-height: 1.7;
   white-space: pre-wrap;
   word-break: break-word;
@@ -359,7 +359,7 @@
 
 .qc-menu-name {
   overflow: hidden;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -369,7 +369,7 @@
   margin-top: 2px;
   overflow: hidden;
   color: var(--qc-subtle);
-  font-size: 12px;
+  font-size: 0.75rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -606,7 +606,7 @@
 }
 
 .qc-log-autoscroll .v-label {
-  font-size: 13px;
+  font-size: 0.75rem;
   opacity: 0.82;
 }
 
@@ -618,7 +618,7 @@
   border: 1px solid var(--qc-border);
   border-radius: 999px;
   color: var(--qc-muted);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
 }
 
@@ -660,7 +660,7 @@
   padding: 11px 18px;
   border-bottom: 1px solid var(--qc-border);
   color: var(--qc-subtle);
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .qc-log-paused-note {
@@ -674,7 +674,7 @@
   overscroll-behavior: contain;
   background: color-mix(in srgb, rgb(var(--v-theme-surface)) 96%, rgb(var(--v-theme-on-surface)));
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12.5px;
+  font-size: 0.75rem;
   line-height: 1.65;
 }
 
@@ -689,7 +689,7 @@
 }
 
 .qc-logs-empty-title {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 600;
 }
 
@@ -698,7 +698,7 @@
   margin-top: 7px;
   color: var(--qc-subtle);
   font-family: var(--v-font-body);
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .qc-log-row {
@@ -716,7 +716,7 @@
 
 .qc-log-time {
   color: var(--qc-subtle);
-  font-size: 11.5px;
+  font-size: 0.75rem;
   white-space: nowrap;
 }
 
@@ -726,7 +726,7 @@
   border-radius: 999px;
   background: rgba(var(--v-theme-on-surface), 0.08);
   font-family: var(--v-font-body);
-  font-size: 11px;
+  font-size: 0.75rem;
   font-weight: 700;
   line-height: 1.7;
   text-align: center;
@@ -750,7 +750,7 @@
 .qc-log-level-badge--critical {
   background: color-mix(in srgb, rgb(var(--v-theme-error)) 68%, black);
   color: white;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .qc-log-content {
@@ -774,7 +774,7 @@
   color: rgba(var(--v-theme-primary), 0.9);
   cursor: pointer;
   font-family: var(--v-font-body);
-  font-size: 11.5px;
+  font-size: 0.75rem;
 }
 
 .qc-log-traceback {

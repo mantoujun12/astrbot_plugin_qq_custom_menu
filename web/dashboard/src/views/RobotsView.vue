@@ -543,7 +543,7 @@ async function importLegacy(): Promise<void> {
     <v-dialog v-model="createDialog" max-width="560">
       <v-card class="qc-card">
         <v-card-item class="px-5 pt-5">
-          <v-card-title class="text-body-large">
+          <v-card-title class="text-h6">
             {{ t('pages.dashboard.robots.addRobot', '新增机器人') }}
           </v-card-title>
           <v-card-subtitle>
@@ -620,7 +620,7 @@ async function importLegacy(): Promise<void> {
     <v-dialog v-model="deleteDialog" max-width="480">
       <v-card class="qc-card">
         <v-card-item class="px-5 pt-5">
-          <v-card-title class="text-body-large">
+          <v-card-title class="text-h6">
             {{ t('pages.dashboard.robots.deleteConfirmTitle', '删除机器人配置？') }}
           </v-card-title>
           <v-card-subtitle>{{ selectedForm.name }}</v-card-subtitle>
@@ -648,7 +648,7 @@ async function importLegacy(): Promise<void> {
     <v-dialog v-model="importDialog" max-width="560">
       <v-card class="qc-card">
         <v-card-item class="px-5 pt-5">
-          <v-card-title class="text-body-large">
+          <v-card-title class="text-h6">
             {{ t('pages.dashboard.robots.importTitle', '从兼容配置导入') }}
           </v-card-title>
           <v-card-subtitle>
@@ -700,7 +700,7 @@ async function importLegacy(): Promise<void> {
     <v-card class="qc-card qc-robots-shell" variant="outlined">
       <section class="qc-robots-pane qc-robot-list" data-pane="list">
         <v-card-item class="px-5 pt-5">
-          <v-card-title class="text-body-large">
+          <v-card-title class="text-h6">
             {{ t('pages.dashboard.robots.listTitle', '机器人') }}
           </v-card-title>
           <v-card-subtitle>
@@ -781,7 +781,7 @@ async function importLegacy(): Promise<void> {
         <template v-else>
           <v-card class="qc-card mb-4" variant="outlined">
             <v-card-item class="px-5 pt-5">
-              <v-card-title class="text-body-large">
+              <v-card-title class="text-h6">
                 {{ t('pages.dashboard.robots.basicTitle', '基础信息') }}
               </v-card-title>
               <v-card-subtitle>
@@ -861,7 +861,7 @@ async function importLegacy(): Promise<void> {
               <div class="d-flex align-center ga-3">
                 <v-icon :icon="mdiAccountOutline" size="22" />
                 <div class="qc-row-main">
-                  <v-card-title class="text-body-large">
+                  <v-card-title class="text-h6">
                     {{ t('pages.dashboard.robots.scene.c2c', '私聊') }}
                   </v-card-title>
                   <v-card-subtitle>
@@ -933,7 +933,7 @@ async function importLegacy(): Promise<void> {
 
           <v-card class="qc-card mt-4" variant="outlined">
             <v-card-item class="px-5 pt-5">
-              <v-card-title class="text-body-large">
+              <v-card-title class="text-h6">
                 {{ t('pages.dashboard.robots.dangerTitle', '删除机器人配置') }}
               </v-card-title>
             </v-card-item>

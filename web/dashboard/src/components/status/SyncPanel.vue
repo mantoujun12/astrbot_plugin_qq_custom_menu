@@ -67,7 +67,7 @@ onBeforeUnmount(() => {
 <template>
   <v-card class="qc-card mb-4" variant="outlined">
     <v-card-item class="px-5 pt-5">
-      <v-card-title class="text-body-large">
+      <v-card-title class="text-h6">
         {{ t('pages.dashboard.status.sync.title', '同步私聊菜单') }}
       </v-card-title>
       <v-card-subtitle>

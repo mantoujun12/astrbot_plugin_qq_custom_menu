@@ -271,7 +271,7 @@ async function save(options: { sync?: boolean } = {}): Promise<void> {
     <template v-if="config">
       <v-card class="qc-card mb-4" variant="outlined">
         <v-card-item class="px-5 pt-5">
-          <v-card-title class="text-body-large">
+          <v-card-title class="text-h6">
             {{ t('pages.dashboard.compatibility.platformsTitle', '兼容平台凭证') }}
           </v-card-title>
           <v-card-subtitle>
@@ -366,7 +366,7 @@ async function save(options: { sync?: boolean } = {}): Promise<void> {
 
       <v-card class="qc-card" variant="outlined">
         <v-card-item class="px-5 pt-5">
-          <v-card-title class="text-body-large">
+          <v-card-title class="text-h6">
             {{ t('pages.dashboard.compatibility.menuTitle', '兼容私聊菜单') }}
           </v-card-title>
           <v-card-subtitle>

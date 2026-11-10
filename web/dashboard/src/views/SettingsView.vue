@@ -201,7 +201,7 @@ async function save(): Promise<void> {
 
     <v-card v-if="config" class="qc-card mb-4" variant="outlined">
       <v-card-item class="px-5 pt-5">
-        <v-card-title class="text-body-large">
+        <v-card-title class="text-h6">
           {{ t('pages.dashboard.settings.basicTitle', '基础配置') }}
         </v-card-title>
         <v-card-subtitle>
@@ -242,7 +242,7 @@ async function save(): Promise<void> {
 
     <v-card v-if="config" class="qc-card mb-4" variant="outlined">
       <v-card-item class="px-5 pt-5">
-        <v-card-title class="text-body-large">
+        <v-card-title class="text-h6">
           {{ t('pages.dashboard.settings.themeTitle', '主题配色') }}
         </v-card-title>
         <v-card-subtitle>
@@ -287,7 +287,7 @@ async function save(): Promise<void> {
 
     <v-card v-if="config" class="qc-card qc-about-plugin" variant="outlined">
       <v-card-item class="px-5 pt-5">
-        <v-card-title class="text-body-large">
+        <v-card-title class="text-h6">
           {{ t('pages.dashboard.settings.aboutTitle', '关于插件') }}
         </v-card-title>
         <v-card-subtitle>

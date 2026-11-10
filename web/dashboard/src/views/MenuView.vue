@@ -247,7 +247,7 @@ async function save(options: { sync?: boolean } = {}): Promise<void> {
 
     <v-card v-if="config" class="qc-card" variant="outlined">
       <v-card-item class="px-5 pt-5">
-        <v-card-title class="text-body-large">
+        <v-card-title class="text-h6">
           {{ t('pages.dashboard.menu.listTitle', '菜单条目') }}
         </v-card-title>
         <v-card-subtitle>

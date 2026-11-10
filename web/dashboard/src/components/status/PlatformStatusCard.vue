@@ -39,7 +39,7 @@ function sceneLabel(scene: string): string {
 <template>
   <v-card class="qc-card h-100" variant="outlined">
     <v-card-item class="px-5 pt-5">
-      <v-card-title class="text-body-large" data-field="robot-title">
+      <v-card-title class="text-h6" data-field="robot-title">
         {{ platform.name || platform.pf_id }}
       </v-card-title>
       <v-card-subtitle class="d-flex align-center ga-2">

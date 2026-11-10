@@ -141,7 +141,7 @@ function onSave(): void {
   >
     <v-card class="qc-card">
       <v-card-item class="px-5 pt-5">
-        <v-card-title class="text-body-large">
+        <v-card-title class="text-h6">
           {{
             isEditing
               ? t('pages.dashboard.menu.dialogEdit', '编辑菜单条目')

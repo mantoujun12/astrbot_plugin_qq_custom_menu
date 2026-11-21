@@ -6,7 +6,6 @@
 
 [![CI Core](https://img.shields.io/github/actions/workflow/status/mantoujun12/astrbot_plugin_qq_custom_menu/ci.yml?style=flat-square&label=Core)](https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/actions/workflows/ci.yml)
 [![CI Dashboard](https://img.shields.io/github/actions/workflow/status/mantoujun12/astrbot_plugin_qq_custom_menu/ci-dashboard.yml?style=flat-square&label=Dashboard)](https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/actions/workflows/ci-dashboard.yml)
-[![Codecov](https://img.shields.io/codecov/c/github/mantoujun12/astrbot_plugin_qq_custom_menu?style=flat-square&logo=codecov&label=Coverage)](https://codecov.io/gh/mantoujun12/astrbot_plugin_qq_custom_menu)
 [![GitHub Release](https://img.shields.io/github/v/release/mantoujun12/astrbot_plugin_qq_custom_menu?display_name=tag&style=flat-square)](https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/releases/latest)
 [![GitHub last commit](https://img.shields.io/github/last-commit/mantoujun12/astrbot_plugin_qq_custom_menu?style=flat-square)](https://github.com/mantoujun12/astrbot_plugin_qq_custom_menu/commits/master)
 [![AstrBot Plugin](https://img.shields.io/badge/AstrBot-Plugin-4984b9?style=flat-square&logo=github)](https://cloud.astrbot.app/plugin/mantoujun12/astrbot_plugin_qq_custom_menu)
@@ -175,24 +174,18 @@ menu:
 5. 单个机器人失败只影响对应机器人，Dashboard 会展示失败原因，其余机器人继续同步。
 6. 私聊菜单为空且场景启用时，`PUT` 会清空该机器人的 QQ 自定义菜单。
 
-## 开发与测试
+## 开发
 
-插件通过 AstrBot 加载，功能测试仍需要在运行的 AstrBot 实例下进行；业务逻辑和 Dashboard 都可以跑离线测试。
+插件通过 AstrBot 加载，功能验证需要在运行的 AstrBot 实例下进行。
 
 ### 后端（Python 3.10+）
 
 ```bash
-pip install -r requirements.txt -r requirements-dev.txt
-pytest -q
-pytest --cov --cov-branch --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
+pip install -r requirements.txt
 ruff check . --fix
 ruff format --check .
 pre-commit run --all-files   # 可选，与 CI 同一套 hooks
 ```
-
-- 用例都在 `tests/`，`tests/conftest.py` 会注入轻量 AstrBot stub，无需安装 AstrBot。
-- `tests/test_main.py` 覆盖插件装配层；`tests/test_web_api.py` / `tests/test_sync_runner.py` 覆盖 Dashboard 后端；`tests/test_package_script.py` / `tests/test_bump_script.py` 覆盖发布脚本。
-- 异步用例直接写 `async def`（`asyncio_mode = "auto"`）。
 
 ### Dashboard（Vue 3 + Vite 8 + Vuetify 4）
 
@@ -203,10 +196,6 @@ cd web/dashboard
 pnpm install
 pnpm dev            # 本地 dev server，没有 bridge，走 mock 并显式标注
 pnpm build          # vue-tsc 类型检查 + Vite 打包，直接写 pages/dashboard/
-pnpm test           # Vitest 单次运行
-pnpm test:coverage  # 覆盖率，阈值见 vitest.config.ts
-pnpm test:report    # 额外产出 test-report.junit.xml
-pnpm test:codecov   # 覆盖率 + JUnit，CI 用的入口
 ```
 
 `pnpm build` 会先执行 `vue-tsc` 类型检查，并直接生成 `pages/dashboard/` 产物；不要手工编辑构建产物，改源码后重新构建即可。
@@ -223,9 +212,8 @@ python scripts/package_plugin.py         # 生成 dist/<插件名>-<版本>.zip
 
 ### 持续集成
 
-- [ci.yml](.github/workflows/ci.yml)：pre-commit lint + Python 3.10 / 3.11 / 3.12 / 3.13 Pytest 矩阵
-- [ci-dashboard.yml](.github/workflows/ci-dashboard.yml)：Node 24 + pnpm 12 上跑 Vitest 与 Dashboard 构建
-- [codecov-core.yml](.github/workflows/codecov-core.yml) / [codecov-dashboard.yml](.github/workflows/codecov-dashboard.yml)：把覆盖率与 JUnit 测试报告上传到 [Codecov](https://codecov.io/gh/mantoujun12/astrbot_plugin_qq_custom_menu)，前后端分别使用 flag `unittests` 与 `dashboard`
+- [ci.yml](.github/workflows/ci.yml)：pre-commit lint（含 ruff check + format）
+- [ci-dashboard.yml](.github/workflows/ci-dashboard.yml)：Node 24 + pnpm 12 上的 Dashboard 构建
 
 ## 目录结构
 
@@ -235,11 +223,10 @@ core/                     业务逻辑：config、menu、qq_api、state、sync_r
 _conf_schema.json         WebUI 插件配置 schema
 metadata.yaml             插件元数据（版本号唯一来源）
 .astrbot-plugin/          WebUI 侧 i18n（metadata / config / views）
-web/dashboard/            Dashboard 源码（Vue 3 + TypeScript + Vite + Vuetify + Vitest）
+web/dashboard/            Dashboard 源码（Vue 3 + TypeScript + Vite + Vuetify）
 pages/dashboard/          Dashboard 构建产物（提交进仓库的生成文件）
-tests/                    离线 pytest 套件
 scripts/                  bump_version.py、package_plugin.py
-.github/                  CI、Codecov、Release、Dependabot、Issue 模板
+.github/                  CI、Release、Dependabot、Issue 模板
 ```
 
 ## 已知限制

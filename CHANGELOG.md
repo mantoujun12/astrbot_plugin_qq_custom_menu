@@ -7,6 +7,10 @@
 
 ## [Unreleased]
 
+### 移除
+
+- 移除全部测试与覆盖率体系：pytest 套件（`tests/`）、Vitest 用例与配置、`requirements-dev.txt`、`codecov.yml`、Codecov 徽章，以及 pytest / Codecov 相关 CI 工作流；CI 仅保留 lint 与 Dashboard 构建
+
 ### 工程
 
 - 升级依赖：Vuetify 4.3.2、Vitest 5.1.0、vue-tsc 3.3.14、@types/node 26.6.6、pytest-asyncio 1.4.1.post1，pre-commit 的 ruff 更新至 v0.17.3（#67、#68、#69）

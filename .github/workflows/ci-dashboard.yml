@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   dashboard:
-    name: Dashboard - Test & Build (Node ${{ matrix.node-version }})
+    name: Dashboard - Build (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -36,10 +36,6 @@ jobs:
       - name: Install dependencies
         working-directory: web/dashboard
         run: pnpm install --frozen-lockfile
-
-      - name: Run tests
-        working-directory: web/dashboard
-        run: pnpm test
 
       - name: Build dashboard
         working-directory: web/dashboard

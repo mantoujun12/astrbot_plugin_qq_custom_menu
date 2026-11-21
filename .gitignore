@@ -36,20 +36,12 @@ MANIFEST
 pip-log.txt
 pip-delete-this-directory.txt
 
-# Unit test / coverage reports
+# Tool caches
 htmlcov/
 .tox/
 .nox/
-.coverage
-.coverage.*
 .cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py.cover
 .hypothesis/
-.pytest_cache/
-cover/
 
 # Translations
 *.mo
@@ -209,9 +201,5 @@ __marimo__/
 # 运行时兜底数据目录，不应提交到仓库
 /data/
 
-# 前端与测试产物
+# 前端产物
 web/dashboard/node_modules/
-web/dashboard/coverage/
-web/dashboard/test-report.junit.xml
-/junit.xml
-coverage.xml

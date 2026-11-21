@@ -6,10 +6,10 @@ QQ 官方机器人私聊自定义菜单插件。用户在插件可视化视图�
 
 #### 技术栈
 
-- Python 3.10+（代码里有 `X | None`、`from __future__ import annotations`；CI 矩阵为 3.10 / 3.11 / 3.12 / 3.13）
+- Python 3.10+（代码里有 `X | None`、`from __future__ import annotations`）
 - aiohttp（HTTP 客户端，15s 超时）
 - AstrBot Star 插件体系（`@register` / `Context` / `Star`）
-- Dashboard：Vue 3 + TypeScript + Vite 8 + Vuetify 4 + vue-router（hash）+ Vitest 5
+- Dashboard：Vue 3 + TypeScript + Vite 8 + Vuetify 4 + vue-router（hash）
 - 前端工具链要求 Node `^22.12.0 || >=24`（见 `web/dashboard/package.json` 的 `engines`）与 pnpm 9+（lockfile 由 pnpm 12 生成）
 - 无第三方数据库，本地状态保存在 AstrBot 的 `data/plugin_data/astrbot_plugin_qq_custom_menu/`
 
@@ -34,44 +34,37 @@ _conf_schema.json          WebUI 插件配置 schema
 metadata.yaml              插件元数据（版本号唯一来源）
 .astrbot-plugin/i18n/      WebUI 侧 i18n（metadata / config / pages.dashboard）
 .semgrepignore             安全扫描排除 Vite 生成的 Dashboard 产物，源码仍由 web/dashboard/ 覆盖
-web/dashboard/             Dashboard 源码（Vue 3 + TypeScript + Vite + Vuetify + Vitest）
+web/dashboard/             Dashboard 源码（Vue 3 + TypeScript + Vite + Vuetify）
 pages/dashboard/           Dashboard 构建产物（提交进仓库的生成文件）
-tests/                     离线 pytest 套件（conftest 注入 AstrBot stub）
 scripts/                   bump_version.py、package_plugin.py
-.github/                   CI、Codecov、Release、Dependabot、Issue 模板
+.github/                   CI、Release、Dependabot、Issue 模板
 ```
 
 #### 开发命令
 
-插件通过 AstrBot 加载，功能性测试仍需要在运行的 AstrBot 实例下进行；业务逻辑与前端可以跑离线测试。
+插件通过 AstrBot 加载，功能性验证需要在运行的 AstrBot 实例下进行。
 
-安装运行 + 开发依赖：
+安装运行依赖：
 
 ```bash
-pip install -r requirements.txt -r requirements-dev.txt
+pip install -r requirements.txt
 ```
 
-后端测试与规范检查：
+后端规范检查：
 
 ```bash
-pytest -q
-pytest --cov --cov-branch --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
 ruff check . --fix
 ruff format --check .
 pre-commit run --all-files   # 可选，与 pre-commit.ci / CI 同一套 hooks
 ```
 
-Dashboard 开发与测试：
+Dashboard 开发：
 
 ```bash
 cd web/dashboard
 pnpm install
 pnpm dev            # 本地 dev server，没有 bridge，走 mock 并显式标注
 pnpm build          # vue-tsc + Vite，直接写 pages/dashboard/
-pnpm test           # Vitest 单次运行
-pnpm test:coverage  # 覆盖率，阈值见 vitest.config.ts
-pnpm test:report    # 额外产出 test-report.junit.xml
-pnpm test:codecov   # 覆盖率 + JUnit，CI 用的入口
 ```
 
 打包与版本：
@@ -111,8 +104,7 @@ python scripts/package_plugin.py         # 生成 dist/<插件名>-<版本>.zip
 17. i18n 分两条管线：`core/i18n/*.json` 供运行期日志使用；`.astrbot-plugin/i18n/*.json` 供 WebUI 读取，Dashboard 文案放在 `pages.dashboard` 下，`zh-CN`、`en-US`、`ru-RU`、`ja-JP` 四份 locale 的 key 集合与占位符必须一致。面板标题不得直接采用宿主传入的原始视图名 `dashboard`。
 18. 版本号只有 `metadata.yaml` 一个来源；`core/paths.py` 的 `PLUGIN_VERSION` 与 `web/dashboard/package.json` 的 `version` 由 `scripts/bump_version.py` 同步，`release.yml` 发布前用 `--check` 校验。
 19. `pages/dashboard/` 是生成文件，由 `pnpm build` 写入，不要手工编辑；冲突时重新构建再 `git add`，不要改成 `merge=ours`。`.semgrepignore` 必须继续排除该目录，避免安全扫描把压缩后的 Vuetify 内部 DOM 操作误判为业务代码问题。
-20. 测试按模块对应：`core/*.py` → `tests/test_*.py`，Dashboard 源码 → 同目录 `*.test.ts`。公共假件放 `tests/fakes.py` 与 `web/dashboard/src/test/helpers.ts`。
-21. `LogBuffer` 只采集插件源码路径产生的日志，环形缓冲容量为 1000；安装时临时启用 DEBUG 并在关闭时恢复 logger 级别，缓冲淘汰后通过 `gap` 事件报告缺口，日志只保存在当前进程内存。日志采集属于可选能力，安装失败不能阻止插件启动；`terminate()` 或构造失败清理必须移除 handler 并结束等待中的 SSE 订阅。
+20. `LogBuffer` 只采集插件源码路径产生的日志，环形缓冲容量为 1000；安装时临时启用 DEBUG 并在关闭时恢复 logger 级别，缓冲淘汰后通过 `gap` 事件报告缺口，日志只保存在当前进程内存。日志采集属于可选能力，安装失败不能阻止插件启动；`terminate()` 或构造失败清理必须移除 handler 并结束等待中的 SSE 订阅。
 
 #### Dashboard 数据契约
 
@@ -124,19 +116,16 @@ python scripts/package_plugin.py         # 生成 dist/<插件名>-<版本>.zip
 - 同步事件：`start`（`platforms` / `scenes` / `items`）、`message`（`text`）、`platform`（`pf_id` / `status` / `action` / `saved` / `scenes` / `error`）、`finish`（`ok` / `succeeded` / `failed`）。
 - 日志事件：`stream`（`id` / `reset`，连接开始时发送一次）、`log`（`seq` / `timestamp` / `level` / `message` / 可选 `traceback`）、`gap`（`first_seq` / `last_seq` / `count`）、`error`（`code=subscriber_limit`）。
 
-#### 测试与覆盖率
+#### Dashboard mock
 
-- Python 覆盖率门禁在 `codecov.yml`（flag `unittests`），核心模块目标 90%+。
-- Dashboard 覆盖率门禁写在 `vitest.config.ts`（lines 85 / statements 85 / functions 80 / branches 80）。
-- Codecov 分两条上传链路：`codecov-core.yml` 与 `codecov-dashboard.yml`，合并后 `after_n_builds: 2`。
 - 本地开发没有 bridge 时，Dashboard 使用 `web/dashboard/src/api/mock.ts` 的假数据；保存与同步入口必须显式禁用，不能伪装成功。
 
 #### 代码风格
 
 要点：类型注解齐全、`from __future__ import annotations`、`Path` 而非字符串拼路径、`__all__` 导出公开 API。
 
-- Python 行宽 100，Ruff 规则见 `pyproject.toml`；测试允许 `assert` 与假凭证字符串。
-- 前端使用 TypeScript strict 风格，组件测试只断言文本、自有 class、属性与 emit，不断言 Vuetify 内部结构。
+- Python 行宽 100，Ruff 规则见 `pyproject.toml`。
+- 前端使用 TypeScript strict 风格，不断言 Vuetify 内部结构。
 - 提交前跑 `ruff check . --fix`、`ruff format --check .` 与 `pre-commit run --all-files`。
 
 #### 文案与标点

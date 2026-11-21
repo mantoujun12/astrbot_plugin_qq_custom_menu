@@ -32,5 +32,3 @@ jobs:
 
       - name: Run hooks (includes ruff check + format)
         run: pre-commit run --all-files --show-diff-on-failure
-
-
